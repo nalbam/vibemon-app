@@ -1,5 +1,5 @@
 /*
- * Claude Code Status Display
+ * Claude Monitor
  * ESP32-C6-LCD-1.47 (172x320, ST7789V2)
  *
  * Pixel art character (128x128) with animated states
@@ -117,12 +117,12 @@ void drawStartScreen() {
   tft.setTextColor(COLOR_TEXT_WHITE);
   tft.setTextSize(2);
   tft.setCursor(20, STATUS_TEXT_Y);
-  tft.println("Claude Code");
+  tft.println("Claude");
 
   tft.setTextSize(1);
   tft.setTextColor(COLOR_TEXT_DIM);
   tft.setCursor(30, STATUS_TEXT_Y + 30);
-  tft.println("Status Display");
+  tft.println("Monitor");
 
   tft.setCursor(30, PROJECT_Y);
   tft.println("Waiting for");
@@ -187,7 +187,7 @@ void drawStatus() {
   tft.setTextSize(1);
   int brandText = 10;
   tft.setCursor(brandText, BRAND_Y);
-  tft.println("Claude Code Monitor");
+  tft.println("Claude Monitor");
 
   needsRedraw = false;
 }

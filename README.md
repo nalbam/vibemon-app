@@ -1,6 +1,6 @@
-# Claude Code Status Display
+# Claude Monitor
 
-ESP32-C6-LCD-1.47 보드를 사용한 Claude Code 상태 표시기 (픽셀 아트 버전)
+ESP32-C6-LCD-1.47 보드를 사용한 Claude Monitor 상태 표시기 (픽셀 아트 버전)
 
 ## 미리보기
 
@@ -20,7 +20,7 @@ ESP32-C6-LCD-1.47 보드를 사용한 Claude Code 상태 표시기 (픽셀 아�
 │ Project: dotfiles  │
 │ Tool: Bash         │
 ├────────────────────┤
-│ Claude Code        │
+│ Claude Monitor     │
 └────────────────────┘
 ```
 
@@ -71,7 +71,7 @@ cp User_Setup.h ~/Documents/Arduino/libraries/TFT_eSPI/User_Setup.h
 2. **포트 선택**: Tools → Port → /dev/cu.usbmodem* (또는 해당 포트)
 3. **업로드**: Upload 버튼 클릭
 
-## Claude Code 설정
+## Claude Monitor 설정
 
 ### 1. 환경 변수 설정
 
@@ -98,8 +98,8 @@ ls /dev/ttyUSB* /dev/ttyACM*
 ## 파일 구조
 
 ```
-claude-status-display/
-├── claude-status-display.ino   # 메인 코드
+claude-monitor/
+├── claude-monitor.ino          # 메인 코드
 ├── sprites.h                   # 캐릭터 그리기 함수
 ├── User_Setup.h                # TFT 디스플레이 설정
 ├── simulator/                  # 웹 시뮬레이터
@@ -111,10 +111,11 @@ claude-status-display/
 
 하드웨어 없이 브라우저에서 디스플레이를 미리 볼 수 있습니다.
 
+**웹 시뮬레이터**: https://nalbam.github.io/claude-monitor/simulator/
+
 ```bash
-# 시뮬레이터 실행
+# 로컬에서 실행
 open simulator/index.html
-# 또는 브라우저에서 파일 열기
 ```
 
 시뮬레이터 기능:
@@ -135,6 +136,21 @@ USB 없이 WiFi로 사용하려면:
 #define USE_WIFI
 const char* ssid = "YOUR_SSID";
 const char* password = "YOUR_PASSWORD";
+```
+
+### HTTP API
+
+```bash
+# POST /status - 상태 업데이트
+curl -X POST http://192.168.1.100/status \
+  -H "Content-Type: application/json" \
+  -d '{"state":"working","event":"PreToolUse","tool":"Bash","project":"test"}'
+
+# 응답
+{"ok":true}
+
+# 오류 (body 없음)
+{"error":"no body"}
 ```
 
 ## 테스트
