@@ -166,6 +166,9 @@ function startHttpServer() {
     } else if (req.method === 'GET' && req.url === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ state: currentState }));
+    } else if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
     } else {
       res.writeHead(404);
       res.end('Not Found');
