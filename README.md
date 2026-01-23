@@ -168,6 +168,12 @@ curl -X POST http://127.0.0.1:19280/status \
 
 # Get current status
 curl http://127.0.0.1:19280/status
+
+# Health check
+curl http://127.0.0.1:19280/health
+
+# Show and position window
+curl -X POST http://127.0.0.1:19280/show
 ```
 
 ## WiFi Mode (Optional)

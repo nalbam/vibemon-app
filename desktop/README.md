@@ -83,6 +83,26 @@ Desktop 앱을 실행하고 Claude Code를 사용하면 자동으로 상태가 �
 }
 ```
 
+### GET /health
+
+Health check endpoint
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### POST /show
+
+창을 보이게 하고 우측 상단으로 이동
+
+```json
+{
+  "success": true
+}
+```
+
 ## Build
 
 macOS 앱으로 빌드:
