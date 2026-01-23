@@ -136,7 +136,7 @@ function updateState(data) {
   updateTrayMenu();
 }
 
-// 창을 보이게 하고 우측 상단으로 이동
+// Show window and position to top-right corner
 function showAndPositionWindow() {
   if (mainWindow) {
     const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize;

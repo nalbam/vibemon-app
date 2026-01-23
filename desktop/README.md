@@ -1,14 +1,14 @@
 # Claude Monitor Desktop App
 
-macOS용 프레임 없는 데스크톱 앱으로, Claude Code의 상태를 실시간으로 모니터링합니다.
+A frameless desktop app for real-time monitoring of Claude Code status.
 
 ## Features
 
-- **프레임 없는 창**: 깔끔한 floating 디자인
-- **Always on Top**: 다른 창 위에 항상 표시
-- **시스템 트레이**: 메뉴바에서 빠르게 제어
-- **HTTP API**: Claude Code hooks와 쉽게 연동
-- **드래그 가능**: 창을 원하는 위치로 이동
+- **Frameless Window**: Clean floating design
+- **Always on Top**: Always displayed above other windows
+- **System Tray**: Quick control from the menu bar
+- **HTTP API**: Easy integration with Claude Code hooks
+- **Draggable**: Move the window to any position
 
 ## Installation
 
@@ -19,50 +19,50 @@ npm install
 
 ## Usage
 
-### 앱 실행
+### Run the App
 
 ```bash
 npm start
 ```
 
-### HTTP API로 상태 업데이트
+### Update Status via HTTP API
 
 ```bash
-# Working 상태로 변경
+# Change to working state
 curl -X POST http://127.0.0.1:19280/status \
   -H "Content-Type: application/json" \
   -d '{"state":"working","tool":"Bash","project":"my-project"}'
 
-# 현재 상태 확인
+# Check current status
 curl http://127.0.0.1:19280/status
 ```
 
-### Claude Code Hooks 연동
+### Claude Code Hooks Integration
 
-[claude-config](https://github.com/nalbam/claude-config) 저장소의 `hooks/claude-monitor.sh`에 Desktop App 지원이 통합되어 있습니다.
+Desktop App support is integrated into `hooks/claude-monitor.sh` in the [claude-config](https://github.com/nalbam/claude-config) repository.
 
-Hook이 상태 업데이트를 전송하는 순서:
-1. **Desktop App** (`http://127.0.0.1:19280`) - 항상 시도
-2. **ESP32 USB Serial** - 설정된 경우
-3. **ESP32 HTTP** - 설정된 경우
+Order in which the hook sends status updates:
+1. **Desktop App** (`http://127.0.0.1:19280`) - Always attempted
+2. **ESP32 USB Serial** - If configured
+3. **ESP32 HTTP** - If configured
 
-Desktop 앱을 실행하고 Claude Code를 사용하면 자동으로 상태가 업데이트됩니다.
+Run the Desktop app and use Claude Code to automatically update the status.
 
 ## States
 
 | State | Background | Description |
 |-------|------------|-------------|
-| `idle` | Green | Ready/대기 상태 |
-| `working` | Blue | 작업 진행 중 |
-| `notification` | Yellow | 입력 요청 |
-| `session_start` | Cyan | 세션 시작 |
-| `tool_done` | Green | 도구 완료 |
+| `idle` | Green | Ready/Standby |
+| `working` | Blue | Work in progress |
+| `notification` | Yellow | Input requested |
+| `session_start` | Cyan | Session started |
+| `tool_done` | Green | Tool completed |
 
 ## API
 
 ### POST /status
 
-상태 업데이트
+Update status
 
 ```json
 {
@@ -75,7 +75,7 @@ Desktop 앱을 실행하고 Claude Code를 사용하면 자동으로 상태가 �
 
 ### GET /status
 
-현재 상태 조회
+Get current status
 
 ```json
 {
@@ -95,7 +95,7 @@ Health check endpoint
 
 ### POST /show
 
-창을 보이게 하고 우측 상단으로 이동
+Show window and position to top-right corner
 
 ```json
 {
@@ -105,23 +105,41 @@ Health check endpoint
 
 ## Build
 
-macOS 앱으로 빌드:
+Build for macOS:
 
 ```bash
 npm run build:mac
 ```
 
+Build for Windows:
+
+```bash
+npm run build:win
+```
+
+Build for Linux:
+
+```bash
+npm run build:linux
+```
+
+Build for all platforms:
+
+```bash
+npm run build:all
+```
+
 ## Tray Menu
 
-시스템 트레이 아이콘을 클릭하면:
-- 현재 상태 확인
-- 상태 수동 변경
-- Always on Top 토글
-- 창 표시/숨기기
-- 종료
+Click the system tray icon to:
+- Check current status
+- Manually change status
+- Toggle Always on Top
+- Show/Hide window
+- Quit
 
 ## Port
 
-기본 HTTP 서버 포트: `19280`
+Default HTTP server port: `19280`
 
-(main.js의 `HTTP_PORT` 상수로 변경 가능)
+(Can be changed via `HTTP_PORT` constant in main.js)
