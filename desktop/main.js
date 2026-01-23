@@ -150,10 +150,10 @@ function updateTrayMenu() {
     {
       label: 'Set State',
       submenu: [
+        { label: 'Session Start', click: () => updateState({ state: 'session_start' }) },
         { label: 'Idle', click: () => updateState({ state: 'idle' }) },
         { label: 'Working', click: () => updateState({ state: 'working' }) },
         { label: 'Notification', click: () => updateState({ state: 'notification' }) },
-        { label: 'Session Start', click: () => updateState({ state: 'session_start' }) },
         { label: 'Tool Done', click: () => updateState({ state: 'tool_done' }) }
       ]
     },
