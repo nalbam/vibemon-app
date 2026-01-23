@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Status Display Simulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+    }
+
+    /* ESP32 Display Frame */
+    .device-frame {
+      background: #2d2d2d;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    .device-label {
+      color: #888;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    /* Display Screen */
+    .display {
+      width: 172px;
+      height: 320px;
+      background: #000;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      image-rendering: pixelated;
+    }
+
+    /* Character Canvas - 128x128, centered */
+    #character-canvas {
+      position: absolute;
+      top: 20px;
+      left: 22px;  /* (172 - 128) / 2 = 22 */
+      width: 128px;
+      height: 128px;
+      image-rendering: pixelated;
+    }
+
+    /* Status Text */
+    .status-text {
+      position: absolute;
+      top: 160px;
+      width: 100%;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+    }
+
+    /* Loading Dots */
+    .loading-dots {
+      position: absolute;
+      top: 195px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7BEF7B;
+      transition: background 0.1s;
+    }
+
+    .dot.dim {
+      background: #3a3a3a;
+    }
+
+    /* Info Text */
+    .info-text {
+      position: absolute;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      color: white;
+      left: 10px;
+    }
+
+    .project-text {
+      top: 235px;
+    }
+
+    .tool-text {
+      top: 255px;
+    }
+
+    .brand-text {
+      top: 295px;
+      color: #7BEF7B;
+    }
+
+    .info-label {
+      color: white;
+    }
+
+    .info-value {
+      color: #aaa;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      background: #2d2d2d;
+      padding: 24px;
+      border-radius: 16px;
+      min-width: 300px;
+    }
+
+    .panel-title {
+      color: white;
+      font-size: 18px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .state-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .state-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .state-btn.idle {
+      background: #00AA00;
+      color: white;
+    }
+
+    .state-btn.working {
+      background: #0066CC;
+      color: white;
+    }
+
+    .state-btn.notification {
+      background: #FFCC00;
+      color: #333;
+    }
+
+    .state-btn.session {
+      background: #00CCCC;
+      color: white;
+    }
+
+    .state-btn.done {
+      background: #00AA00;
+      color: white;
+    }
+
+    .state-icon {
+      font-size: 18px;
+    }
+
+    /* Input Fields */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      color: #888;
+      font-size: 12px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: white;
+      font-size: 14px;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #E07B39;
+    }
+
+    /* JSON Preview */
+    .json-preview {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .json-title {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .json-content {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #E07B39;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Current State Indicator */
+    .current-state {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .current-state-label {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .current-state-value {
+      color: #E07B39;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- ESP32 Display -->
+    <div class="device-frame">
+      <div class="device-label">ESP32-C6-LCD-1.47 (172x320)</div>
+      <div class="display" id="display">
+        <canvas id="character-canvas" width="128" height="128"></canvas>
+        <div class="status-text" id="status-text">Ready</div>
+        <div class="loading-dots" id="loading-dots">
+          <div class="dot dim"></div>
+          <div class="dot dim"></div>
+          <div class="dot dim"></div>
+          <div class="dot dim"></div>
+        </div>
+        <div class="info-text project-text">
+          <span class="info-label">Project: </span>
+          <span class="info-value" id="project-value">dotfiles</span>
+        </div>
+        <div class="info-text tool-text" id="tool-line">
+          <span class="info-label">Tool: </span>
+          <span class="info-value" id="tool-value">Bash</span>
+        </div>
+        <div class="info-text brand-text">Claude Code Monitor</div>
+      </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <div class="panel-title">Control Panel</div>
+
+      <!-- Current State -->
+      <div class="current-state">
+        <div class="current-state-label">Current State</div>
+        <div class="current-state-value" id="current-state-display">idle</div>
+      </div>
+
+      <!-- State Buttons -->
+      <div class="button-group">
+        <button class="state-btn idle" onclick="setState('idle')">
+          <span class="state-icon">Ready</span>
+          idle
+        </button>
+        <button class="state-btn working" onclick="setState('working')">
+          <span class="state-icon">Working</span>
+          working
+        </button>
+        <button class="state-btn notification" onclick="setState('notification')">
+          <span class="state-icon">Input?</span>
+          notification
+        </button>
+        <button class="state-btn session" onclick="setState('session_start')">
+          <span class="state-icon">Hello!</span>
+          session_start
+        </button>
+        <button class="state-btn done" onclick="setState('tool_done')">
+          <span class="state-icon">Done!</span>
+          tool_done
+        </button>
+      </div>
+
+      <!-- Input Fields -->
+      <div class="input-group">
+        <label class="input-label">Project Name</label>
+        <input type="text" class="input-field" id="project-input" value="dotfiles" oninput="updateDisplay()">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Tool Name</label>
+        <input type="text" class="input-field" id="tool-input" value="Bash" oninput="updateDisplay()">
+      </div>
+
+      <!-- JSON Preview -->
+      <div class="json-preview">
+        <div class="json-title">JSON Payload (sent to ESP32)</div>
+        <div class="json-content" id="json-preview"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Character size (128x128, doubled from 64)
+    const CHAR_SIZE = 128;
+    const SCALE = 2;  // Scale factor from original 64px
+
+    // State configuration
+    const states = {
+      idle: {
+        bgColor: '#00AA00',
+        text: 'Ready',
+        eyeType: 'normal',
+        showLoading: false,
+        textColor: '#FFFFFF'
+      },
+      working: {
+        bgColor: '#0066CC',
+        text: 'Working',
+        eyeType: 'focused',
+        showLoading: true,
+        textColor: '#FFFFFF'
+      },
+      notification: {
+        bgColor: '#FFCC00',
+        text: 'Input?',
+        eyeType: 'alert',
+        showLoading: false,
+        textColor: '#000000'  // Dark text on yellow
+      },
+      session_start: {
+        bgColor: '#00CCCC',
+        text: 'Hello!',
+        eyeType: 'sparkle',
+        showLoading: false,
+        textColor: '#000000'  // Dark text on cyan
+      },
+      tool_done: {
+        bgColor: '#00AA00',
+        text: 'Done!',
+        eyeType: 'happy',
+        showLoading: false,
+        textColor: '#FFFFFF'
+      }
+    };
+
+    // Colors
+    const COLOR_CLAUDE = '#E07B39';
+    const COLOR_EYE = '#000000';
+    const COLOR_WHITE = '#FFFFFF';
+
+    // Current state
+    let currentState = 'idle';
+    let animFrame = 0;
+    let blinkFrame = 0;
+
+    // Canvas
+    const canvas = document.getElementById('character-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Helper: draw scaled rect
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE);
+    }
+
+    // Initialize
+    function init() {
+      setState('idle');
+      startAnimation();
+    }
+
+    // Set state
+    function setState(state) {
+      currentState = state;
+      updateDisplay();
+    }
+
+    // Update display
+    function updateDisplay() {
+      const state = states[currentState];
+      const display = document.getElementById('display');
+      const statusText = document.getElementById('status-text');
+      const loadingDots = document.getElementById('loading-dots');
+      const toolLine = document.getElementById('tool-line');
+      const projectValue = document.getElementById('project-value');
+      const toolValue = document.getElementById('tool-value');
+      const currentStateDisplay = document.getElementById('current-state-display');
+      const jsonPreview = document.getElementById('json-preview');
+
+      // Update background
+      display.style.background = state.bgColor;
+
+      // Update text and color
+      statusText.textContent = state.text;
+      statusText.style.color = state.textColor;
+
+      // Update loading dots visibility
+      loadingDots.style.display = state.showLoading ? 'flex' : 'none';
+
+      // Update tool line visibility
+      toolLine.style.display = currentState === 'working' ? 'block' : 'none';
+
+      // Update values from inputs
+      const projectName = document.getElementById('project-input').value;
+      const toolName = document.getElementById('tool-input').value;
+      projectValue.textContent = projectName.length > 16 ? projectName.substring(0, 13) + '...' : projectName;
+      toolValue.textContent = toolName;
+
+      // Update all text colors based on state
+      document.querySelectorAll('.info-text').forEach(el => {
+        el.style.color = state.textColor;
+      });
+      document.querySelectorAll('.info-label').forEach(el => {
+        el.style.color = state.textColor;
+      });
+      document.querySelectorAll('.info-value').forEach(el => {
+        el.style.color = state.textColor;
+      });
+
+      // Update current state display
+      currentStateDisplay.textContent = currentState;
+
+      // Update JSON preview
+      const json = {
+        state: currentState,
+        event: getEventName(currentState),
+        tool: currentState === 'working' ? toolName : '',
+        project: projectName
+      };
+      jsonPreview.textContent = JSON.stringify(json, null, 2);
+
+      // Draw character
+      drawCharacter(state.eyeType);
+    }
+
+    // Get event name for state
+    function getEventName(state) {
+      const events = {
+        idle: 'Stop',
+        working: 'PreToolUse',
+        notification: 'Notification',
+        session_start: 'SessionStart',
+        tool_done: 'PostToolUse'
+      };
+      return events[state] || 'Unknown';
+    }
+
+    // Draw character (128x128, scaled 2x from 64x64)
+    function drawCharacter(eyeType) {
+      const state = states[currentState];
+
+      // Clear with background color
+      ctx.fillStyle = state.bgColor;
+      ctx.fillRect(0, 0, CHAR_SIZE, CHAR_SIZE);
+
+      // Main body (wider: 52x36)
+      drawRect(6, 8, 52, 36, COLOR_CLAUDE);
+
+      // Arms (attached to body: 6x10)
+      drawRect(0, 22, 6, 10, COLOR_CLAUDE);    // Left (ends at 6, body starts at 6)
+      drawRect(58, 22, 6, 10, COLOR_CLAUDE);   // Right (starts at 58, body ends at 58)
+
+      // Legs (4 legs: shorter, thinner, wider gap between pairs)
+      // Left pair
+      drawRect(10, 44, 6, 12, COLOR_CLAUDE);   // Left outer
+      drawRect(18, 44, 6, 12, COLOR_CLAUDE);   // Left inner
+      // Right pair (wider gap from left pair)
+      drawRect(40, 44, 6, 12, COLOR_CLAUDE);   // Right inner
+      drawRect(48, 44, 6, 12, COLOR_CLAUDE);   // Right outer
+
+      // Draw eyes
+      drawEyes(eyeType);
+    }
+
+    // Draw eyes (scaled 2x)
+    function drawEyes(eyeType) {
+      const leftX = 14;
+      const rightX = 44;
+      const eyeY = 22;
+
+      switch (eyeType) {
+        case 'normal':
+          // Square eyes (6x6 -> 12x12)
+          drawRect(leftX, eyeY, 6, 6, COLOR_EYE);
+          drawRect(rightX, eyeY, 6, 6, COLOR_EYE);
+          break;
+
+        case 'focused':
+          // Horizontal flat eyes (6x3 -> 12x6)
+          drawRect(leftX, eyeY + 2, 6, 3, COLOR_EYE);
+          drawRect(rightX, eyeY + 2, 6, 3, COLOR_EYE);
+          break;
+
+        case 'alert':
+          // Round eyes (circle approximation)
+          drawRect(leftX + 1, eyeY, 4, 6, COLOR_EYE);
+          drawRect(leftX, eyeY + 1, 6, 4, COLOR_EYE);
+          drawRect(rightX + 1, eyeY, 4, 6, COLOR_EYE);
+          drawRect(rightX, eyeY + 1, 6, 4, COLOR_EYE);
+          break;
+
+        case 'sparkle':
+          // Normal eyes + sparkle
+          drawRect(leftX, eyeY, 6, 6, COLOR_EYE);
+          drawRect(rightX, eyeY, 6, 6, COLOR_EYE);
+          drawSparkle(50, 8);
+          break;
+
+        case 'happy':
+          // Curved happy eyes (arch shape)
+          drawRect(leftX, eyeY + 4, 6, 2, COLOR_EYE);
+          drawRect(leftX, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(leftX + 4, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(rightX, eyeY + 4, 6, 2, COLOR_EYE);
+          drawRect(rightX, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(rightX + 4, eyeY + 2, 2, 2, COLOR_EYE);
+          break;
+
+        case 'blink':
+          // Closed eyes (thin line)
+          drawRect(leftX, eyeY + 2, 6, 2, COLOR_EYE);
+          drawRect(rightX, eyeY + 2, 6, 2, COLOR_EYE);
+          break;
+      }
+    }
+
+    // Draw sparkle (scaled 2x)
+    function drawSparkle(x, y) {
+      const frame = animFrame % 4;
+
+      // Center
+      drawRect(x + 2, y + 2, 2, 2, COLOR_WHITE);
+
+      if (frame === 0 || frame === 2) {
+        // Vertical and horizontal rays
+        drawRect(x + 2, y, 2, 2, COLOR_WHITE);
+        drawRect(x + 2, y + 4, 2, 2, COLOR_WHITE);
+        drawRect(x, y + 2, 2, 2, COLOR_WHITE);
+        drawRect(x + 4, y + 2, 2, 2, COLOR_WHITE);
+      } else {
+        // Diagonal rays
+        drawRect(x, y, 2, 2, COLOR_WHITE);
+        drawRect(x + 4, y, 2, 2, COLOR_WHITE);
+        drawRect(x, y + 4, 2, 2, COLOR_WHITE);
+        drawRect(x + 4, y + 4, 2, 2, COLOR_WHITE);
+      }
+    }
+
+    // Animation loop
+    function startAnimation() {
+      setInterval(() => {
+        animFrame++;
+
+        // Loading dots animation
+        if (currentState === 'working') {
+          updateLoadingDots();
+        }
+
+        // Sparkle animation
+        if (currentState === 'session_start') {
+          drawCharacter('sparkle');
+        }
+
+        // Blink animation for idle (every 30 frames = 3 seconds)
+        if (currentState === 'idle') {
+          blinkFrame++;
+          if (blinkFrame === 30) {
+            drawCharacter('blink');
+          } else if (blinkFrame === 31) {
+            drawCharacter('normal');
+            blinkFrame = 0;
+          }
+        }
+      }, 100);
+    }
+
+    // Update loading dots
+    function updateLoadingDots() {
+      const dots = document.querySelectorAll('.dot');
+      const activeIndex = animFrame % 4;
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('dim', i !== activeIndex);
+      });
+    }
+
+    // Initialize on load
+    window.onload = init;
+  </script>
+</body>
+</html>

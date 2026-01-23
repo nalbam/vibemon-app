@@ -1,0 +1,54 @@
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+# Mac
+.DS_Store
+
+# java
+*.class
+*.jar
+*.war
+*.ear
+
+# pytest
+__pycache__
+.pytest_cache
+
+# maven
+build/
+builds/
+config/
+target/
+
+# eclipse
+.settings/
+.metadata/
+
+# JetBrains
+.idea/
+*.iml
+
+# backup files
+*.bak
+*.backup
+
+# claude
+.claude/
+.prompt-*.md
+.prompt.md
+prompt-*.md
+prompt.md
+
+# claude local env
+claude/env.local
+claude/.env.local
