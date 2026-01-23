@@ -553,13 +553,19 @@
           break;
 
         case 'happy':
-          // Curved happy eyes (arch shape)
-          drawRect(leftX, eyeY + 4, 6, 2, COLOR_EYE);
-          drawRect(leftX, eyeY + 2, 2, 2, COLOR_EYE);
-          drawRect(leftX + 4, eyeY + 2, 2, 2, COLOR_EYE);
-          drawRect(rightX, eyeY + 4, 6, 2, COLOR_EYE);
-          drawRect(rightX, eyeY + 2, 2, 2, COLOR_EYE);
-          drawRect(rightX + 4, eyeY + 2, 2, 2, COLOR_EYE);
+          // Happy eyes (V shape, smiling)
+          // Left eye - downward V
+          drawRect(leftX + 2, eyeY, 2, 2, COLOR_EYE);
+          drawRect(leftX + 1, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(leftX + 3, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(leftX, eyeY + 4, 2, 2, COLOR_EYE);
+          drawRect(leftX + 4, eyeY + 4, 2, 2, COLOR_EYE);
+          // Right eye - downward V
+          drawRect(rightX + 2, eyeY, 2, 2, COLOR_EYE);
+          drawRect(rightX + 1, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(rightX + 3, eyeY + 2, 2, 2, COLOR_EYE);
+          drawRect(rightX, eyeY + 4, 2, 2, COLOR_EYE);
+          drawRect(rightX + 4, eyeY + 4, 2, 2, COLOR_EYE);
           break;
 
         case 'blink':

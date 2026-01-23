@@ -37,7 +37,7 @@ ESP32-C6-LCD-1.47 보드를 사용한 Claude Monitor 상태 표시기 (픽셀 �
 | `working` | 🔵 파란색 | ▬ ▬ 집중 | 로딩 점 |
 | `notification` | 🟡 노란색 | ● ● 둥근 | - |
 | `session_start` | 🔵 시안 | ■ ■ + ✦ | 반짝이 회전 |
-| `tool_done` | 🟢 녹색 | ◠ ◠ 웃음 | - |
+| `tool_done` | 🟢 녹색 | ∨ ∨ 웃음 | - |
 
 ## 설치
 

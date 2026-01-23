@@ -134,15 +134,19 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType) {
       break;
 
     case EYE_HAPPY:
-      // Curved happy eyes (arch shape, scaled)
-      // Left eye - upward curve
-      tft.fillRect(leftEyeX, eyeY + (4 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
-      tft.fillRect(leftEyeX, eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-      tft.fillRect(leftEyeX + (4 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-      // Right eye - upward curve
-      tft.fillRect(rightEyeX, eyeY + (4 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
-      tft.fillRect(rightEyeX, eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-      tft.fillRect(rightEyeX + (4 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      // Happy eyes (V shape, smiling)
+      // Left eye - downward V
+      tft.fillRect(leftEyeX + (2 * SCALE), eyeY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(leftEyeX + (1 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(leftEyeX + (3 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(leftEyeX, eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(leftEyeX + (4 * SCALE), eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      // Right eye - downward V
+      tft.fillRect(rightEyeX + (2 * SCALE), eyeY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(rightEyeX + (1 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(rightEyeX + (3 * SCALE), eyeY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(rightEyeX, eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(rightEyeX + (4 * SCALE), eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
       break;
   }
 }
