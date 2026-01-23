@@ -61,6 +61,7 @@
       width: 128px;
       height: 128px;
       image-rendering: pixelated;
+      transition: top 0.1s ease-out;
     }
 
     /* Status Text */
@@ -423,6 +424,10 @@
     let animFrame = 0;
     let blinkFrame = 0;
 
+    // Floating animation
+    const FLOAT_AMPLITUDE = 5;   // pixels
+    const CHAR_Y_BASE = 20;      // base Y position
+
     // Canvas
     const canvas = document.getElementById('character-canvas');
     const ctx = canvas.getContext('2d');
@@ -431,6 +436,18 @@
     function drawRect(x, y, w, h, color) {
       ctx.fillStyle = color;
       ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE);
+    }
+
+    // Calculate floating Y offset using sine wave
+    function getFloatOffset() {
+      const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
+      return Math.sin(angle) * FLOAT_AMPLITUDE;
+    }
+
+    // Update canvas position for floating effect
+    function updateFloatingPosition() {
+      const offset = getFloatOffset();
+      canvas.style.top = (CHAR_Y_BASE + offset) + 'px';
     }
 
     // Initialize
@@ -653,6 +670,9 @@
     function startAnimation() {
       setInterval(() => {
         animFrame++;
+
+        // Floating animation (all states)
+        updateFloatingPosition();
 
         // Loading dots animation
         if (currentState === 'working') {
