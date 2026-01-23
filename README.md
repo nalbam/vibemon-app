@@ -149,7 +149,7 @@ npm start
 
 ### Claude Code Hooks Integration
 
-Desktop app support is integrated into `claude-config/hooks/esp32-status.sh`.
+Desktop app support is integrated into [claude-config](https://github.com/nalbam/claude-config) repository's `hooks/claude-monitor.sh`.
 
 The hook sends status updates to:
 1. **Desktop App** (`http://127.0.0.1:19280`) - always attempted first

@@ -39,7 +39,7 @@ curl http://127.0.0.1:19280/status
 
 ### Claude Code Hooks 연동
 
-`claude-config/hooks/esp32-status.sh`에 Desktop App 지원이 통합되어 있습니다.
+[claude-config](https://github.com/nalbam/claude-config) 저장소의 `hooks/claude-monitor.sh`에 Desktop App 지원이 통합되어 있습니다.
 
 Hook이 상태 업데이트를 전송하는 순서:
 1. **Desktop App** (`http://127.0.0.1:19280`) - 항상 시도
