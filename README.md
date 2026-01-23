@@ -213,7 +213,7 @@ const char* password = "YOUR_PASSWORD";
 # POST /status - Update status
 curl -X POST http://192.168.1.100/status \
   -H "Content-Type: application/json" \
-  -d '{"state":"working","event":"PreToolUse","tool":"Bash","project":"test","model":"opus","memory":"45%"}'
+  -d '{"state":"working","event":"PreToolUse","tool":"Bash","project":"claude-monitor","model":"opus","memory":"45%"}'
 
 # Response
 {"ok":true}
@@ -226,19 +226,19 @@ curl -X POST http://192.168.1.100/status \
 
 ```bash
 # USB Serial test - idle (green, square eyes)
-echo '{"state":"idle","event":"Stop","tool":"","project":"test","model":"opus","memory":"45%"}' > /dev/cu.usbmodem1101
+echo '{"state":"idle","event":"Stop","tool":"","project":"claude-monitor","model":"opus","memory":"45%"}' > /dev/cu.usbmodem1101
 
 # working (blue, focused eyes)
-echo '{"state":"working","event":"PreToolUse","tool":"Bash","project":"dotfiles","model":"opus","memory":"50%"}' > /dev/cu.usbmodem1101
+echo '{"state":"working","event":"PreToolUse","tool":"Bash","project":"claude-monitor","model":"opus","memory":"50%"}' > /dev/cu.usbmodem1101
 
 # notification (yellow, round eyes)
-echo '{"state":"notification","event":"Notification","tool":"","project":"test","model":"opus","memory":"60%"}' > /dev/cu.usbmodem1101
+echo '{"state":"notification","event":"Notification","tool":"","project":"claude-monitor","model":"opus","memory":"60%"}' > /dev/cu.usbmodem1101
 
 # session_start (cyan, sparkle)
-echo '{"state":"session_start","event":"SessionStart","tool":"","project":"test","model":"opus","memory":"10%"}' > /dev/cu.usbmodem1101
+echo '{"state":"session_start","event":"SessionStart","tool":"","project":"claude-monitor","model":"opus","memory":"10%"}' > /dev/cu.usbmodem1101
 
 # tool_done (green, happy eyes)
-echo '{"state":"tool_done","event":"PostToolUse","tool":"Bash","project":"test","model":"opus","memory":"55%"}' > /dev/cu.usbmodem1101
+echo '{"state":"tool_done","event":"PostToolUse","tool":"Bash","project":"claude-monitor","model":"opus","memory":"55%"}' > /dev/cu.usbmodem1101
 ```
 
 ## Troubleshooting
