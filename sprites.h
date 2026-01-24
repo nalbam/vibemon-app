@@ -253,6 +253,36 @@ void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame) {
   }
 }
 
+// Get memory bar color based on percentage
+uint16_t getMemoryBarColor(int percent) {
+  if (percent < 50) return 0x0540;  // Green (#00AA00)
+  if (percent < 80) return 0xFE60;  // Yellow (#FFCC00)
+  return 0xF800;  // Red (#FF0000)
+}
+
+// Draw memory bar
+void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int percent, uint16_t bgColor) {
+  int clampedPercent = min(100, max(0, percent));
+  int fillWidth = (width * clampedPercent) / 100;
+
+  // Determine border/bg colors based on background brightness
+  bool isDarkBg = (bgColor == COLOR_BG_WORKING || bgColor == COLOR_BG_SLEEP);
+  uint16_t borderColor = isDarkBg ? 0xAD75 : 0x4208;  // Light gray or dark gray
+  uint16_t containerBg = isDarkBg ? 0x3186 : 0x2104;  // Lighter or darker
+
+  // Border (1px)
+  tft.drawRect(x, y, width, height, borderColor);
+
+  // Background - inside border
+  tft.fillRect(x + 1, y + 1, width - 2, height - 2, containerBg);
+
+  // Fill bar with color based on percentage
+  if (fillWidth > 2) {
+    uint16_t barColor = getMemoryBarColor(clampedPercent);
+    tft.fillRect(x + 1, y + 1, fillWidth - 2, height - 2, barColor);
+  }
+}
+
 // Draw blink animation (for idle state)
 void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame) {
   int leftEyeX = x + (14 * SCALE);

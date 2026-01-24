@@ -36,7 +36,10 @@ TFT_eSPI tft = TFT_eSPI();
 #define TOOL_Y        235
 #define MODEL_Y       250
 #define MEMORY_Y      265
-#define BRAND_Y       290
+#define MEMORY_BAR_X  10
+#define MEMORY_BAR_Y  280
+#define MEMORY_BAR_W  152
+#define MEMORY_BAR_H  8
 
 // State
 String currentState = "idle";
@@ -258,14 +261,11 @@ void drawStatus() {
     tft.setCursor(10, MEMORY_Y);
     tft.print("Memory: ");
     tft.println(currentMemory);
-  }
 
-  // Brand
-  tft.setTextColor(textColor);
-  tft.setTextSize(1);
-  int brandText = 10;
-  tft.setCursor(brandText, BRAND_Y);
-  tft.println("Claude Monitor");
+    // Memory bar (below percentage)
+    int memoryPercent = currentMemory.toInt();
+    drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, memoryPercent, bgColor);
+  }
 
   needsRedraw = false;
 }

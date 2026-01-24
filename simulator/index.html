@@ -123,9 +123,22 @@
       top: 265px;
     }
 
-    .brand-text {
-      top: 290px;
-      color: #7BEF7B;
+    .memory-bar-container {
+      position: absolute;
+      top: 280px;
+      left: 10px;
+      width: 152px;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.6);
+      box-sizing: border-box;
+    }
+
+    .memory-bar {
+      height: 100%;
+      border-radius: 0px;
+      transition: width 0.3s, background 0.3s;
     }
 
     .info-label {
@@ -283,9 +296,9 @@
 </head>
 <body>
   <div class="container">
-    <!-- ESP32 Display -->
+    <!-- Claude Monitor Display -->
     <div class="device-frame">
-      <div class="device-label">ESP32-C6-LCD-1.47 (172x320)</div>
+      <div class="device-label">Claude Monitor</div>
       <div class="display" id="display">
         <canvas id="character-canvas" width="128" height="128"></canvas>
         <div class="status-text" id="status-text">Ready</div>
@@ -311,7 +324,9 @@
           <span class="info-label">Memory: </span>
           <span class="info-value" id="memory-value">45%</span>
         </div>
-        <div class="info-text brand-text">Claude Monitor</div>
+        <div class="memory-bar-container" id="memory-bar-container">
+          <div class="memory-bar" id="memory-bar"></div>
+        </div>
       </div>
     </div>
 
@@ -456,6 +471,42 @@
       return texts[Math.floor(Math.random() * texts.length)];
     }
 
+    // Get memory bar color based on percentage
+    function getMemoryBarColor(percent) {
+      if (percent < 50) return '#00AA00';  // Green
+      if (percent < 80) return '#FFCC00';  // Yellow
+      return '#FF4444';  // Red
+    }
+
+    // Update memory bar display
+    function updateMemoryBar(memoryUsage, bgColor) {
+      const memoryBar = document.getElementById('memory-bar');
+      const memoryBarContainer = document.getElementById('memory-bar-container');
+
+      if (!memoryUsage) {
+        memoryBarContainer.style.display = 'none';
+        return;
+      }
+
+      memoryBarContainer.style.display = 'block';
+
+      // Set border/background based on background brightness
+      const isDarkBg = (bgColor === '#0066CC' || bgColor === '#1a1a4e');
+      if (isDarkBg) {
+        memoryBarContainer.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+        memoryBarContainer.style.background = 'rgba(255, 255, 255, 0.2)';
+      } else {
+        memoryBarContainer.style.borderColor = 'rgba(0, 0, 0, 0.6)';
+        memoryBarContainer.style.background = 'rgba(0, 0, 0, 0.3)';
+      }
+
+      const percent = parseInt(memoryUsage.replace('%', '')) || 0;
+      const clampedPercent = Math.min(100, Math.max(0, percent));
+
+      memoryBar.style.width = clampedPercent + '%';
+      memoryBar.style.background = getMemoryBarColor(clampedPercent);
+    }
+
     // Current state
     let currentState = 'idle';
     let animFrame = 0;
@@ -560,6 +611,9 @@
       // Update model/memory visibility
       modelLine.style.display = modelName ? 'block' : 'none';
       memoryLine.style.display = memoryUsage ? 'block' : 'none';
+
+      // Update memory bar
+      updateMemoryBar(memoryUsage, state.bgColor);
 
       // Update all text colors based on state
       document.querySelectorAll('.info-text').forEach(el => {
