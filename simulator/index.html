@@ -322,6 +322,10 @@
 
       <!-- State Buttons -->
       <div class="button-group">
+        <button class="state-btn session" onclick="setState('session_start')">
+          <span class="state-icon">Hello!</span>
+          session_start
+        </button>
         <button class="state-btn idle" onclick="setState('idle')">
           <span class="state-icon">Ready</span>
           idle
@@ -333,10 +337,6 @@
         <button class="state-btn notification" onclick="setState('notification')">
           <span class="state-icon">Input?</span>
           notification
-        </button>
-        <button class="state-btn session" onclick="setState('session_start')">
-          <span class="state-icon">Hello!</span>
-          session_start
         </button>
         <button class="state-btn done" onclick="setState('tool_done')">
           <span class="state-icon">Done!</span>
@@ -377,6 +377,13 @@
 
     // State configuration
     const states = {
+      session_start: {
+        bgColor: '#00CCCC',
+        text: 'Hello!',
+        eyeType: 'sparkle',
+        showLoading: false,
+        textColor: '#000000'  // Dark text on cyan
+      },
       idle: {
         bgColor: '#00AA00',
         text: 'Ready',
@@ -397,13 +404,6 @@
         eyeType: 'alert',
         showLoading: false,
         textColor: '#000000'  // Dark text on yellow
-      },
-      session_start: {
-        bgColor: '#00CCCC',
-        text: 'Hello!',
-        eyeType: 'sparkle',
-        showLoading: false,
-        textColor: '#000000'  // Dark text on cyan
       },
       tool_done: {
         bgColor: '#00AA00',
@@ -537,10 +537,10 @@
     // Get event name for state
     function getEventName(state) {
       const events = {
+        session_start: 'SessionStart',
         idle: 'Stop',
         working: 'PreToolUse',
         notification: 'Notification',
-        session_start: 'SessionStart',
         tool_done: 'PostToolUse'
       };
       return events[state] || 'Unknown';
@@ -674,14 +674,14 @@
         // Floating animation (all states)
         updateFloatingPosition();
 
-        // Loading dots animation
-        if (currentState === 'working') {
-          updateLoadingDots();
-        }
-
         // Sparkle animation
         if (currentState === 'session_start') {
           drawCharacter('sparkle');
+        }
+
+        // Loading dots animation
+        if (currentState === 'working') {
+          updateLoadingDots();
         }
 
         // Blink animation for idle (every 30 frames = 3 seconds)

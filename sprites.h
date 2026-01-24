@@ -32,10 +32,10 @@
 
 // Eye types
 enum EyeType {
+  EYE_SPARKLE,     // session_start: normal + sparkle
   EYE_NORMAL,      // idle: square eyes
   EYE_FOCUSED,     // working: horizontal flat eyes
   EYE_ALERT,       // notification: round eyes
-  EYE_SPARKLE,     // session_start: normal + sparkle
   EYE_HAPPY        // done: curved happy eyes
 };
 
@@ -229,38 +229,38 @@ void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame) {
 
 // Get background color for state
 uint16_t getBackgroundColor(String state) {
+  if (state == "session_start") return COLOR_BG_SESSION;
   if (state == "idle") return COLOR_BG_IDLE;
   if (state == "working") return COLOR_BG_WORKING;
   if (state == "notification") return COLOR_BG_NOTIFY;
-  if (state == "session_start") return COLOR_BG_SESSION;
   if (state == "tool_done") return COLOR_BG_DONE;
   return COLOR_BG_IDLE;  // default
 }
 
 // Get eye type for state
 EyeType getEyeType(String state) {
+  if (state == "session_start") return EYE_SPARKLE;
   if (state == "idle") return EYE_NORMAL;
   if (state == "working") return EYE_FOCUSED;
   if (state == "notification") return EYE_ALERT;
-  if (state == "session_start") return EYE_SPARKLE;
   if (state == "tool_done") return EYE_HAPPY;
   return EYE_NORMAL;  // default
 }
 
 // Get status text for state
 String getStatusText(String state) {
+  if (state == "session_start") return "Hello!";
   if (state == "idle") return "Ready";
   if (state == "working") return "Working";
   if (state == "notification") return "Input?";
-  if (state == "session_start") return "Hello!";
   if (state == "tool_done") return "Done!";
   return state;
 }
 
 // Get text color for state (dark text on bright backgrounds)
 uint16_t getTextColor(String state) {
-  if (state == "notification") return TFT_BLACK;   // Dark on yellow
   if (state == "session_start") return TFT_BLACK;  // Dark on cyan
+  if (state == "notification") return TFT_BLACK;   // Dark on yellow
   return COLOR_TEXT_WHITE;  // White on dark backgrounds
 }
 

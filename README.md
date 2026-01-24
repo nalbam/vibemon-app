@@ -40,10 +40,10 @@ Real-time status monitor for Claude Code with pixel art character.
 
 | State | Background | Eyes | Animation |
 |-------|------------|------|-----------|
+| `session_start` | Cyan | ■ ■ + ✦ | Rotating sparkle |
 | `idle` | Green | ■ ■ Square | Blink every 3s |
 | `working` | Blue | ▬ ▬ Focused | Loading dots |
 | `notification` | Yellow | ● ● Round + ? | Question mark |
-| `session_start` | Cyan | ■ ■ + ✦ | Rotating sparkle |
 | `tool_done` | Green | ∨ ∨ Happy | - |
 
 **Common Animation**: All states have a gentle floating animation (±5px vertical movement, ~3.2s cycle).
@@ -226,8 +226,13 @@ curl -X POST http://192.168.1.100/status \
 
 ## Testing
 
+### USB Serial test
+
 ```bash
-# USB Serial test - idle (green, square eyes)
+# session_start (cyan, sparkle)
+echo '{"state":"session_start","event":"SessionStart","tool":"","project":"claude-monitor","model":"opus","memory":"10%"}' > /dev/cu.usbmodem1101
+
+# idle (green, square eyes)
 echo '{"state":"idle","event":"Stop","tool":"","project":"claude-monitor","model":"opus","memory":"45%"}' > /dev/cu.usbmodem1101
 
 # working (blue, focused eyes)
@@ -235,9 +240,6 @@ echo '{"state":"working","event":"PreToolUse","tool":"Bash","project":"claude-mo
 
 # notification (yellow, round eyes)
 echo '{"state":"notification","event":"Notification","tool":"","project":"claude-monitor","model":"opus","memory":"60%"}' > /dev/cu.usbmodem1101
-
-# session_start (cyan, sparkle)
-echo '{"state":"session_start","event":"SessionStart","tool":"","project":"claude-monitor","model":"opus","memory":"10%"}' > /dev/cu.usbmodem1101
 
 # tool_done (green, happy eyes)
 echo '{"state":"tool_done","event":"PostToolUse","tool":"Bash","project":"claude-monitor","model":"opus","memory":"55%"}' > /dev/cu.usbmodem1101
