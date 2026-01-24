@@ -118,6 +118,10 @@ function createWindow() {
 
   // Show window without stealing focus
   mainWindow.once('ready-to-show', () => {
+    // Set alwaysOnTop with level for better Windows support
+    if (isAlwaysOnTop) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
     mainWindow.showInactive();
   });
 
@@ -165,7 +169,7 @@ function updateTrayMenu() {
       click: () => {
         isAlwaysOnTop = !isAlwaysOnTop;
         if (mainWindow) {
-          mainWindow.setAlwaysOnTop(isAlwaysOnTop);
+          mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
         }
       }
     },
