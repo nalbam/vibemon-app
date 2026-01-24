@@ -50,10 +50,6 @@ prompt-*.md
 prompt.md
 docs/plans/
 
-# claude local env
-claude/env.local
-claude/.env.local
-
 # Node.js
 node_modules/
 package-lock.json
