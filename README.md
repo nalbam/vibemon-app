@@ -24,6 +24,8 @@ Monitor your Claude Code sessions at a glance - see what state it's in, which pr
 
 ## Preview
 
+![Working State on macOS](screenshots/working.png)
+
 ```
 ┌────────────────────┐
 │                    │
