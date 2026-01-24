@@ -253,14 +253,61 @@ void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame) {
   }
 }
 
-// Get memory bar color based on percentage
-uint16_t getMemoryBarColor(int percent) {
-  if (percent < 50) return 0x0540;  // Green (#00AA00)
-  if (percent < 80) return 0xFE60;  // Yellow (#FFCC00)
-  return 0xF800;  // Red (#FF0000)
+// RGB565 color constants for gradient
+#define COLOR_MEM_GREEN  0x0540  // #00AA00
+#define COLOR_MEM_YELLOW 0xFE60  // #FFCC00
+#define COLOR_MEM_RED    0xF800  // #FF0000
+
+// Interpolate between two RGB565 colors
+uint16_t lerpColor565(uint16_t color1, uint16_t color2, int ratio, int maxRatio) {
+  // Extract RGB components from RGB565
+  int r1 = (color1 >> 11) & 0x1F;
+  int g1 = (color1 >> 5) & 0x3F;
+  int b1 = color1 & 0x1F;
+
+  int r2 = (color2 >> 11) & 0x1F;
+  int g2 = (color2 >> 5) & 0x3F;
+  int b2 = color2 & 0x1F;
+
+  // Interpolate
+  int r = r1 + ((r2 - r1) * ratio) / maxRatio;
+  int g = g1 + ((g2 - g1) * ratio) / maxRatio;
+  int b = b1 + ((b2 - b1) * ratio) / maxRatio;
+
+  // Clamp values
+  r = min(31, max(0, r));
+  g = min(63, max(0, g));
+  b = min(31, max(0, b));
+
+  return (r << 11) | (g << 5) | b;
 }
 
-// Draw memory bar
+// Get gradient color for a specific position in the bar
+uint16_t getGradientColor(int pos, int width, int percent) {
+  // Calculate base color from percent (smooth transition)
+  uint16_t baseStart, baseEnd;
+  int baseRatio;
+
+  if (percent < 50) {
+    // Green to Yellow range
+    baseStart = COLOR_MEM_GREEN;
+    baseEnd = COLOR_MEM_YELLOW;
+    baseRatio = percent * 2;  // 0-100 for 0-50%
+  } else {
+    // Yellow to Red range
+    baseStart = COLOR_MEM_YELLOW;
+    baseEnd = COLOR_MEM_RED;
+    baseRatio = (percent - 50) * 2;  // 0-100 for 50-100%
+  }
+
+  // Apply position-based gradient within the bar
+  int posRatio = (pos * 30) / width;  // 0-30% variation across bar
+  int totalRatio = min(100, max(0, baseRatio + posRatio));
+
+  return lerpColor565(baseStart, baseEnd, totalRatio, 100);
+}
+
+// Draw memory bar with gradient
 void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int percent, uint16_t bgColor) {
   int clampedPercent = min(100, max(0, percent));
   int fillWidth = (width * clampedPercent) / 100;
@@ -276,10 +323,13 @@ void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int perce
   // Background - inside border
   tft.fillRect(x + 1, y + 1, width - 2, height - 2, containerBg);
 
-  // Fill bar with color based on percentage
+  // Fill bar with gradient
   if (fillWidth > 2) {
-    uint16_t barColor = getMemoryBarColor(clampedPercent);
-    tft.fillRect(x + 1, y + 1, fillWidth - 2, height - 2, barColor);
+    int barHeight = height - 2;
+    for (int i = 0; i < fillWidth - 2; i++) {
+      uint16_t color = getGradientColor(i, fillWidth - 2, clampedPercent);
+      tft.drawFastVLine(x + 1 + i, y + 1, barHeight, color);
+    }
   }
 }
 
