@@ -149,6 +149,14 @@
       color: #aaa;
     }
 
+    .icon-canvas {
+      width: 8px;
+      height: 8px;
+      image-rendering: pixelated;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
+
     /* Control Panel */
     .control-panel {
       background: #2d2d2d;
@@ -309,19 +317,23 @@
           <div class="dot dim"></div>
         </div>
         <div class="info-text project-text">
-          <span class="info-label">📂 </span>
+          <span class="info-label emoji-icon" id="emoji-project">📂 </span>
+          <canvas class="icon-canvas pixel-icon" id="icon-project" width="8" height="8"></canvas>
           <span class="info-value" id="project-value">claude-monitor</span>
         </div>
         <div class="info-text tool-text" id="tool-line">
-          <span class="info-label">🛠️ </span>
+          <span class="info-label emoji-icon" id="emoji-tool">🛠️ </span>
+          <canvas class="icon-canvas pixel-icon" id="icon-tool" width="8" height="8"></canvas>
           <span class="info-value" id="tool-value">Bash</span>
         </div>
         <div class="info-text model-text" id="model-line">
-          <span class="info-label">🤖 </span>
+          <span class="info-label emoji-icon" id="emoji-model">🤖 </span>
+          <canvas class="icon-canvas pixel-icon" id="icon-model" width="8" height="8"></canvas>
           <span class="info-value" id="model-value">Opus 4.5</span>
         </div>
         <div class="info-text memory-text" id="memory-line">
-          <span class="info-label">🧠 </span>
+          <span class="info-label emoji-icon" id="emoji-memory">🧠 </span>
+          <canvas class="icon-canvas pixel-icon" id="icon-memory" width="8" height="8"></canvas>
           <span class="info-value" id="memory-value">45%</span>
         </div>
         <div class="memory-bar-container" id="memory-bar-container">
@@ -366,6 +378,15 @@
           <span class="state-icon">Zzz...</span>
           sleep
         </button>
+      </div>
+
+      <!-- Icon Type -->
+      <div class="input-group">
+        <label class="input-label">Icon Type</label>
+        <select class="input-field" id="icon-type-select" onchange="setIconType(this.value)">
+          <option value="emoji" selected>Emoji (📂 🛠️ 🤖 🧠)</option>
+          <option value="pixel">Pixel Art</option>
+        </select>
       </div>
 
       <!-- Input Fields -->
@@ -511,6 +532,7 @@
     let currentState = 'idle';
     let animFrame = 0;
     let blinkFrame = 0;
+    let iconType = 'emoji';  // 'emoji' or 'pixel'
 
     // Sleep timer (10 minutes = 600 seconds, use 10 for testing)
     const SLEEP_TIMEOUT = 600 * 1000;  // 10 minutes in ms
@@ -619,12 +641,12 @@
       document.querySelectorAll('.info-text').forEach(el => {
         el.style.color = state.textColor;
       });
-      document.querySelectorAll('.info-label').forEach(el => {
-        el.style.color = state.textColor;
-      });
       document.querySelectorAll('.info-value').forEach(el => {
         el.style.color = state.textColor;
       });
+
+      // Draw info icons with current text color
+      drawInfoIcons(state.textColor);
 
       // Update current state display
       currentStateDisplay.textContent = currentState;
@@ -803,6 +825,119 @@
         drawRect(x, y + 5, 6, 1, COLOR_WHITE);     // Bottom
       }
       // else: hidden (blinking effect)
+    }
+
+    // Draw folder icon (📂) - 8x7 pixels
+    function drawFolderIcon(iconCtx, color) {
+      iconCtx.fillStyle = color;
+      // Folder tab (top)
+      iconCtx.fillRect(0, 0, 3, 1);
+      // Folder body
+      iconCtx.fillRect(0, 1, 8, 6);
+      // Inner fold line
+      iconCtx.fillStyle = '#000000';
+      iconCtx.fillRect(1, 2, 6, 1);
+    }
+
+    // Draw tool/wrench icon (🛠️) - 8x8 pixels
+    function drawToolIcon(iconCtx, color) {
+      iconCtx.fillStyle = color;
+      // Wrench head (top)
+      iconCtx.fillRect(1, 0, 6, 3);
+      iconCtx.fillStyle = '#000000';
+      iconCtx.fillRect(3, 0, 2, 1);  // Notch
+      // Handle
+      iconCtx.fillStyle = color;
+      iconCtx.fillRect(3, 3, 2, 5);
+    }
+
+    // Draw robot icon (🤖) - 8x8 pixels
+    function drawRobotIcon(iconCtx, color) {
+      iconCtx.fillStyle = color;
+      // Antenna
+      iconCtx.fillRect(3, 0, 2, 1);
+      // Head
+      iconCtx.fillRect(1, 1, 6, 5);
+      // Eyes
+      iconCtx.fillStyle = '#000000';
+      iconCtx.fillRect(2, 2, 1, 2);
+      iconCtx.fillRect(5, 2, 1, 2);
+      // Mouth
+      iconCtx.fillRect(2, 5, 4, 1);
+      // Ears
+      iconCtx.fillStyle = color;
+      iconCtx.fillRect(0, 2, 1, 2);
+      iconCtx.fillRect(7, 2, 1, 2);
+    }
+
+    // Draw brain icon (🧠) - 8x7 pixels
+    function drawBrainIcon(iconCtx, color) {
+      iconCtx.fillStyle = color;
+      // Brain shape (simplified)
+      iconCtx.fillRect(1, 0, 6, 7);
+      iconCtx.fillRect(0, 1, 8, 5);
+      // Brain folds (center line)
+      iconCtx.fillStyle = '#000000';
+      iconCtx.fillRect(4, 1, 1, 5);
+      // Top bumps
+      iconCtx.fillRect(2, 0, 1, 1);
+      iconCtx.fillRect(5, 0, 1, 1);
+    }
+
+    // Set icon type
+    function setIconType(type) {
+      iconType = type;
+      updateDisplay();
+    }
+
+    // Draw all info icons
+    function drawInfoIcons(color) {
+      const bgColor = states[currentState].bgColor;
+      const showEmoji = (iconType === 'emoji');
+
+      // Toggle visibility
+      document.querySelectorAll('.emoji-icon').forEach(el => {
+        el.style.display = showEmoji ? 'inline' : 'none';
+      });
+      document.querySelectorAll('.pixel-icon').forEach(el => {
+        el.style.display = showEmoji ? 'none' : 'inline-block';
+      });
+
+      // Update emoji colors
+      document.querySelectorAll('.emoji-icon').forEach(el => {
+        el.style.color = color;
+      });
+
+      // Draw pixel icons if needed
+      if (!showEmoji) {
+        // Project icon
+        const projectCanvas = document.getElementById('icon-project');
+        const projectCtx = projectCanvas.getContext('2d');
+        projectCtx.fillStyle = bgColor;
+        projectCtx.fillRect(0, 0, 8, 8);
+        drawFolderIcon(projectCtx, color);
+
+        // Tool icon
+        const toolCanvas = document.getElementById('icon-tool');
+        const toolCtx = toolCanvas.getContext('2d');
+        toolCtx.fillStyle = bgColor;
+        toolCtx.fillRect(0, 0, 8, 8);
+        drawToolIcon(toolCtx, color);
+
+        // Model icon
+        const modelCanvas = document.getElementById('icon-model');
+        const modelCtx = modelCanvas.getContext('2d');
+        modelCtx.fillStyle = bgColor;
+        modelCtx.fillRect(0, 0, 8, 8);
+        drawRobotIcon(modelCtx, color);
+
+        // Memory icon
+        const memoryCanvas = document.getElementById('icon-memory');
+        const memoryCtx = memoryCanvas.getContext('2d');
+        memoryCtx.fillStyle = bgColor;
+        memoryCtx.fillRect(0, 0, 8, 8);
+        drawBrainIcon(memoryCtx, color);
+      }
     }
 
     // Animation loop
