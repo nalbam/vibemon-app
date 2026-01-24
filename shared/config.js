@@ -74,16 +74,13 @@ export const CHARACTER_CONFIG = {
     name: 'kiro',
     displayName: 'Kiro',
     color: '#FFFFFF',
-    body: { x: 8, y: 4, w: 44, h: 40 },
+    // Sprite-based rendering (see sprites.js) - 64x64 sprite
+    body: { x: 10, y: 3, w: 44, h: 30 },
     arms: null,
     legs: [],
-    tail: [
-      { x: 6, y: 44, w: 48, h: 4 },
-      { x: 8, y: 48, w: 14, h: 8 },
-      { x: 24, y: 46, w: 14, h: 10 },
-      { x: 40, y: 48, w: 14, h: 8 }
-    ],
-    eyes: { left: { x: 22, y: 18 }, right: { x: 40, y: 18 }, size: 6 },
+    tail: [],
+    // Eyes positioned in sprite (drawn by drawEyes, not in sprite)
+    eyes: { left: { x: 34, y: 11 }, right: { x: 43, y: 11 }, size: 5 },
     isGhost: true
   }
 };

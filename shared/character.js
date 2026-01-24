@@ -1,5 +1,6 @@
 import { CHAR_SIZE, SCALE, CHARACTER_CONFIG, DEFAULT_CHARACTER, states } from './config.js';
 import { drawEyes } from './effects.js';
+import { hasSprite, getSprite, drawSprite } from './sprites.js';
 
 let ctx = null;
 
@@ -23,8 +24,12 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
   ctx.fillStyle = state.bgColor;
   ctx.fillRect(0, 0, CHAR_SIZE, CHAR_SIZE);
 
-  if (char.isGhost) {
-    // Ghost body (rounded egg/chick shape)
+  // Check if character has sprite-based rendering
+  if (hasSprite(currentCharacter)) {
+    const { sprite, palette } = getSprite(currentCharacter);
+    drawSprite(ctx, sprite, palette, state.bgColor, SCALE);
+  } else if (char.isGhost) {
+    // Ghost body (rounded egg/chick shape) - fallback geometry
     const bx = char.body.x;
     const by = char.body.y;
     const bw = char.body.w;
@@ -44,25 +49,39 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
     drawRect(bx + 4, by + bh - 6, bw - 8, 2, char.color);
     drawRect(bx + 6, by + bh - 4, bw - 12, 2, char.color);
     drawRect(bx + 10, by + bh - 2, bw - 20, 2, char.color);
+
+    // Draw tail parts
+    if (char.tail && char.tail.length > 0) {
+      char.tail.forEach(t => {
+        if (t.round) {
+          const cx = t.x;
+          const cy = t.y;
+          const s = t.w;
+          drawRect(cx + 2, cy, s - 4, 2, char.color);
+          drawRect(cx + 1, cy + 2, s - 2, s - 4, char.color);
+          drawRect(cx + 2, cy + s - 2, s - 4, 2, char.color);
+        } else {
+          drawRect(t.x, t.y, t.w, t.h, char.color);
+        }
+      });
+    }
   } else {
     // Standard rectangular body
     drawRect(char.body.x, char.body.y, char.body.w, char.body.h, char.color);
+
+    // Arms (if exists)
+    if (char.arms) {
+      drawRect(char.arms.left.x, char.arms.left.y, char.arms.left.w, char.arms.left.h, char.color);
+      drawRect(char.arms.right.x, char.arms.right.y, char.arms.right.w, char.arms.right.h, char.color);
+    }
+
+    // Legs
+    if (char.legs && char.legs.length > 0) {
+      char.legs.forEach(leg => drawRect(leg.x, leg.y, leg.w, leg.h, char.color));
+    }
   }
 
-  // Arms (if exists)
-  if (char.arms) {
-    drawRect(char.arms.left.x, char.arms.left.y, char.arms.left.w, char.arms.left.h, char.color);
-    drawRect(char.arms.right.x, char.arms.right.y, char.arms.right.w, char.arms.right.h, char.color);
-  }
-
-  // Legs or Tail
-  if (char.tail && char.tail.length > 0) {
-    char.tail.forEach(t => drawRect(t.x, t.y, t.w, t.h, char.color));
-  } else if (char.legs && char.legs.length > 0) {
-    char.legs.forEach(leg => drawRect(leg.x, leg.y, leg.w, leg.h, char.color));
-  }
-
-  // Draw eyes
+  // Draw eyes (for all characters)
   drawEyes(eyeType, char, animFrame, drawRect);
 }
 
