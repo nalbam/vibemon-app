@@ -250,6 +250,13 @@
         eyeType: 'happy',
         showLoading: false,
         textColor: '#FFFFFF'
+      },
+      sleep: {
+        bgColor: '#1a1a4e',
+        text: 'Zzz...',
+        eyeType: 'sleep',
+        showLoading: false,
+        textColor: '#FFFFFF'
       }
     };
 
@@ -287,6 +294,10 @@
     let currentMemory = '-';
     let animFrame = 0;
     let blinkFrame = 0;
+
+    // Sleep timer (10 minutes = 600 seconds)
+    const SLEEP_TIMEOUT = 600 * 1000;  // 10 minutes in ms
+    let lastActivityTime = Date.now();
 
     // Floating animation
     const FLOAT_AMPLITUDE_X = 3;  // pixels (horizontal)
@@ -337,6 +348,7 @@
           if (data.tool) currentTool = data.tool;
           if (data.model) currentModel = data.model;
           if (data.memory) currentMemory = data.memory;
+          lastActivityTime = Date.now();  // Reset sleep timer
           updateDisplay();
         });
       }
@@ -479,6 +491,13 @@
           drawRect(leftX, eyeY + 2, 6, 2, COLOR_EYE);
           drawRect(rightX, eyeY + 2, 6, 2, COLOR_EYE);
           break;
+
+        case 'sleep':
+          // Closed eyes + Zzz
+          drawRect(leftX, eyeY + 2, 6, 2, COLOR_EYE);
+          drawRect(rightX, eyeY + 2, 6, 2, COLOR_EYE);
+          drawZzz(50, 6);
+          break;
       }
     }
 
@@ -509,6 +528,20 @@
       drawRect(x + 2, y + 10, 2, 2, color);
     }
 
+    // Draw Zzz animation for sleep state
+    function drawZzz(x, y) {
+      const frame = animFrame % 20;  // 2 second cycle (slower)
+      if (frame < 10) {
+        // Show Z (pixel art, larger 6x6)
+        drawRect(x, y, 6, 1, COLOR_WHITE);         // Top
+        drawRect(x + 4, y + 1, 2, 1, COLOR_WHITE); // Upper diagonal 1
+        drawRect(x + 3, y + 2, 2, 1, COLOR_WHITE); // Upper diagonal 2
+        drawRect(x + 2, y + 3, 2, 1, COLOR_WHITE); // Lower diagonal 1
+        drawRect(x + 1, y + 4, 2, 1, COLOR_WHITE); // Lower diagonal 2
+        drawRect(x, y + 5, 6, 1, COLOR_WHITE);     // Bottom
+      }
+    }
+
     // Animation loop
     function startAnimation() {
       setInterval(() => {
@@ -534,7 +567,26 @@
             blinkFrame = 0;
           }
         }
+
+        // Sleep state Zzz animation
+        if (currentState === 'sleep') {
+          drawCharacter('sleep');
+        }
+
+        // Check sleep timer (only from idle or tool_done)
+        checkSleepTimer();
       }, 100);
+    }
+
+    // Check if should transition to sleep state
+    function checkSleepTimer() {
+      if (currentState === 'idle' || currentState === 'tool_done') {
+        const elapsed = Date.now() - lastActivityTime;
+        if (elapsed >= SLEEP_TIMEOUT) {
+          currentState = 'sleep';
+          updateDisplay();
+        }
+      }
     }
 
     // Update loading dots

@@ -48,6 +48,7 @@ target/
 .prompt.md
 prompt-*.md
 prompt.md
+docs/plans/
 
 # claude local env
 claude/env.local

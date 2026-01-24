@@ -52,6 +52,10 @@ bool needsRedraw = true;
 int lastCharX = CHAR_X_BASE;  // Track last character X for efficient redraw
 int lastCharY = CHAR_Y_BASE;  // Track last character Y for efficient redraw
 
+// Sleep timer (10 minutes = 600000 ms)
+#define SLEEP_TIMEOUT 600000
+unsigned long lastActivityTime = 0;
+
 void setup() {
   Serial.begin(115200);
 
@@ -62,6 +66,9 @@ void setup() {
 
   // Start screen
   drawStartScreen();
+
+  // Initialize sleep timer
+  lastActivityTime = millis();
 
 #ifdef USE_WIFI
   setupWiFi();
@@ -91,6 +98,21 @@ void loop() {
     lastBlink = millis();
     drawBlinkAnimation();
   }
+
+  // Check sleep timer (only from idle or tool_done)
+  checkSleepTimer();
+}
+
+// Check if should transition to sleep state
+void checkSleepTimer() {
+  if (currentState == "idle" || currentState == "tool_done") {
+    if (millis() - lastActivityTime >= SLEEP_TIMEOUT) {
+      previousState = currentState;
+      currentState = "sleep";
+      needsRedraw = true;
+      drawStatus();
+    }
+  }
 }
 
 void processInput(String input) {
@@ -108,6 +130,9 @@ void processInput(String input) {
   currentTool = doc["tool"].as<String>();
   currentModel = doc["model"].as<String>();
   currentMemory = doc["memory"].as<String>();
+
+  // Reset sleep timer on any input
+  lastActivityTime = millis();
 
   // Redraw if state changed
   if (currentState != previousState) {
@@ -270,6 +295,9 @@ void updateAnimation() {
   } else if (currentState == "session_start") {
     // Update sparkle animation (redraw for sparkle effect)
     drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor);
+  } else if (currentState == "sleep") {
+    // Update Zzz animation (redraw for blink effect)
+    drawCharacter(tft, newCharX, newCharY, EYE_SLEEP, bgColor);
   }
 }
 

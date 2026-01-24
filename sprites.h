@@ -20,6 +20,7 @@
 #define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
 #define COLOR_BG_SESSION  0x0666  // #00CCCC Cyan
 #define COLOR_BG_DONE     0x0540  // #00AA00 Green
+#define COLOR_BG_SLEEP    0x18C9  // #1a1a4e Navy blue
 
 // Text colors
 #define COLOR_TEXT_WHITE  0xFFFF
@@ -36,7 +37,8 @@ enum EyeType {
   EYE_NORMAL,      // idle: square eyes
   EYE_FOCUSED,     // working: horizontal flat eyes
   EYE_ALERT,       // notification: round eyes
-  EYE_HAPPY        // done: curved happy eyes
+  EYE_HAPPY,       // done: curved happy eyes
+  EYE_SLEEP        // sleep: closed eyes + Zzz
 };
 
 // Animation frame counter
@@ -162,6 +164,14 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType) {
       tft.fillRect(rightEyeX, eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
       tft.fillRect(rightEyeX + (4 * SCALE), eyeY + (4 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
       break;
+
+    case EYE_SLEEP:
+      // Closed eyes (same as blink) + Zzz
+      tft.fillRect(leftEyeX, eyeY + (2 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
+      tft.fillRect(rightEyeX, eyeY + (2 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
+      // Zzz animation (position relative to character)
+      drawZzz(tft, x + (50 * SCALE), y + (6 * SCALE), animFrame);
+      break;
   }
 }
 
@@ -209,6 +219,27 @@ void drawQuestionMark(TFT_eSPI &tft, int x, int y) {
   tft.fillRect(x + (2 * SCALE), y + (10 * SCALE), 2 * SCALE, 2 * SCALE, color); // Dot
 }
 
+// Draw Zzz animation for sleep state (scaled 2x)
+void drawZzz(TFT_eSPI &tft, int x, int y, int frame) {
+  uint16_t color = COLOR_TEXT_WHITE;
+
+  // Blink effect: show Z for 10 frames, hide for 10 frames (2 second cycle)
+  if ((frame % 20) < 10) {
+    // Z shape (6x6 pixels, scaled)
+    // ██████
+    //     ██
+    //   ██
+    //  ██
+    // ██████
+    tft.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);              // Top
+    tft.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 1
+    tft.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 2
+    tft.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 1
+    tft.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 2
+    tft.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color); // Bottom
+  }
+}
+
 // Draw loading dots animation
 void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame) {
   int dotRadius = 4;
@@ -246,6 +277,7 @@ uint16_t getBackgroundColor(String state) {
   if (state == "working") return COLOR_BG_WORKING;
   if (state == "notification") return COLOR_BG_NOTIFY;
   if (state == "tool_done") return COLOR_BG_DONE;
+  if (state == "sleep") return COLOR_BG_SLEEP;
   return COLOR_BG_IDLE;  // default
 }
 
@@ -256,6 +288,7 @@ EyeType getEyeType(String state) {
   if (state == "working") return EYE_FOCUSED;
   if (state == "notification") return EYE_ALERT;
   if (state == "tool_done") return EYE_HAPPY;
+  if (state == "sleep") return EYE_SLEEP;
   return EYE_NORMAL;  // default
 }
 
@@ -283,6 +316,7 @@ String getStatusText(String state, String tool = "") {
   if (state == "working") return getWorkingText(tool);
   if (state == "notification") return "Input?";
   if (state == "tool_done") return "Done!";
+  if (state == "sleep") return "Zzz...";
   return state;
 }
 

@@ -45,6 +45,9 @@ Real-time status monitor for Claude Code with pixel art character.
 | `working` | Blue | ▬ ▬ Focused | Loading dots |
 | `notification` | Yellow | ● ● Round + ? | Question mark |
 | `tool_done` | Green | ∨ ∨ Happy | - |
+| `sleep` | Navy | ─ ─ Closed + Z | Blinking Zzz |
+
+**Sleep Mode**: Automatically transitions to `sleep` state after 10 minutes of inactivity (from `idle` or `tool_done`). Any new state message wakes up the display.
 
 **Common Animation**: All states have a gentle floating animation (±3px horizontal, ±5px vertical movement, ~3.2s cycle).
 
@@ -257,6 +260,9 @@ echo '{"state":"notification","event":"Notification","tool":"","project":"claude
 
 # tool_done (green, happy eyes)
 echo '{"state":"tool_done","event":"PostToolUse","tool":"Bash","project":"claude-monitor","model":"opus","memory":"55%"}' > /dev/cu.usbmodem1101
+
+# sleep (navy, closed eyes + Zzz)
+echo '{"state":"sleep","event":"Sleep","tool":"","project":"claude-monitor","model":"opus","memory":"55%"}' > /dev/cu.usbmodem1101
 ```
 
 ## Troubleshooting
