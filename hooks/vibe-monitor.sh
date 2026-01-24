@@ -57,19 +57,19 @@ get_state() {
     "PostToolUse") echo "tool_done" ;;
     "Stop") echo "idle" ;;
     "Notification") echo "notification" ;;
-    # Kiro CLI events
-    "AgentSpawn"|"agent_spawn") echo "session_start" ;;
-    "UserPromptSubmit"|"user_prompt_submit") echo "working" ;;
-    "pre_tool_use") echo "working" ;;
-    "post_tool_use") echo "tool_done" ;;
-    "stop") echo "idle" ;;
-    # Kiro IDE events
-    "PromptSubmit") echo "working" ;;
-    "AgentStop") echo "idle" ;;
-    "FileCreate"|"fileCreated") echo "working" ;;
-    "FileEdited"|"fileEdited") echo "working" ;;
-    "FileDeleted"|"fileDeleted") echo "working" ;;
-    "Manual") echo "working" ;;
+    # # Kiro CLI events
+    # "AgentSpawn"|"agent_spawn") echo "session_start" ;;
+    # "UserPromptSubmit"|"user_prompt_submit") echo "working" ;;
+    # "pre_tool_use") echo "working" ;;
+    # "post_tool_use") echo "tool_done" ;;
+    # "stop") echo "idle" ;;
+    # # Kiro IDE events
+    # "PromptSubmit") echo "working" ;;
+    # "AgentStop") echo "idle" ;;
+    # "FileCreate"|"fileCreated") echo "working" ;;
+    # "FileEdited"|"fileEdited") echo "working" ;;
+    # "FileDeleted"|"fileDeleted") echo "working" ;;
+    # "Manual") echo "working" ;;
     # Default
     *) echo "working" ;;
   esac
