@@ -39,21 +39,28 @@ curl http://127.0.0.1:19280/status
 
 ### IDE Hooks Integration
 
-Desktop App support is integrated into `hooks/vibe-monitor.sh` in the [vibe-monitor](https://github.com/nalbam/vibe-monitor) repository. Works with both Claude Code and Kiro IDE/CLI.
+#### Claude Code
 
-**Hook priority** (only if configured):
-1. **Desktop App** - if `VIBE_MONITOR_URL` is set (auto-launches via `VIBE_MONITOR_DESKTOP`)
-2. **ESP32 USB Serial** - if `ESP32_SERIAL_PORT` is set
-3. **ESP32 HTTP** - if `ESP32_HTTP_URL` is set
+Uses `hooks/vibe-monitor.sh` - see [main README](../README.md#claude-code-setup) for setup.
 
-See [main README](../README.md#ide-integration) for detailed setup instructions.
+#### Kiro IDE
+
+Copy hook files to your project's `.kiro/hooks/` folder:
+
+```bash
+cp hooks/kiro/*.hook .kiro/hooks/
+```
+
+**Hook files:**
+- `vibe-monitor-working.hook` - Sends `working` state on `promptSubmit`
+- `vibe-monitor-idle.hook` - Sends `idle` state on `agentStop`
 
 ## Supported IDEs
 
 | IDE | Hook System | Status |
 |-----|-------------|--------|
 | **Claude Code** | Shell hooks via `settings.json` | ✅ Supported |
-| **Kiro IDE/CLI** | Agent hooks via `.kiro/hooks/` | ✅ Supported |
+| **Kiro IDE** | `.hook` files in `.kiro/hooks/` | ✅ Supported |
 
 ## States
 

@@ -1,0 +1,12 @@
+{
+  "name": "Vibe Monitor - Working",
+  "version": "1.0.0",
+  "description": "프롬프트 제출 시 Vibe Monitor에 working 상태 전송",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d '{\"state\":\"working\",\"event\":\"PromptSubmit\",\"character\":\"kiro\"}' --connect-timeout 1 --max-time 2 > /dev/null 2>&1 || true"
+  }
+}

@@ -158,127 +158,50 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 ---
 
-### Kiro IDE/CLI Setup
+### Kiro IDE Setup
 
-Kiro uses agent hooks stored in `.kiro/hooks/` folder. Both IDE and CLI are supported.
+Kiro IDE uses `.hook` files in the `.kiro/hooks/` folder.
 
-#### 1. Copy hook script
-
-```bash
-cp hooks/vibe-monitor.sh ~/.kiro/hooks/
-chmod +x ~/.kiro/hooks/vibe-monitor.sh
-```
-
-#### 2. Copy environment sample
+#### 1. Copy hook files to your project
 
 ```bash
-cp hooks/.env.sample ~/.kiro/.env.local
+mkdir -p .kiro/hooks
+cp hooks/kiro/*.hook .kiro/hooks/
 ```
 
-#### 3. Edit `~/.kiro/.env.local`
+This copies:
+- `vibe-monitor-working.hook` - Sends `working` state on `promptSubmit`
+- `vibe-monitor-idle.hook` - Sends `idle` state on `agentStop`
 
-```bash
-# Desktop App path (auto-launches on AgentSpawn if not running)
-export VIBE_MONITOR_DESKTOP="~/vibe-monitor/desktop"
-
-# Desktop App URL (sends status updates)
-export VIBE_MONITOR_URL="http://127.0.0.1:19280"
-
-# ESP32 USB Serial port (optional)
-export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
-```
-
-> **Note:** Character is auto-detected (Kiro → `kiro`)
-
-#### 4. Create Kiro hook files
-
-**Option A: CLI Configuration (kiro.json)**
-
-Create or edit `~/.kiro/kiro.json`:
-
-```json
-{
-  "hooks": {
-    "agent_spawn": [
-      { "command": "~/.kiro/hooks/vibe-monitor.sh" }
-    ],
-    "user_prompt_submit": [
-      { "command": "~/.kiro/hooks/vibe-monitor.sh" }
-    ],
-    "pre_tool_use": [
-      { "command": "~/.kiro/hooks/vibe-monitor.sh" }
-    ],
-    "stop": [
-      { "command": "~/.kiro/hooks/vibe-monitor.sh" }
-    ]
-  }
-}
-```
-
-**Option B: IDE Hook Files (.kiro/hooks/)**
-
-Create individual hook files in your project's `.kiro/hooks/` folder:
-
-**`.kiro/hooks/vibe-monitor-start.hook`**
-```json
-{
-  "enabled": true,
-  "name": "Vibe Monitor - Agent Start",
-  "version": "1.0",
-  "when": {
-    "type": "agentStop"
-  },
-  "then": {
-    "type": "shellCommand",
-    "command": "~/.kiro/hooks/vibe-monitor.sh"
-  }
-}
-```
-
-**`.kiro/hooks/vibe-monitor-save.hook`**
-```json
-{
-  "enabled": true,
-  "name": "Vibe Monitor - File Save",
-  "version": "1.0",
-  "when": {
-    "type": "fileEdited",
-    "patterns": ["**/*"]
-  },
-  "then": {
-    "type": "shellCommand",
-    "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d '{\"state\":\"working\",\"event\":\"FileSave\",\"tool\":\"Edit\"}'"
-  }
-}
-```
+> **Note:** Character is auto-set to `kiro` in the hook files.
 
 #### Kiro Hook Events
 
 | Kiro Event | Vibe Monitor State | Description |
 |------------|-------------------|-------------|
-| `AgentSpawn` | `session_start` | Agent starts |
-| `UserPromptSubmit` | `working` | User submits prompt |
-| `PreToolUse` | `working` | Tool execution starts |
-| `PostToolUse` | `tool_done` | Tool execution ends |
-| `Stop` | `idle` | Agent turn ends |
-| `FileCreate` | `working` | File created (IDE only) |
-| `FileEdited` | `working` | File saved (IDE only) |
-| `FileDeleted` | `working` | File deleted (IDE only) |
+| `promptSubmit` | `working` | User submits prompt |
+| `agentStop` | `idle` | Agent turn ends |
 
-#### Kiro-specific Features
+#### Adding More Hooks (Optional)
 
-Kiro IDE supports additional file-based triggers not available in Claude Code:
+You can create additional `.hook` files for other events:
 
 ```json
 {
+  "name": "Vibe Monitor - File Save",
+  "version": "1.0.0",
   "when": {
     "type": "fileEdited",
-    "patterns": ["src/**/*.ts", "src/**/*.tsx"]
+    "patterns": ["**/*"]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d '{\"state\":\"working\",\"event\":\"FileSave\",\"tool\":\"Edit\",\"character\":\"kiro\"}' --connect-timeout 1 --max-time 2 > /dev/null 2>&1 || true"
   }
 }
 ```
 
-This enables monitoring of file save events for real-time status updates.
+Available event types: `promptSubmit`, `agentStop`, `fileEdited`, `fileCreated`, `fileDeleted`
 
 ---
 
