@@ -221,8 +221,8 @@ void drawStatus() {
   if (currentProject.length() > 0) {
     tft.setTextColor(textColor);
     tft.setTextSize(1);
-    tft.setCursor(10, PROJECT_Y);
-    tft.print("Project: ");
+    drawFolderIcon(tft, 10, PROJECT_Y, textColor);
+    tft.setCursor(20, PROJECT_Y);
 
     String displayProject = currentProject;
     if (displayProject.length() > 16) {
@@ -235,8 +235,8 @@ void drawStatus() {
   if (currentTool.length() > 0 && currentState == "working") {
     tft.setTextColor(textColor);
     tft.setTextSize(1);
-    tft.setCursor(10, TOOL_Y);
-    tft.print("Tool: ");
+    drawToolIcon(tft, 10, TOOL_Y, textColor);
+    tft.setCursor(20, TOOL_Y);
     tft.println(currentTool);
   }
 
@@ -244,8 +244,8 @@ void drawStatus() {
   if (currentModel.length() > 0) {
     tft.setTextColor(textColor);
     tft.setTextSize(1);
-    tft.setCursor(10, MODEL_Y);
-    tft.print("Model: ");
+    drawRobotIcon(tft, 10, MODEL_Y, textColor);
+    tft.setCursor(20, MODEL_Y);
 
     String displayModel = currentModel;
     if (displayModel.length() > 14) {
@@ -258,8 +258,8 @@ void drawStatus() {
   if (currentMemory.length() > 0) {
     tft.setTextColor(textColor);
     tft.setTextSize(1);
-    tft.setCursor(10, MEMORY_Y);
-    tft.print("Memory: ");
+    drawBrainIcon(tft, 10, MEMORY_Y, textColor);
+    tft.setCursor(20, MEMORY_Y);
     tft.println(currentMemory);
 
     // Memory bar (below percentage)

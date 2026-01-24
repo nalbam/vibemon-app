@@ -357,4 +357,51 @@ uint16_t getTextColor(String state) {
   return COLOR_TEXT_WHITE;  // White on dark backgrounds
 }
 
+// Draw folder icon (📂) - 8x7 pixels
+void drawFolderIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
+  // Folder tab (top)
+  tft.fillRect(x, y, 3, 1, color);
+  // Folder body
+  tft.fillRect(x, y + 1, 8, 6, color);
+  // Inner fold line
+  tft.drawLine(x + 1, y + 2, x + 6, y + 2, 0x0000);
+}
+
+// Draw tool/wrench icon (🛠️) - 8x8 pixels
+void drawToolIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
+  // Wrench head (top)
+  tft.fillRect(x + 1, y, 6, 3, color);
+  tft.fillRect(x + 3, y, 2, 1, 0x0000);  // Notch
+  // Handle (diagonal)
+  tft.fillRect(x + 3, y + 3, 2, 5, color);
+}
+
+// Draw robot icon (🤖) - 8x8 pixels
+void drawRobotIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
+  // Antenna
+  tft.fillRect(x + 3, y, 2, 1, color);
+  // Head
+  tft.fillRect(x + 1, y + 1, 6, 5, color);
+  // Eyes
+  tft.fillRect(x + 2, y + 2, 1, 2, 0x0000);
+  tft.fillRect(x + 5, y + 2, 1, 2, 0x0000);
+  // Mouth
+  tft.fillRect(x + 2, y + 5, 4, 1, 0x0000);
+  // Ears
+  tft.fillRect(x, y + 2, 1, 2, color);
+  tft.fillRect(x + 7, y + 2, 1, 2, color);
+}
+
+// Draw brain icon (🧠) - 8x7 pixels
+void drawBrainIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
+  // Brain shape (simplified)
+  tft.fillRect(x + 1, y, 6, 7, color);
+  tft.fillRect(x, y + 1, 8, 5, color);
+  // Brain folds (center line)
+  tft.drawLine(x + 4, y + 1, x + 4, y + 5, 0x0000);
+  // Top bumps
+  tft.fillRect(x + 2, y, 1, 1, 0x0000);
+  tft.fillRect(x + 5, y, 1, 1, 0x0000);
+}
+
 #endif // SPRITES_H
