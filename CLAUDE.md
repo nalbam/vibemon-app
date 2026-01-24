@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ESP32 firmware that displays Claude Code's status in real-time using a pixel art character on a 172×320 LCD. Supports 5 states: idle, working, notification, session_start, and tool_done.
+ESP32 firmware that displays Claude Code's status in real-time using a pixel art character on a 172×320 LCD. Supports 5 states: session_start, idle, working, notification, and tool_done.
 
 ## Development Environment
 
