@@ -37,7 +37,7 @@ TFT_eSPI tft = TFT_eSPI();
 #define MODEL_Y       250
 #define MEMORY_Y      265
 #define MEMORY_BAR_X  10
-#define MEMORY_BAR_Y  280
+#define MEMORY_BAR_Y  285
 #define MEMORY_BAR_W  152
 #define MEMORY_BAR_H  8
 
