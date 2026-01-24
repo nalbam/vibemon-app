@@ -196,11 +196,20 @@ function updateTrayMenu() {
 }
 
 function updateState(data) {
-  currentState = data.state || 'idle';
-  if (data.project !== undefined) currentProject = data.project;
-  if (data.tool !== undefined) currentTool = data.tool;
-  if (data.model !== undefined) currentModel = data.model;
-  if (data.memory !== undefined) currentMemory = data.memory;
+  // If state is provided (from claude-monitor.sh), update all fields
+  if (data.state !== undefined) {
+    currentState = data.state;
+    if (data.project !== undefined) currentProject = data.project;
+    if (data.tool !== undefined) currentTool = data.tool;
+    if (data.model !== undefined) currentModel = data.model;
+    if (data.memory !== undefined) currentMemory = data.memory;
+  } else {
+    // If no state (from statusline.sh), only update model/memory if project matches
+    if (data.project !== undefined && data.project === currentProject) {
+      if (data.model !== undefined) currentModel = data.model;
+      if (data.memory !== undefined) currentMemory = data.memory;
+    }
+  }
   if (mainWindow) {
     mainWindow.webContents.send('state-update', data);
   }
