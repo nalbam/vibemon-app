@@ -1,5 +1,5 @@
 /*
- * Claude Monitor
+ * Vibe Monitor
  * ESP32-C6-LCD-1.47 (172x320, ST7789V2)
  *
  * Pixel art character (128x128) with animated states

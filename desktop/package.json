@@ -1,5 +1,5 @@
 {
-  "name": "claude-monitor-desktop",
+  "name": "vibe-monitor-desktop",
   "version": "1.0.0",
   "description": "Claude Code Status Monitor - Frameless Desktop App",
   "main": "main.js",
@@ -20,8 +20,8 @@
     "electron-builder": "^25.0.0"
   },
   "build": {
-    "appId": "com.nalbam.claude-monitor",
-    "productName": "Claude Monitor",
+    "appId": "com.nalbam.vibe-monitor",
+    "productName": "Vibe Monitor",
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon.icns",

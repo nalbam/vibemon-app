@@ -174,7 +174,7 @@ function createWindow() {
 function createTray() {
   const icon = createTrayIcon(currentState, currentCharacter);
   tray = new Tray(icon);
-  tray.setToolTip('Claude Monitor');
+  tray.setToolTip('Vibe Monitor');
   updateTrayMenu();
 }
 
@@ -258,7 +258,7 @@ function updateTrayMenu() {
 }
 
 function updateState(data) {
-  // If state is provided (from claude-monitor.sh), update all fields
+  // If state is provided (from vibe-monitor.sh), update all fields
   if (data.state !== undefined) {
     currentState = data.state;
     if (data.character !== undefined) {
@@ -364,7 +364,7 @@ function startHttpServer() {
   });
 
   httpServer.listen(HTTP_PORT, '127.0.0.1', () => {
-    console.log(`Claude Monitor HTTP server running on http://127.0.0.1:${HTTP_PORT}`);
+    console.log(`Vibe Monitor HTTP server running on http://127.0.0.1:${HTTP_PORT}`);
   });
 }
 

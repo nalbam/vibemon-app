@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Claude Monitor Desktop App Startup Script
+# Vibe Monitor Desktop App Startup Script
 # Runs the Electron app in background
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +16,7 @@ is_desktop_running() {
 }
 
 if is_desktop_running; then
-    echo "Claude Monitor Desktop is already running"
+    echo "Vibe Monitor Desktop is already running"
     exit 0
 fi
 
@@ -31,7 +31,7 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Run the app in background
-echo "Starting Claude Monitor Desktop..."
+echo "Starting Vibe Monitor Desktop..."
 nohup npm start > /dev/null 2>&1 &
 
-echo "Claude Monitor Desktop started (PID: $!)"
+echo "Vibe Monitor Desktop started (PID: $!)"

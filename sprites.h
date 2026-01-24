@@ -1,5 +1,5 @@
 /*
- * Claude Monitor Character Sprites
+ * Vibe Monitor Character Sprites
  * 128x128 pixel art for ESP32-C6-LCD-1.47
  * (Doubled from 64x64 original design)
  */

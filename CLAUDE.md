@@ -47,7 +47,7 @@ npm start
 └─────────────────────────────────────────────────────┘
 ```
 
-- **claude-monitor.ino**: Main loop, communication (Serial/WiFi), state management
+- **vibe-monitor.ino**: Main loop, communication (Serial/WiFi), state management
 - **sprites.h**: Rendering logic - character, eyes, animations, color/text mapping
 
 ### Desktop App Architecture
@@ -82,7 +82,7 @@ npm start
 ### Web Simulator (No hardware required)
 ```bash
 open simulator/index.html
-# Or: https://nalbam.github.io/claude-monitor/simulator/
+# Or: https://nalbam.github.io/vibe-monitor/simulator/
 ```
 
 ### Hardware Testing (USB Serial)

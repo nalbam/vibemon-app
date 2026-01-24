@@ -1,4 +1,4 @@
-# Claude Monitor Desktop App
+# Vibe Monitor Desktop App
 
 A frameless desktop app for real-time monitoring of Claude Code status.
 
@@ -39,7 +39,7 @@ curl http://127.0.0.1:19280/status
 
 ### Claude Code Hooks Integration
 
-Desktop App support is integrated into `hooks/claude-monitor.sh` in the [claude-config](https://github.com/nalbam/claude-config) repository.
+Desktop App support is integrated into `hooks/vibe-monitor.sh` in the [claude-config](https://github.com/nalbam/claude-config) repository.
 
 Order in which the hook sends status updates (only if configured):
 1. **Desktop App** - if `CLAUDE_MONITOR_URL` is set (auto-launches via `CLAUDE_MONITOR_DESKTOP` on SessionStart)
@@ -70,7 +70,7 @@ Update status
   "state": "working",
   "event": "PreToolUse",
   "tool": "Bash",
-  "project": "claude-monitor",
+  "project": "vibe-monitor",
   "model": "opus",
   "memory": "45%"
 }
@@ -83,7 +83,7 @@ Get current status
 ```json
 {
   "state": "working",
-  "project": "claude-monitor",
+  "project": "vibe-monitor",
   "tool": "Bash",
   "model": "opus",
   "memory": "45%"

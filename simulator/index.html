@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude Monitor Simulator</title>
+  <title>Vibe Monitor Simulator</title>
   <link rel="stylesheet" href="../shared/styles.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
-    <!-- Claude Monitor Display -->
+    <!-- Vibe Monitor Display -->
     <div class="device-frame">
-      <div class="device-label">Claude Monitor</div>
+      <div class="device-label">Vibe Monitor</div>
       <div class="display" id="display">
         <canvas id="character-canvas" width="128" height="128"></canvas>
         <div class="status-text" id="status-text">Ready</div>
@@ -24,7 +24,7 @@
         <div class="info-text project-text">
           <span class="info-label emoji-icon" id="emoji-project">📂 </span>
           <canvas class="icon-canvas pixel-icon" id="icon-project" width="8" height="8"></canvas>
-          <span class="info-value" id="project-value">claude-monitor</span>
+          <span class="info-value" id="project-value">vibe-monitor</span>
         </div>
         <div class="info-text tool-text" id="tool-line">
           <span class="info-label emoji-icon" id="emoji-tool">🛠️ </span>
@@ -104,7 +104,7 @@
       <!-- Input Fields -->
       <div class="input-group">
         <label class="input-label">Project Name</label>
-        <input type="text" class="input-field" id="project-input" value="claude-monitor" oninput="updateDisplay()">
+        <input type="text" class="input-field" id="project-input" value="vibe-monitor" oninput="updateDisplay()">
       </div>
       <div class="input-group">
         <label class="input-label">Tool Name</label>

@@ -1,4 +1,4 @@
-# Claude Monitor
+# Vibe Monitor
 
 Real-time status and usage monitor for Claude Code with pixel art character.
 
@@ -9,7 +9,7 @@ Monitor your Claude Code sessions at a glance - see what state it's in, which pr
 | Field | Description | Example |
 |-------|-------------|---------|
 | **State** | Current Claude Code activity state | `working`, `idle`, `notification` |
-| **Project** | Active project directory name | `claude-monitor` |
+| **Project** | Active project directory name | `vibe-monitor` |
 | **Tool** | Currently executing tool | `Bash`, `Read`, `Edit` |
 | **Model** | Active Claude model | `Opus 4.5`, `Sonnet` |
 | **Memory** | Context window usage percentage | `45%` |
@@ -63,7 +63,7 @@ The app runs in the system tray and listens on `http://127.0.0.1:19280`.
 
 No installation required - just open in browser:
 
-**Online**: https://nalbam.github.io/claude-monitor/simulator/
+**Online**: https://nalbam.github.io/vibe-monitor/simulator/
 
 **Local**:
 ```bash
@@ -76,12 +76,12 @@ See [ESP32 Setup](#esp32-setup) section below.
 
 ## Claude Code Integration
 
-Claude Monitor integrates with Claude Code through hooks.
+Vibe Monitor integrates with Claude Code through hooks.
 
 ### How It Works
 
 ```
-Claude Code → Hooks → Claude Monitor
+Claude Code → Hooks → Vibe Monitor
      │                      │
      └── Events ──────────→ Display
          (state, tool,      (Desktop App,
@@ -93,8 +93,8 @@ Claude Code → Hooks → Claude Monitor
 **1. Copy hook script:**
 
 ```bash
-cp hooks/claude-monitor.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/claude-monitor.sh
+cp hooks/vibe-monitor.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/vibe-monitor.sh
 ```
 
 **2. Copy environment sample:**
@@ -107,7 +107,7 @@ cp hooks/.env.sample ~/.claude/.env.local
 
 ```bash
 # Desktop App path (auto-launches on SessionStart if not running)
-export CLAUDE_MONITOR_DESKTOP="~/claude-monitor/desktop"
+export CLAUDE_MONITOR_DESKTOP="~/vibe-monitor/desktop"
 
 # Desktop App URL (sends status updates)
 export CLAUDE_MONITOR_URL="http://127.0.0.1:19280"
@@ -124,11 +124,11 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "command": "~/.claude/hooks/claude-monitor.sh" }],
-    "PreToolUse": [{ "command": "~/.claude/hooks/claude-monitor.sh" }],
-    "PostToolUse": [{ "command": "~/.claude/hooks/claude-monitor.sh" }],
-    "Notification": [{ "command": "~/.claude/hooks/claude-monitor.sh" }],
-    "Stop": [{ "command": "~/.claude/hooks/claude-monitor.sh" }]
+    "SessionStart": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "PreToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "PostToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "Notification": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "Stop": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }]
   }
 }
 ```
@@ -319,7 +319,7 @@ See [desktop/README.md](desktop/README.md) for WSL setup and troubleshooting.
 
 ### WiFi Mode (Optional)
 
-Edit `claude-monitor.ino`:
+Edit `vibe-monitor.ino`:
 
 ```cpp
 #define USE_WIFI
@@ -367,14 +367,14 @@ echo '{"state":"idle","project":"test","model":"opus","memory":"45%"}' > /dev/cu
 ## File Structure
 
 ```
-claude-monitor/
+vibe-monitor/
 ├── README.md                   # This document
 ├── CLAUDE.md                   # AI development guidelines
-├── claude-monitor.ino          # ESP32 main firmware
+├── vibe-monitor.ino            # ESP32 main firmware
 ├── sprites.h                   # Character rendering
 ├── User_Setup.h                # TFT display configuration
 ├── hooks/                      # Claude Code hooks
-│   ├── claude-monitor.sh       # Hook script
+│   ├── vibe-monitor.sh         # Hook script
 │   └── .env.sample             # Environment sample
 ├── desktop/                    # Desktop app
 │   ├── main.js                 # Electron main process

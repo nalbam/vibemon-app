@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Claude Monitor Hook
+# Vibe Monitor Hook
 # Desktop App + ESP32 (USB Serial / HTTP)
 # Note: Model and Memory are provided by statusline.sh (accurate data)
 
