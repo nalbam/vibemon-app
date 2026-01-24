@@ -158,8 +158,8 @@ main() {
   debug_log "Payload: $payload"
 
   # Launch Desktop App if not running (on SessionStart)
-  if [ -n "${CLAUDE_MONITOR_DESKTOP}" ] && [ "$event_name" = "SessionStart" ]; then
-    if ! is_monitor_running "${CLAUDE_MONITOR_URL:-http://127.0.0.1:19280}"; then
+  if [ -n "${CLAUDE_MONITOR_DESKTOP}" ] && [ -n "${CLAUDE_MONITOR_URL}" ] && [ "$event_name" = "SessionStart" ]; then
+    if ! is_monitor_running "${CLAUDE_MONITOR_URL}"; then
       debug_log "Desktop App not running, launching..."
       launch_desktop
     fi
