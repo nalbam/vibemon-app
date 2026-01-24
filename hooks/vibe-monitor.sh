@@ -70,7 +70,7 @@ get_state() {
     "FileEdited"|"fileEdited") echo "working" ;;
     "FileDeleted"|"fileDeleted") echo "working" ;;
     "Manual") echo "working" ;;
-    Default
+    # Default
     *) echo "working" ;;
   esac
 }
