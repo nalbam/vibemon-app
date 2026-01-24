@@ -258,6 +258,27 @@
     const COLOR_EYE = '#000000';
     const COLOR_WHITE = '#FFFFFF';
 
+    // Tool-based status texts for working state (lowercase keys)
+    const TOOL_TEXTS = {
+      'bash': ['Running', 'Executing', 'Processing'],
+      'read': ['Reading', 'Scanning', 'Checking'],
+      'edit': ['Editing', 'Modifying', 'Fixing'],
+      'write': ['Writing', 'Creating', 'Saving'],
+      'grep': ['Searching', 'Finding', 'Looking'],
+      'glob': ['Scanning', 'Browsing', 'Finding'],
+      'task': ['Thinking', 'Working', 'Planning'],
+      'webfetch': ['Fetching', 'Loading', 'Getting'],
+      'websearch': ['Searching', 'Googling', 'Looking'],
+      'default': ['Working', 'Busy', 'Coding']
+    };
+
+    // Get working text based on tool (random selection, case-insensitive)
+    function getWorkingText(tool) {
+      const key = (tool || '').toLowerCase();
+      const texts = TOOL_TEXTS[key] || TOOL_TEXTS['default'];
+      return texts[Math.floor(Math.random() * texts.length)];
+    }
+
     // Current state
     let currentState = 'idle';
     let currentProject = '-';
@@ -338,8 +359,12 @@
       // Update background
       display.style.background = state.bgColor;
 
-      // Update text and color
-      statusText.textContent = state.text;
+      // Update text and color (use tool-based text for working state)
+      if (currentState === 'working') {
+        statusText.textContent = getWorkingText(currentTool);
+      } else {
+        statusText.textContent = state.text;
+      }
       statusText.style.color = state.textColor;
 
       // Update loading dots visibility

@@ -259,18 +259,20 @@ EyeType getEyeType(String state) {
   return EYE_NORMAL;  // default
 }
 
-// Get working text based on tool (random selection)
+// Get working text based on tool (random selection, case-insensitive)
 String getWorkingText(String tool) {
   int idx = random(3);
-  if (tool == "Bash") return BASH_TEXTS[idx];
-  if (tool == "Read") return READ_TEXTS[idx];
-  if (tool == "Edit") return EDIT_TEXTS[idx];
-  if (tool == "Write") return WRITE_TEXTS[idx];
-  if (tool == "Grep") return GREP_TEXTS[idx];
-  if (tool == "Glob") return GLOB_TEXTS[idx];
-  if (tool == "Task") return TASK_TEXTS[idx];
-  if (tool == "WebFetch") return WEBFETCH_TEXTS[idx];
-  if (tool == "WebSearch") return WEBSEARCH_TEXTS[idx];
+  String t = tool;
+  t.toLowerCase();
+  if (t == "bash") return BASH_TEXTS[idx];
+  if (t == "read") return READ_TEXTS[idx];
+  if (t == "edit") return EDIT_TEXTS[idx];
+  if (t == "write") return WRITE_TEXTS[idx];
+  if (t == "grep") return GREP_TEXTS[idx];
+  if (t == "glob") return GLOB_TEXTS[idx];
+  if (t == "task") return TASK_TEXTS[idx];
+  if (t == "webfetch") return WEBFETCH_TEXTS[idx];
+  if (t == "websearch") return WEBSEARCH_TEXTS[idx];
   return DEFAULT_TEXTS[idx];
 }
 

@@ -419,23 +419,24 @@
     const COLOR_EYE = '#000000';
     const COLOR_WHITE = '#FFFFFF';
 
-    // Tool-based status texts for working state
+    // Tool-based status texts for working state (lowercase keys)
     const TOOL_TEXTS = {
-      'Bash': ['Running', 'Executing', 'Processing'],
-      'Read': ['Reading', 'Scanning', 'Checking'],
-      'Edit': ['Editing', 'Modifying', 'Fixing'],
-      'Write': ['Writing', 'Creating', 'Saving'],
-      'Grep': ['Searching', 'Finding', 'Looking'],
-      'Glob': ['Scanning', 'Browsing', 'Finding'],
-      'Task': ['Thinking', 'Working', 'Planning'],
-      'WebFetch': ['Fetching', 'Loading', 'Getting'],
-      'WebSearch': ['Searching', 'Googling', 'Looking'],
+      'bash': ['Running', 'Executing', 'Processing'],
+      'read': ['Reading', 'Scanning', 'Checking'],
+      'edit': ['Editing', 'Modifying', 'Fixing'],
+      'write': ['Writing', 'Creating', 'Saving'],
+      'grep': ['Searching', 'Finding', 'Looking'],
+      'glob': ['Scanning', 'Browsing', 'Finding'],
+      'task': ['Thinking', 'Working', 'Planning'],
+      'webfetch': ['Fetching', 'Loading', 'Getting'],
+      'websearch': ['Searching', 'Googling', 'Looking'],
       'default': ['Working', 'Busy', 'Coding']
     };
 
-    // Get working text based on tool (random selection)
+    // Get working text based on tool (random selection, case-insensitive)
     function getWorkingText(tool) {
-      const texts = TOOL_TEXTS[tool] || TOOL_TEXTS['default'];
+      const key = (tool || '').toLowerCase();
+      const texts = TOOL_TEXTS[key] || TOOL_TEXTS['default'];
       return texts[Math.floor(Math.random() * texts.length)];
     }
 
