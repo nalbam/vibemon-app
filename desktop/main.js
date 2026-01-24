@@ -22,7 +22,8 @@ const STATE_COLORS = {
   idle: '#00AA00',
   working: '#0066CC',
   notification: '#FFCC00',
-  tool_done: '#00AA00'
+  tool_done: '#00AA00',
+  sleep: '#1a1a4e'
 };
 
 const COLOR_CLAUDE = '#E07B39';
@@ -158,7 +159,8 @@ function updateTrayMenu() {
         { label: 'Idle', click: () => updateState({ state: 'idle' }) },
         { label: 'Working', click: () => updateState({ state: 'working' }) },
         { label: 'Notification', click: () => updateState({ state: 'notification' }) },
-        { label: 'Tool Done', click: () => updateState({ state: 'tool_done' }) }
+        { label: 'Tool Done', click: () => updateState({ state: 'tool_done' }) },
+        { label: 'Sleep', click: () => updateState({ state: 'sleep' }) }
       ]
     },
     { type: 'separator' },
