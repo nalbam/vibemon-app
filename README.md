@@ -46,7 +46,7 @@ Real-time status monitor for Claude Code with pixel art character.
 | `notification` | Yellow | ● ● Round + ? | Question mark |
 | `tool_done` | Green | ∨ ∨ Happy | - |
 
-**Common Animation**: All states have a gentle floating animation (±5px vertical movement, ~3.2s cycle).
+**Common Animation**: All states have a gentle floating animation (±3px horizontal, ±5px vertical movement, ~3.2s cycle).
 
 ## Installation
 
