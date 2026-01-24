@@ -1,0 +1,129 @@
+/* Display Screen */
+.display {
+  width: 172px;
+  height: 320px;
+  background: #000;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+/* Character Canvas - 128x128, centered */
+#character-canvas {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  width: 128px;
+  height: 128px;
+  image-rendering: pixelated;
+  transition: top 0.1s ease-out, left 0.1s ease-out;
+}
+
+/* Status Text */
+.status-text {
+  position: absolute;
+  top: 160px;
+  width: 100%;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+}
+
+/* Loading Dots */
+.loading-dots {
+  position: absolute;
+  top: 190px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7BEF7B;
+  transition: background 0.1s;
+}
+
+.dot.dim {
+  background: #3a3a3a;
+}
+
+/* Info Text */
+.info-text {
+  position: absolute;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: white;
+  left: 10px;
+}
+
+.project-text {
+  top: 220px;
+}
+
+.tool-text {
+  top: 235px;
+}
+
+.model-text {
+  top: 250px;
+}
+
+.memory-text {
+  top: 265px;
+}
+
+.memory-bar-container {
+  position: absolute;
+  top: 280px;
+  left: 10px;
+  width: 152px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+
+.memory-bar {
+  height: 100%;
+  border-radius: 0px;
+  transition: width 0.3s, background 0.3s;
+}
+
+.info-label {
+  color: white;
+  display: inline-flex;
+  align-items: center;
+}
+
+.info-value {
+  color: #aaa;
+}
+
+.pixel-icon {
+  width: 8px;
+  height: 8px;
+  margin-right: 2px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  display: none;
+}
+
+.emoji-icon {
+  display: inline;
+}
+
+.icon-canvas {
+  width: 8px;
+  height: 8px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  margin-right: 2px;
+}

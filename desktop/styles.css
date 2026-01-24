@@ -1,0 +1,66 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Draggable title bar */
+.title-bar {
+  -webkit-app-region: drag;
+  height: 28px;
+  background: rgba(45, 45, 45, 0.95);
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  justify-content: space-between;
+}
+
+.title-bar-buttons {
+  -webkit-app-region: no-drag;
+  display: flex;
+  gap: 8px;
+}
+
+.title-bar-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-close {
+  background: #ff5f57;
+}
+
+.btn-close:hover {
+  background: #ff3b30;
+}
+
+.btn-minimize {
+  background: #febc2e;
+}
+
+.btn-minimize:hover {
+  background: #ff9500;
+}
+
+.title-text {
+  color: #888;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Device Frame */
+.device-frame {
+  background: rgba(45, 45, 45, 0.95);
+  padding: 0;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
