@@ -358,14 +358,14 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
       break;
 
     case EYE_HAPPY: {
-      // Simplified happy eyes (^ ^)
-      int unit = max(1, min(character->eyeW, character->eyeH) / 3) * SCALE;
+      // Happy eyes (^ ^) - use eye width for sizing
+      int unit = max(2, character->eyeW / 2) * SCALE;
       tft.fillRect(leftEyeX + unit, eyeY, unit, unit, COLOR_EYE);
       tft.fillRect(leftEyeX, eyeY + unit, unit, unit, COLOR_EYE);
-      tft.fillRect(leftEyeX + unit * 2, eyeY + unit, unit, unit, COLOR_EYE);
+      tft.fillRect(leftEyeX + ew - unit, eyeY + unit, unit, unit, COLOR_EYE);
       tft.fillRect(rightEyeX + unit, eyeY, unit, unit, COLOR_EYE);
       tft.fillRect(rightEyeX, eyeY + unit, unit, unit, COLOR_EYE);
-      tft.fillRect(rightEyeX + unit * 2, eyeY + unit, unit, unit, COLOR_EYE);
+      tft.fillRect(rightEyeX + ew - unit, eyeY + unit, unit, unit, COLOR_EYE);
       break;
     }
 
