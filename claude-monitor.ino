@@ -26,9 +26,10 @@ TFT_eSPI tft = TFT_eSPI();
 #define SCREEN_HEIGHT 320
 
 // Layout positions (adjusted for 128x128 character)
-#define CHAR_X        22   // (172 - 128) / 2 = 22
+#define CHAR_X_BASE   22   // (172 - 128) / 2 = 22
 #define CHAR_Y_BASE   20   // Base Y position
-#define FLOAT_AMPLITUDE 5  // Floating animation amplitude (pixels)
+#define FLOAT_AMPLITUDE_X 3  // Floating animation amplitude X (pixels)
+#define FLOAT_AMPLITUDE_Y 5  // Floating animation amplitude Y (pixels)
 #define STATUS_TEXT_Y 160
 #define LOADING_Y     190
 #define PROJECT_Y     220
@@ -48,6 +49,7 @@ unsigned long lastUpdate = 0;
 unsigned long lastBlink = 0;
 int animFrame = 0;
 bool needsRedraw = true;
+int lastCharX = CHAR_X_BASE;  // Track last character X for efficient redraw
 int lastCharY = CHAR_Y_BASE;  // Track last character Y for efficient redraw
 
 void setup() {
@@ -114,11 +116,18 @@ void processInput(String input) {
   }
 }
 
-// Calculate floating Y offset using sine wave
-int getFloatOffset() {
-  // Use sine wave for smooth floating (period ~3.2 seconds at 100ms intervals)
+// Calculate floating X offset using cosine wave
+int getFloatOffsetX() {
+  // Use cosine wave for smooth horizontal floating (period ~3.2 seconds at 100ms intervals)
   float angle = (animFrame % 32) * (2.0 * PI / 32.0);
-  return (int)(sin(angle) * FLOAT_AMPLITUDE);
+  return (int)(cos(angle) * FLOAT_AMPLITUDE_X);
+}
+
+// Calculate floating Y offset using sine wave
+int getFloatOffsetY() {
+  // Use sine wave for smooth vertical floating (period ~3.2 seconds at 100ms intervals)
+  float angle = (animFrame % 32) * (2.0 * PI / 32.0);
+  return (int)(sin(angle) * FLOAT_AMPLITUDE_Y);
 }
 
 void drawStartScreen() {
@@ -126,7 +135,7 @@ void drawStartScreen() {
   tft.fillScreen(bgColor);
 
   // Draw character in idle state (128x128)
-  drawCharacter(tft, CHAR_X, CHAR_Y_BASE, EYE_NORMAL, bgColor);
+  drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, bgColor);
 
   // Title
   tft.setTextColor(COLOR_TEXT_WHITE);
@@ -158,12 +167,14 @@ void drawStatus() {
   // Fill background
   tft.fillScreen(bgColor);
 
-  // Calculate floating Y position
-  int charY = CHAR_Y_BASE + getFloatOffset();
+  // Calculate floating position
+  int charX = CHAR_X_BASE + getFloatOffsetX();
+  int charY = CHAR_Y_BASE + getFloatOffsetY();
+  lastCharX = charX;
   lastCharY = charY;
 
   // Draw character (128x128)
-  drawCharacter(tft, CHAR_X, charY, eyeType, bgColor);
+  drawCharacter(tft, charX, charY, eyeType, bgColor);
 
   // Status text (color based on background)
   tft.setTextColor(textColor);
@@ -239,14 +250,16 @@ void updateAnimation() {
   EyeType eyeType = getEyeType(currentState);
 
   // Calculate new floating position
-  int newCharY = CHAR_Y_BASE + getFloatOffset();
+  int newCharX = CHAR_X_BASE + getFloatOffsetX();
+  int newCharY = CHAR_Y_BASE + getFloatOffsetY();
 
   // Only redraw character if position changed
-  if (newCharY != lastCharY) {
+  if (newCharX != lastCharX || newCharY != lastCharY) {
     // Clear previous character area
-    tft.fillRect(CHAR_X, lastCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
+    tft.fillRect(lastCharX, lastCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
     // Draw character at new position
-    drawCharacter(tft, CHAR_X, newCharY, eyeType, bgColor);
+    drawCharacter(tft, newCharX, newCharY, eyeType, bgColor);
+    lastCharX = newCharX;
     lastCharY = newCharY;
   }
 
@@ -256,7 +269,7 @@ void updateAnimation() {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame);
   } else if (currentState == "session_start") {
     // Update sparkle animation (redraw for sparkle effect)
-    drawCharacter(tft, CHAR_X, newCharY, EYE_SPARKLE, bgColor);
+    drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor);
   }
 }
 
@@ -264,17 +277,18 @@ void drawBlinkAnimation() {
   if (currentState != "idle") return;
 
   uint16_t bgColor = getBackgroundColor(currentState);
-  int charY = lastCharY;  // Use current floating position
+  int charX = lastCharX;  // Use current floating position
+  int charY = lastCharY;
 
   // Close eyes (redraw body area with closed eyes)
-  tft.fillRect(CHAR_X + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
-  drawBlinkEyes(tft, CHAR_X, charY, 0);  // Closed
+  tft.fillRect(charX + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
+  drawBlinkEyes(tft, charX, charY, 0);  // Closed
 
   delay(100);
 
   // Open eyes
-  tft.fillRect(CHAR_X + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
-  drawBlinkEyes(tft, CHAR_X, charY, 1);  // Open
+  tft.fillRect(charX + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
+  drawBlinkEyes(tft, charX, charY, 1);  // Open
 }
 
 #ifdef USE_WIFI

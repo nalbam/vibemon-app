@@ -91,7 +91,7 @@
       width: 128px;
       height: 128px;
       image-rendering: pixelated;
-      transition: top 0.1s ease-out;
+      transition: top 0.1s ease-out, left 0.1s ease-out;
     }
 
     /* Status Text */
@@ -268,8 +268,10 @@
     let blinkFrame = 0;
 
     // Floating animation
-    const FLOAT_AMPLITUDE = 5;   // pixels
-    const CHAR_Y_BASE = 20;      // base Y position
+    const FLOAT_AMPLITUDE_X = 3;  // pixels (horizontal)
+    const FLOAT_AMPLITUDE_Y = 5;  // pixels (vertical)
+    const CHAR_X_BASE = 22;       // base X position
+    const CHAR_Y_BASE = 20;       // base Y position
 
     // Canvas
     const canvas = document.getElementById('character-canvas');
@@ -281,16 +283,24 @@
       ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE);
     }
 
-    // Calculate floating Y offset using sine wave
-    function getFloatOffset() {
+    // Calculate floating X offset using cosine wave
+    function getFloatOffsetX() {
       const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
-      return Math.sin(angle) * FLOAT_AMPLITUDE;
+      return Math.cos(angle) * FLOAT_AMPLITUDE_X;
+    }
+
+    // Calculate floating Y offset using sine wave
+    function getFloatOffsetY() {
+      const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
+      return Math.sin(angle) * FLOAT_AMPLITUDE_Y;
     }
 
     // Update canvas position for floating effect
     function updateFloatingPosition() {
-      const offset = getFloatOffset();
-      canvas.style.top = (CHAR_Y_BASE + offset) + 'px';
+      const offsetX = getFloatOffsetX();
+      const offsetY = getFloatOffsetY();
+      canvas.style.left = (CHAR_X_BASE + offsetX) + 'px';
+      canvas.style.top = (CHAR_Y_BASE + offsetY) + 'px';
     }
 
     // Initialize
