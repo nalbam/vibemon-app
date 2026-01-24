@@ -48,6 +48,21 @@ Real-time status monitor for Claude Code with pixel art character.
 
 **Common Animation**: All states have a gentle floating animation (±3px horizontal, ±5px vertical movement, ~3.2s cycle).
 
+**Working State Text**: The `working` state displays tool-specific text randomly selected from:
+
+| Tool | Possible Text |
+|------|---------------|
+| Bash | Running, Executing, Processing |
+| Read | Reading, Scanning, Checking |
+| Edit | Editing, Modifying, Fixing |
+| Write | Writing, Creating, Saving |
+| Grep | Searching, Finding, Looking |
+| Glob | Scanning, Browsing, Finding |
+| Task | Thinking, Working, Planning |
+| WebFetch | Fetching, Loading, Getting |
+| WebSearch | Searching, Googling, Looking |
+| Default | Working, Busy, Coding |
+
 ## Installation
 
 ### 1. Arduino IDE Setup

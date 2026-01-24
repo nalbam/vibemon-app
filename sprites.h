@@ -42,6 +42,18 @@ enum EyeType {
 // Animation frame counter
 extern int animFrame;
 
+// Tool-based status texts for working state
+const char* BASH_TEXTS[] = {"Running", "Executing", "Processing"};
+const char* READ_TEXTS[] = {"Reading", "Scanning", "Checking"};
+const char* EDIT_TEXTS[] = {"Editing", "Modifying", "Fixing"};
+const char* WRITE_TEXTS[] = {"Writing", "Creating", "Saving"};
+const char* GREP_TEXTS[] = {"Searching", "Finding", "Looking"};
+const char* GLOB_TEXTS[] = {"Scanning", "Browsing", "Finding"};
+const char* TASK_TEXTS[] = {"Thinking", "Working", "Planning"};
+const char* WEBFETCH_TEXTS[] = {"Fetching", "Loading", "Getting"};
+const char* WEBSEARCH_TEXTS[] = {"Searching", "Googling", "Looking"};
+const char* DEFAULT_TEXTS[] = {"Working", "Busy", "Coding"};
+
 /*
  * Character structure (128x128, scaled 2x from 64x64):
  *
@@ -247,11 +259,26 @@ EyeType getEyeType(String state) {
   return EYE_NORMAL;  // default
 }
 
+// Get working text based on tool (random selection)
+String getWorkingText(String tool) {
+  int idx = random(3);
+  if (tool == "Bash") return BASH_TEXTS[idx];
+  if (tool == "Read") return READ_TEXTS[idx];
+  if (tool == "Edit") return EDIT_TEXTS[idx];
+  if (tool == "Write") return WRITE_TEXTS[idx];
+  if (tool == "Grep") return GREP_TEXTS[idx];
+  if (tool == "Glob") return GLOB_TEXTS[idx];
+  if (tool == "Task") return TASK_TEXTS[idx];
+  if (tool == "WebFetch") return WEBFETCH_TEXTS[idx];
+  if (tool == "WebSearch") return WEBSEARCH_TEXTS[idx];
+  return DEFAULT_TEXTS[idx];
+}
+
 // Get status text for state
-String getStatusText(String state) {
+String getStatusText(String state, String tool = "") {
   if (state == "session_start") return "Hello!";
   if (state == "idle") return "Ready";
-  if (state == "working") return "Working";
+  if (state == "working") return getWorkingText(tool);
   if (state == "notification") return "Input?";
   if (state == "tool_done") return "Done!";
   return state;

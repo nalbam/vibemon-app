@@ -419,6 +419,26 @@
     const COLOR_EYE = '#000000';
     const COLOR_WHITE = '#FFFFFF';
 
+    // Tool-based status texts for working state
+    const TOOL_TEXTS = {
+      'Bash': ['Running', 'Executing', 'Processing'],
+      'Read': ['Reading', 'Scanning', 'Checking'],
+      'Edit': ['Editing', 'Modifying', 'Fixing'],
+      'Write': ['Writing', 'Creating', 'Saving'],
+      'Grep': ['Searching', 'Finding', 'Looking'],
+      'Glob': ['Scanning', 'Browsing', 'Finding'],
+      'Task': ['Thinking', 'Working', 'Planning'],
+      'WebFetch': ['Fetching', 'Loading', 'Getting'],
+      'WebSearch': ['Searching', 'Googling', 'Looking'],
+      'default': ['Working', 'Busy', 'Coding']
+    };
+
+    // Get working text based on tool (random selection)
+    function getWorkingText(tool) {
+      const texts = TOOL_TEXTS[tool] || TOOL_TEXTS['default'];
+      return texts[Math.floor(Math.random() * texts.length)];
+    }
+
     // Current state
     let currentState = 'idle';
     let animFrame = 0;
@@ -491,8 +511,13 @@
       // Update background
       display.style.background = state.bgColor;
 
-      // Update text and color
-      statusText.textContent = state.text;
+      // Update text and color (use tool-based text for working state)
+      const toolName = document.getElementById('tool-input').value;
+      if (currentState === 'working') {
+        statusText.textContent = getWorkingText(toolName);
+      } else {
+        statusText.textContent = state.text;
+      }
       statusText.style.color = state.textColor;
 
       // Update loading dots visibility
@@ -503,7 +528,6 @@
 
       // Update values from inputs
       const projectName = document.getElementById('project-input').value;
-      const toolName = document.getElementById('tool-input').value;
       const modelName = document.getElementById('model-input').value;
       const memoryUsage = document.getElementById('memory-input').value;
       projectValue.textContent = projectName.length > 16 ? projectName.substring(0, 13) + '...' : projectName;

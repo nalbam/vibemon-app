@@ -49,6 +49,7 @@ ESP32 firmware that displays Claude Code's status in real-time using a pixel art
 - State-based rendering: `state` value determines color, eyeType, text
 - Animation: `animFrame % N` approach (100ms tick, frame-independent)
 - Floating animation: Cosine/Sine wave based offset (X: ±3px, Y: ±5px, ~3.2s cycle) via `getFloatOffsetX()` and `getFloatOffsetY()`
+- Working state text: Tool-based random selection via `getWorkingText(tool)` - each tool has 3 possible text variants
 - JSON communication: Fields `{"state", "event", "tool", "project", "model", "memory"}`
 
 ## Testing

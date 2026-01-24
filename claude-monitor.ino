@@ -162,7 +162,7 @@ void drawStatus() {
   uint16_t bgColor = getBackgroundColor(currentState);
   uint16_t textColor = getTextColor(currentState);
   EyeType eyeType = getEyeType(currentState);
-  String statusText = getStatusText(currentState);
+  String statusText = getStatusText(currentState, currentTool);
 
   // Fill background
   tft.fillScreen(bgColor);
