@@ -45,6 +45,26 @@ ESP32 firmware that displays Claude Code's status in real-time using a pixel art
 - **claude-monitor.ino**: Main loop, communication (Serial/WiFi), state management
 - **sprites.h**: Rendering logic - character, eyes, animations, color/text mapping
 
+### Desktop App Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  main.js (Electron)                 │
+│  ┌─────────────┐  ┌────────────┐  ┌─────────────┐  │
+│  │ HTTP Server │→│ updateState│→│   IPC Send   │  │
+│  │  (19280)    │  └────────────┘  └──────┬──────┘  │
+│  └─────────────┘                         │        │
+│  ┌─────────────┐                         ↓        │
+│  │ System Tray │  ┌─────────────────────────────┐  │
+│  │ (canvas)    │  │    index.html (Renderer)    │  │
+│  └─────────────┘  │  state → canvas → animation │  │
+│                   └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+- **main.js**: HTTP server, window management, system tray (uses `canvas` for tray icons)
+- **index.html**: Character rendering, animations (mirrors simulator logic)
+
 ### Key Patterns
 - State-based rendering: `state` value determines color, eyeType, text
 - Animation: `animFrame % N` approach (100ms tick, frame-independent)

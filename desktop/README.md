@@ -109,6 +109,22 @@ Show window and position to top-right corner
 }
 ```
 
+### GET /debug
+
+Get display and window debug information (useful for troubleshooting positioning issues)
+
+```json
+{
+  "primaryDisplay": {
+    "bounds": { "x": 0, "y": 0, "width": 1920, "height": 1080 },
+    "workArea": { "x": 0, "y": 0, "width": 1920, "height": 1040 },
+    "scaleFactor": 1
+  },
+  "window": { "x": 1748, "y": 0, "width": 172, "height": 348 },
+  "platform": "darwin"
+}
+```
+
 ## WSL (Windows Subsystem for Linux)
 
 Running the Electron app on WSL requires WSLg (Windows 11) and additional dependencies.

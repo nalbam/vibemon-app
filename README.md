@@ -130,11 +130,10 @@ claude-monitor/
 ├── simulator/                  # Web simulator
 │   └── index.html              # Browser testing
 ├── desktop/                    # Electron desktop app
-│   ├── main.js                 # Main process (HTTP server)
+│   ├── main.js                 # Main process (window, tray, HTTP server)
 │   ├── preload.js              # IPC bridge
-│   ├── index.html              # Renderer
-│   ├── package.json            # npm dependencies
-│   ├── start.sh                # Startup script
+│   ├── index.html              # Renderer (character display)
+│   ├── package.json            # Dependencies (electron, canvas)
 │   ├── README.md               # Desktop app documentation
 │   └── assets/                 # Application icons
 │       ├── icon.png            # Linux icon (512x512)
@@ -160,7 +159,7 @@ Simulator features:
 - JSON payload preview
 - Real-time animations (floating, blink, loading dots, sparkle)
 
-## Desktop App (macOS)
+## Desktop App
 
 Frameless desktop app for monitoring Claude Code status.
 
