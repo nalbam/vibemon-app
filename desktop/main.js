@@ -89,13 +89,13 @@ function createTrayIcon(state) {
 }
 
 function createWindow() {
-  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const { workArea } = screen.getPrimaryDisplay();
 
   mainWindow = new BrowserWindow({
     width: 172,
     height: 348,
-    x: screenWidth - 172,
-    y: 20,
+    x: workArea.x + workArea.width - 172,
+    y: workArea.y,
     frame: false,
     transparent: true,
     alwaysOnTop: isAlwaysOnTop,
@@ -211,8 +211,8 @@ function updateState(data) {
 // Show window and position to top-right corner
 function showAndPositionWindow() {
   if (mainWindow) {
-    const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize;
-    mainWindow.setPosition(screenWidth - 172, 20);
+    const { workArea } = screen.getPrimaryDisplay();
+    mainWindow.setPosition(workArea.x + workArea.width - 172, workArea.y);
     mainWindow.showInactive();
     return true;
   }
@@ -262,6 +262,27 @@ function startHttpServer() {
       const shown = showAndPositionWindow();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: shown }));
+    } else if (req.method === 'GET' && req.url === '/debug') {
+      const displays = screen.getAllDisplays();
+      const primary = screen.getPrimaryDisplay();
+      const windowBounds = mainWindow ? mainWindow.getBounds() : null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        primaryDisplay: {
+          bounds: primary.bounds,
+          workArea: primary.workArea,
+          workAreaSize: primary.workAreaSize,
+          scaleFactor: primary.scaleFactor
+        },
+        allDisplays: displays.map(d => ({
+          id: d.id,
+          bounds: d.bounds,
+          workArea: d.workArea,
+          scaleFactor: d.scaleFactor
+        })),
+        window: windowBounds,
+        platform: process.platform
+      }, null, 2));
     } else {
       res.writeHead(404);
       res.end('Not Found');
