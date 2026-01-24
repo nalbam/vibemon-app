@@ -24,10 +24,26 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
   ctx.fillRect(0, 0, CHAR_SIZE, CHAR_SIZE);
 
   if (char.isGhost) {
-    // Ghost body (rounded top effect with multiple rects)
-    drawRect(char.body.x + 4, char.body.y, char.body.w - 8, 4, char.color);
-    drawRect(char.body.x + 2, char.body.y + 2, char.body.w - 4, 4, char.color);
-    drawRect(char.body.x, char.body.y + 4, char.body.w, char.body.h - 4, char.color);
+    // Ghost body (rounded egg/chick shape)
+    const bx = char.body.x;
+    const by = char.body.y;
+    const bw = char.body.w;
+    const bh = char.body.h;
+
+    // Rounded top (gradual curve)
+    drawRect(bx + 10, by, bw - 20, 2, char.color);
+    drawRect(bx + 6, by + 2, bw - 12, 2, char.color);
+    drawRect(bx + 4, by + 4, bw - 8, 2, char.color);
+    drawRect(bx + 2, by + 6, bw - 4, 2, char.color);
+
+    // Main body (middle)
+    drawRect(bx, by + 8, bw, bh - 16, char.color);
+
+    // Rounded bottom (gradual curve)
+    drawRect(bx + 2, by + bh - 8, bw - 4, 2, char.color);
+    drawRect(bx + 4, by + bh - 6, bw - 8, 2, char.color);
+    drawRect(bx + 6, by + bh - 4, bw - 12, 2, char.color);
+    drawRect(bx + 10, by + bh - 2, bw - 20, 2, char.color);
   } else {
     // Standard rectangular body
     drawRect(char.body.x, char.body.y, char.body.w, char.body.h, char.color);

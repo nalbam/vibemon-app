@@ -78,11 +78,12 @@ export const CHARACTER_CONFIG = {
     arms: null,
     legs: [],
     tail: [
-      { x: 14, y: 44, w: 12, h: 10 },
-      { x: 36, y: 44, w: 12, h: 10 },
-      { x: 48, y: 28, w: 8, h: 10 }
+      { x: 6, y: 44, w: 48, h: 4 },
+      { x: 8, y: 48, w: 14, h: 8 },
+      { x: 24, y: 46, w: 14, h: 10 },
+      { x: 40, y: 48, w: 14, h: 8 }
     ],
-    eyes: { left: { x: 14, y: 18 }, right: { x: 32, y: 18 }, size: 6 },
+    eyes: { left: { x: 22, y: 18 }, right: { x: 40, y: 18 }, size: 6 },
     isGhost: true
   }
 };

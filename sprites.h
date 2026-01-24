@@ -64,14 +64,14 @@ const CharacterGeometry CHAR_KIRO = {
   // Arms: hasArms=false
   false,
   0, 0, 0, 0, 0,
-  // Tail: 3 parts (left shin, right shin, short tail)
-  3,
-  {14, 36, 48, 0},   // partX
-  {44, 44, 28, 0},   // partY
-  {12, 12, 8, 0},    // partW
-  {10, 10, 10, 0},   // partH
-  // Eyes (looking 30 degrees left)
-  14, 32, 18, 6      // leftX, rightX, y, size
+  // Tail: 4 parts (blanket draping naturally over legs)
+  4,
+  {6, 8, 24, 40},    // partX
+  {44, 48, 46, 48},  // partY
+  {48, 14, 14, 14},  // partW
+  {4, 8, 10, 8},     // partH
+  // Eyes (looking right)
+  22, 40, 18, 6      // leftX, rightX, y, size
 };
 
 // Character array for dynamic lookup
@@ -172,16 +172,26 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
 
   // Draw body
   if (character->isGhost) {
-    // Ghost body (rounded top effect with multiple rects)
+    // Ghost body (rounded egg/chick shape)
     int bx = x + (character->bodyX * SCALE);
     int by = y + (character->bodyY * SCALE);
     int bw = character->bodyW * SCALE;
     int bh = character->bodyH * SCALE;
-    // Rounded top
-    tft.fillRect(bx + (4 * SCALE), by, bw - (8 * SCALE), 4 * SCALE, charColor);
-    tft.fillRect(bx + (2 * SCALE), by + (2 * SCALE), bw - (4 * SCALE), 4 * SCALE, charColor);
-    // Main body
-    tft.fillRect(bx, by + (4 * SCALE), bw, bh - (4 * SCALE), charColor);
+
+    // Rounded top (gradual curve)
+    tft.fillRect(bx + (10 * SCALE), by, bw - (20 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (6 * SCALE), by + (2 * SCALE), bw - (12 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (4 * SCALE), by + (4 * SCALE), bw - (8 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (2 * SCALE), by + (6 * SCALE), bw - (4 * SCALE), 2 * SCALE, charColor);
+
+    // Main body (middle)
+    tft.fillRect(bx, by + (8 * SCALE), bw, bh - (16 * SCALE), charColor);
+
+    // Rounded bottom (gradual curve)
+    tft.fillRect(bx + (2 * SCALE), by + bh - (8 * SCALE), bw - (4 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (4 * SCALE), by + bh - (6 * SCALE), bw - (8 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (6 * SCALE), by + bh - (4 * SCALE), bw - (12 * SCALE), 2 * SCALE, charColor);
+    tft.fillRect(bx + (10 * SCALE), by + bh - (2 * SCALE), bw - (20 * SCALE), 2 * SCALE, charColor);
   } else {
     // Standard rectangular body
     tft.fillRect(x + (character->bodyX * SCALE), y + (character->bodyY * SCALE),

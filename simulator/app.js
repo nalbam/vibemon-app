@@ -44,6 +44,15 @@ function init() {
   ctx = canvas.getContext('2d');
   initRenderer(ctx);
 
+  // Random state selection
+  const stateNames = Object.keys(states);
+  const randomState = stateNames[Math.floor(Math.random() * stateNames.length)];
+  currentState = randomState;
+
+  // Random character selection
+  const randomCharacter = CHARACTER_NAMES[Math.floor(Math.random() * CHARACTER_NAMES.length)];
+  currentCharacter = randomCharacter;
+
   // Populate character dropdown from CHARACTER_CONFIG
   const characterSelect = document.getElementById('character-select');
   CHARACTER_NAMES.forEach(name => {
@@ -51,7 +60,7 @@ function init() {
     const option = document.createElement('option');
     option.value = name;
     option.textContent = char.displayName || name;
-    if (name === DEFAULT_CHARACTER) option.selected = true;
+    if (name === randomCharacter) option.selected = true;
     characterSelect.appendChild(option);
   });
 
@@ -60,7 +69,7 @@ function init() {
   document.getElementById('memory-input').value = randomMemory;
   document.getElementById('memory-display').textContent = randomMemory + '%';
 
-  setState('idle');
+  updateDisplay();
   startAnimation();
 }
 
