@@ -48,19 +48,19 @@ Uses `hooks/vibe-monitor.sh` - see [main README](../README.md#claude-code-setup)
 Copy hook files to your project's `.kiro/hooks/` folder:
 
 ```bash
-cp hooks/kiro/*.hook .kiro/hooks/
+cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 ```
 
 **Hook files:**
-- `vibe-monitor-working.hook` - Sends `working` state on `promptSubmit`
-- `vibe-monitor-idle.hook` - Sends `idle` state on `agentStop`
+- `vibe-monitor-working.kiro.hook` - Sends `working` state on `promptSubmit`
+- `vibe-monitor-idle.kiro.hook` - Sends `idle` state on `agentStop`
 
 ## Supported IDEs
 
 | IDE | Hook System | Status |
 |-----|-------------|--------|
 | **Claude Code** | Shell hooks via `settings.json` | ✅ Supported |
-| **Kiro IDE** | `.hook` files in `.kiro/hooks/` | ✅ Supported |
+| **Kiro IDE** | `.kiro.hook` files in `.kiro/hooks/` | ✅ Supported |
 
 ## States
 

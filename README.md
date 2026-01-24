@@ -160,18 +160,17 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 ### Kiro IDE Setup
 
-Kiro IDE uses `.hook` files in the `.kiro/hooks/` folder.
+Kiro IDE uses `.kiro.hook` files in the `.kiro/hooks/` folder.
 
 #### 1. Copy hook files to your project
 
 ```bash
-mkdir -p .kiro/hooks
-cp hooks/kiro/*.hook .kiro/hooks/
+cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 ```
 
 This copies:
-- `vibe-monitor-working.hook` - Sends `working` state on `promptSubmit`
-- `vibe-monitor-idle.hook` - Sends `idle` state on `agentStop`
+- `vibe-monitor-working.kiro.hook` - Sends `working` state on `promptSubmit`
+- `vibe-monitor-idle.kiro.hook` - Sends `idle` state on `agentStop`
 
 > **Note:** Character is auto-set to `kiro` in the hook files.
 
@@ -184,7 +183,7 @@ This copies:
 
 #### Adding More Hooks (Optional)
 
-You can create additional `.hook` files for other events:
+You can create additional `.kiro.hook` files for other events:
 
 ```json
 {
@@ -224,9 +223,6 @@ The hook sends status updates in order (only if configured):
 | After tool | `PostToolUse` | `PostToolUse` | - |
 | Agent done | `Stop` | `Stop` | `AgentStop` |
 | Notification | `Notification` | - | - |
-| File create | - | - | `FileCreate` |
-| File save | - | - | `FileEdited` |
-| File delete | - | - | `FileDeleted` |
 | Manual | - | - | `Manual` |
 
 ## Characters
