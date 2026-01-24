@@ -27,11 +27,25 @@ const STATE_COLORS = {
   sleep: '#1a1a4e'
 };
 
-// Character colors
-const CHARACTER_COLORS = {
-  clawd: '#E07B39',  // Claude orange
-  kiro: '#FFFFFF'    // White ghost
+// Character configurations - Single source of truth for main process
+// To add a new character, add an entry here
+const CHARACTER_CONFIG = {
+  clawd: {
+    name: 'clawd',
+    displayName: 'Clawd (Claude)',
+    color: '#E07B39',
+    isGhost: false
+  },
+  kiro: {
+    name: 'kiro',
+    displayName: 'Kiro (Ghost)',
+    color: '#FFFFFF',
+    isGhost: true
+  }
 };
+
+const CHARACTER_NAMES = Object.keys(CHARACTER_CONFIG);
+const DEFAULT_CHARACTER = 'clawd';
 const COLOR_EYE = '#000000';
 
 // Tray icon cache for performance
@@ -51,8 +65,9 @@ function createTrayIcon(state, character = 'clawd') {
   const ctx = canvas.getContext('2d');
 
   const bgColor = STATE_COLORS[state] || STATE_COLORS.idle;
-  const charColor = CHARACTER_COLORS[character] || CHARACTER_COLORS.clawd;
-  const isGhost = character === 'kiro';
+  const charConfig = CHARACTER_CONFIG[character] || CHARACTER_CONFIG[DEFAULT_CHARACTER];
+  const charColor = charConfig.color;
+  const isGhost = charConfig.isGhost;
 
   // Helper to draw filled rectangle
   function rect(x, y, w, h, color) {
@@ -194,10 +209,15 @@ function updateTrayMenu() {
     },
     {
       label: 'Set Character',
-      submenu: [
-        { label: 'Clawd (Claude)', type: 'radio', checked: currentCharacter === 'clawd', click: () => updateState({ state: currentState, character: 'clawd' }) },
-        { label: 'Kiro (Ghost)', type: 'radio', checked: currentCharacter === 'kiro', click: () => updateState({ state: currentState, character: 'kiro' }) }
-      ]
+      submenu: CHARACTER_NAMES.map(name => {
+        const char = CHARACTER_CONFIG[name];
+        return {
+          label: char.displayName,
+          type: 'radio',
+          checked: currentCharacter === name,
+          click: () => updateState({ state: currentState, character: name })
+        };
+      })
     },
     { type: 'separator' },
     {
@@ -242,7 +262,7 @@ function updateState(data) {
   if (data.state !== undefined) {
     currentState = data.state;
     if (data.character !== undefined) {
-      currentCharacter = (data.character === 'kiro') ? 'kiro' : 'clawd';
+      currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
     }
     if (data.project !== undefined) currentProject = data.project;
     if (data.tool !== undefined) currentTool = data.tool;

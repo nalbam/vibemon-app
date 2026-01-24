@@ -135,12 +135,12 @@ void processInput(String input) {
   currentModel = doc["model"].as<String>();
   currentMemory = doc["memory"].as<String>();
 
-  // Parse character (default to clawd if not specified or invalid)
+  // Parse character (use isValidCharacter() for dynamic validation)
   String charInput = doc["character"].as<String>();
-  if (charInput == "kiro") {
-    currentCharacter = "kiro";
+  if (isValidCharacter(charInput)) {
+    currentCharacter = charInput;
   } else {
-    currentCharacter = "clawd";
+    currentCharacter = DEFAULT_CHARACTER->name;
   }
 
   // Reset sleep timer on any input

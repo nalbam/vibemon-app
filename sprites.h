@@ -74,10 +74,33 @@ const CharacterGeometry CHAR_KIRO = {
   16, 38, 20, 6      // leftX, rightX, y, size
 };
 
-// Get character geometry by name
+// Character array for dynamic lookup
+// To add a new character, add to this array and define the CharacterGeometry above
+const CharacterGeometry* ALL_CHARACTERS[] = {
+  &CHAR_CLAWD,
+  &CHAR_KIRO
+};
+const int CHARACTER_COUNT = sizeof(ALL_CHARACTERS) / sizeof(ALL_CHARACTERS[0]);
+const CharacterGeometry* DEFAULT_CHARACTER = &CHAR_CLAWD;
+
+// Get character geometry by name (loop-based for extensibility)
 const CharacterGeometry* getCharacter(String name) {
-  if (name == "kiro") return &CHAR_KIRO;
-  return &CHAR_CLAWD;  // Default to clawd
+  for (int i = 0; i < CHARACTER_COUNT; i++) {
+    if (name == ALL_CHARACTERS[i]->name) {
+      return ALL_CHARACTERS[i];
+    }
+  }
+  return DEFAULT_CHARACTER;
+}
+
+// Check if character name is valid
+bool isValidCharacter(String name) {
+  for (int i = 0; i < CHARACTER_COUNT; i++) {
+    if (name == ALL_CHARACTERS[i]->name) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Background colors by state (RGB565)
