@@ -296,8 +296,42 @@
 
     // Colors
     const COLOR_CLAUDE = '#E07B39';
+    const COLOR_KIRO = '#FFFFFF';
     const COLOR_EYE = '#000000';
     const COLOR_WHITE = '#FFFFFF';
+
+    // Character configurations
+    const CHARACTER_CONFIG = {
+      clawd: {
+        name: 'clawd',
+        color: '#E07B39',      // Claude orange
+        body: { x: 6, y: 8, w: 52, h: 36 },
+        arms: { left: { x: 0, y: 22, w: 6, h: 10 }, right: { x: 58, y: 22, w: 6, h: 10 } },
+        legs: [
+          { x: 10, y: 44, w: 6, h: 12 },
+          { x: 18, y: 44, w: 6, h: 12 },
+          { x: 40, y: 44, w: 6, h: 12 },
+          { x: 48, y: 44, w: 6, h: 12 }
+        ],
+        tail: null,
+        eyes: { left: { x: 14, y: 22 }, right: { x: 44, y: 22 }, size: 6 },
+        isGhost: false
+      },
+      kiro: {
+        name: 'kiro',
+        color: '#FFFFFF',      // White ghost
+        body: { x: 10, y: 6, w: 44, h: 40 },   // Main ghost body
+        arms: null,           // No arms (ghost floats)
+        legs: [],             // No legs
+        tail: [               // Wavy bottom (instead of legs)
+          { x: 10, y: 46, w: 10, h: 8 },
+          { x: 24, y: 50, w: 16, h: 6 },
+          { x: 44, y: 46, w: 10, h: 8 }
+        ],
+        eyes: { left: { x: 16, y: 20 }, right: { x: 38, y: 20 }, size: 6 },
+        isGhost: true
+      }
+    };
 
     // Tool-based status texts for working state (lowercase keys)
     const TOOL_TEXTS = {
@@ -389,6 +423,7 @@
 
     // Current state
     let currentState = 'idle';
+    let currentCharacter = 'clawd';  // 'clawd' or 'kiro'
     let currentProject = '-';
     let currentTool = '-';
     let currentModel = '-';
@@ -445,6 +480,7 @@
       if (window.electronAPI) {
         window.electronAPI.onStateUpdate((data) => {
           if (data.state) currentState = data.state;
+          if (data.character) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : 'clawd';
           if (data.project) currentProject = data.project;
           if (data.tool) currentTool = data.tool;
           if (data.model) currentModel = data.model;
@@ -627,33 +663,46 @@
     // Draw character (128x128, scaled 2x from 64x64)
     function drawCharacter(eyeType) {
       const state = states[currentState] || states.idle;
+      const char = CHARACTER_CONFIG[currentCharacter] || CHARACTER_CONFIG.clawd;
 
       // Clear with background color
       ctx.fillStyle = state.bgColor;
       ctx.fillRect(0, 0, CHAR_SIZE, CHAR_SIZE);
 
-      // Main body (wider: 52x36)
-      drawRect(6, 8, 52, 36, COLOR_CLAUDE);
+      if (char.isGhost) {
+        // Ghost body (rounded top effect with multiple rects)
+        drawRect(char.body.x + 4, char.body.y, char.body.w - 8, 4, char.color);  // Rounded top
+        drawRect(char.body.x + 2, char.body.y + 2, char.body.w - 4, 4, char.color);
+        drawRect(char.body.x, char.body.y + 4, char.body.w, char.body.h - 4, char.color);  // Main body
+      } else {
+        // Standard rectangular body
+        drawRect(char.body.x, char.body.y, char.body.w, char.body.h, char.color);
+      }
 
-      // Arms (attached to body: 6x10)
-      drawRect(0, 22, 6, 10, COLOR_CLAUDE);
-      drawRect(58, 22, 6, 10, COLOR_CLAUDE);
+      // Arms (if exists)
+      if (char.arms) {
+        drawRect(char.arms.left.x, char.arms.left.y, char.arms.left.w, char.arms.left.h, char.color);
+        drawRect(char.arms.right.x, char.arms.right.y, char.arms.right.w, char.arms.right.h, char.color);
+      }
 
-      // Legs (4 legs)
-      drawRect(10, 44, 6, 12, COLOR_CLAUDE);
-      drawRect(18, 44, 6, 12, COLOR_CLAUDE);
-      drawRect(40, 44, 6, 12, COLOR_CLAUDE);
-      drawRect(48, 44, 6, 12, COLOR_CLAUDE);
+      // Legs or Tail
+      if (char.tail && char.tail.length > 0) {
+        char.tail.forEach(t => drawRect(t.x, t.y, t.w, t.h, char.color));
+      } else if (char.legs && char.legs.length > 0) {
+        char.legs.forEach(leg => drawRect(leg.x, leg.y, leg.w, leg.h, char.color));
+      }
 
       // Draw eyes
-      drawEyes(eyeType);
+      drawEyes(eyeType, char);
     }
 
     // Draw eyes (scaled 2x)
-    function drawEyes(eyeType) {
-      const leftX = 14;
-      const rightX = 44;
-      const eyeY = 22;
+    function drawEyes(eyeType, char) {
+      char = char || CHARACTER_CONFIG[currentCharacter] || CHARACTER_CONFIG.clawd;
+      const leftX = char.eyes.left.x;
+      const rightX = char.eyes.right.x;
+      const eyeY = char.eyes.left.y;
+      const eyeSize = char.eyes.size;
 
       switch (eyeType) {
         case 'normal':

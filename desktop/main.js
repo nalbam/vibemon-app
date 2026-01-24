@@ -7,6 +7,7 @@ let mainWindow;
 let tray;
 let isAlwaysOnTop = true;
 let currentState = 'idle';
+let currentCharacter = 'clawd';  // 'clawd' or 'kiro'
 let currentProject = '';
 let currentTool = '';
 let currentModel = '';
@@ -26,17 +27,23 @@ const STATE_COLORS = {
   sleep: '#1a1a4e'
 };
 
-const COLOR_CLAUDE = '#E07B39';
+// Character colors
+const CHARACTER_COLORS = {
+  clawd: '#E07B39',  // Claude orange
+  kiro: '#FFFFFF'    // White ghost
+};
 const COLOR_EYE = '#000000';
 
 // Tray icon cache for performance
 const trayIconCache = new Map();
 
 // Create tray icon with state-based background color using canvas for proper PNG encoding
-function createTrayIcon(state) {
+function createTrayIcon(state, character = 'clawd') {
+  const cacheKey = `${state}-${character}`;
+
   // Return cached icon if available
-  if (trayIconCache.has(state)) {
-    return trayIconCache.get(state);
+  if (trayIconCache.has(cacheKey)) {
+    return trayIconCache.get(cacheKey);
   }
 
   const size = 22;
@@ -44,6 +51,8 @@ function createTrayIcon(state) {
   const ctx = canvas.getContext('2d');
 
   const bgColor = STATE_COLORS[state] || STATE_COLORS.idle;
+  const charColor = CHARACTER_COLORS[character] || CHARACTER_COLORS.clawd;
+  const isGhost = character === 'kiro';
 
   // Helper to draw filled rectangle
   function rect(x, y, w, h, color) {
@@ -61,30 +70,46 @@ function createTrayIcon(state) {
   ctx.roundRect(0, 0, size, size, radius);
   ctx.fill();
 
-  // Draw simplified character for 22x22
-  // Body (centered, 14x8)
-  rect(4, 6, 14, 8, COLOR_CLAUDE);
+  if (isGhost) {
+    // Draw ghost character for kiro
+    // Body (rounded top effect)
+    rect(6, 4, 10, 2, charColor);   // Rounded top
+    rect(5, 6, 12, 8, charColor);   // Main body
 
-  // Arms (2x3 each)
-  rect(2, 8, 2, 3, COLOR_CLAUDE);   // Left arm
-  rect(18, 8, 2, 3, COLOR_CLAUDE);  // Right arm
+    // Wavy tail (instead of legs)
+    rect(5, 14, 4, 3, charColor);   // Left wave
+    rect(9, 15, 4, 2, charColor);   // Middle wave
+    rect(13, 14, 4, 3, charColor);  // Right wave
 
-  // Legs (2x4 each, 4 legs)
-  rect(5, 14, 2, 4, COLOR_CLAUDE);   // Left outer
-  rect(8, 14, 2, 4, COLOR_CLAUDE);   // Left inner
-  rect(12, 14, 2, 4, COLOR_CLAUDE);  // Right inner
-  rect(15, 14, 2, 4, COLOR_CLAUDE);  // Right outer
+    // Eyes (2x2 each)
+    rect(7, 8, 2, 2, COLOR_EYE);    // Left eye
+    rect(13, 8, 2, 2, COLOR_EYE);   // Right eye
+  } else {
+    // Draw clawd character (default)
+    // Body (centered, 14x8)
+    rect(4, 6, 14, 8, charColor);
 
-  // Eyes (2x2 each)
-  rect(6, 9, 2, 2, COLOR_EYE);   // Left eye
-  rect(14, 9, 2, 2, COLOR_EYE);  // Right eye
+    // Arms (2x3 each)
+    rect(2, 8, 2, 3, charColor);   // Left arm
+    rect(18, 8, 2, 3, charColor);  // Right arm
+
+    // Legs (2x4 each, 4 legs)
+    rect(5, 14, 2, 4, charColor);   // Left outer
+    rect(8, 14, 2, 4, charColor);   // Left inner
+    rect(12, 14, 2, 4, charColor);  // Right inner
+    rect(15, 14, 2, 4, charColor);  // Right outer
+
+    // Eyes (2x2 each)
+    rect(6, 9, 2, 2, COLOR_EYE);   // Left eye
+    rect(14, 9, 2, 2, COLOR_EYE);  // Right eye
+  }
 
   // Convert canvas to PNG buffer and create nativeImage
   const pngBuffer = canvas.toBuffer('image/png');
   const icon = nativeImage.createFromBuffer(pngBuffer);
 
   // Cache the icon for future use
-  trayIconCache.set(state, icon);
+  trayIconCache.set(cacheKey, icon);
 
   return icon;
 }
@@ -132,7 +157,7 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = createTrayIcon(currentState);
+  const icon = createTrayIcon(currentState, currentCharacter);
   tray = new Tray(icon);
   tray.setToolTip('Claude Monitor');
   updateTrayMenu();
@@ -140,7 +165,7 @@ function createTray() {
 
 function updateTrayIcon() {
   if (tray) {
-    const icon = createTrayIcon(currentState);
+    const icon = createTrayIcon(currentState, currentCharacter);
     tray.setImage(icon);
   }
 }
@@ -149,6 +174,10 @@ function updateTrayMenu() {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: `State: ${currentState}`,
+      enabled: false
+    },
+    {
+      label: `Character: ${currentCharacter}`,
       enabled: false
     },
     { type: 'separator' },
@@ -161,6 +190,13 @@ function updateTrayMenu() {
         { label: 'Notification', click: () => updateState({ state: 'notification' }) },
         { label: 'Tool Done', click: () => updateState({ state: 'tool_done' }) },
         { label: 'Sleep', click: () => updateState({ state: 'sleep' }) }
+      ]
+    },
+    {
+      label: 'Set Character',
+      submenu: [
+        { label: 'Clawd (Claude)', type: 'radio', checked: currentCharacter === 'clawd', click: () => updateState({ state: currentState, character: 'clawd' }) },
+        { label: 'Kiro (Ghost)', type: 'radio', checked: currentCharacter === 'kiro', click: () => updateState({ state: currentState, character: 'kiro' }) }
       ]
     },
     { type: 'separator' },
@@ -205,6 +241,9 @@ function updateState(data) {
   // If state is provided (from claude-monitor.sh), update all fields
   if (data.state !== undefined) {
     currentState = data.state;
+    if (data.character !== undefined) {
+      currentCharacter = (data.character === 'kiro') ? 'kiro' : 'clawd';
+    }
     if (data.project !== undefined) currentProject = data.project;
     if (data.tool !== undefined) currentTool = data.tool;
     if (data.model !== undefined) currentModel = data.model;

@@ -11,8 +11,74 @@
 
 // Character colors (RGB565)
 #define COLOR_CLAUDE      0xEB66  // #E07B39 Claude orange
+#define COLOR_KIRO        0xFFFF  // #FFFFFF White ghost
 #define COLOR_EYE         0x0000  // #000000 Black
 #define COLOR_TRANSPARENT 0x0000  // Transparent (same as background)
+
+// Character geometry structure
+typedef struct {
+  const char* name;
+  uint16_t color;
+  // Body
+  int bodyX, bodyY, bodyW, bodyH;
+  bool isGhost;           // Ghost shape flag
+  // Arms (optional)
+  bool hasArms;
+  int armLeftX, armRightX, armY, armW, armH;
+  // Legs or Tail parts
+  int partCount;          // Number of legs or tail parts
+  int partX[4];
+  int partY[4];
+  int partW[4];
+  int partH[4];
+  // Eyes
+  int eyeLeftX, eyeRightX, eyeY, eyeSize;
+} CharacterGeometry;
+
+// Character definitions
+const CharacterGeometry CHAR_CLAWD = {
+  "clawd",
+  COLOR_CLAUDE,
+  // Body: x=6, y=8, w=52, h=36
+  6, 8, 52, 36,
+  false,  // Not a ghost
+  // Arms: hasArms=true
+  true,
+  0, 58, 22, 6, 10,  // leftX, rightX, y, w, h
+  // Legs: 4 parts
+  4,
+  {10, 18, 40, 48},  // partX
+  {44, 44, 44, 44},  // partY
+  {6, 6, 6, 6},      // partW
+  {12, 12, 12, 12},  // partH
+  // Eyes
+  14, 44, 22, 6      // leftX, rightX, y, size
+};
+
+const CharacterGeometry CHAR_KIRO = {
+  "kiro",
+  COLOR_KIRO,
+  // Body: x=10, y=6, w=44, h=40
+  10, 6, 44, 40,
+  true,   // Is a ghost
+  // Arms: hasArms=false
+  false,
+  0, 0, 0, 0, 0,
+  // Tail: 3 parts (wavy bottom)
+  3,
+  {10, 24, 44, 0},   // partX
+  {46, 50, 46, 0},   // partY
+  {10, 16, 10, 0},   // partW
+  {8, 6, 8, 0},      // partH
+  // Eyes
+  16, 38, 20, 6      // leftX, rightX, y, size
+};
+
+// Get character geometry by name
+const CharacterGeometry* getCharacter(String name) {
+  if (name == "kiro") return &CHAR_KIRO;
+  return &CHAR_CLAWD;  // Default to clawd
+}
 
 // Background colors by state (RGB565)
 #define COLOR_BG_IDLE     0x0540  // #00AA00 Green
@@ -75,48 +141,56 @@ const char* DEFAULT_TEXTS[] = {"Working", "Busy", "Coding"};
  */
 
 // Draw the Claude character at specified position (128x128)
-void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColor) {
+void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Clear background area
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
 
-  // All coordinates are scaled 2x from original 64x64 design
-  // Main body (wider: 52x36)
-  int bodyX = x + (6 * SCALE);
-  int bodyY = y + (8 * SCALE);
-  int bodyW = 52 * SCALE;
-  int bodyH = 36 * SCALE;
-  tft.fillRect(bodyX, bodyY, bodyW, bodyH, COLOR_CLAUDE);
+  uint16_t charColor = character->color;
 
-  // Draw arms (attached to body: 6x10)
-  int armY = y + (22 * SCALE);
-  int armH = 10 * SCALE;
-  int armW = 6 * SCALE;
-  // Left arm (ends at 6, body starts at 6)
-  tft.fillRect(x, armY, armW, armH, COLOR_CLAUDE);
-  // Right arm (starts at 58, body ends at 58)
-  tft.fillRect(x + (58 * SCALE), armY, armW, armH, COLOR_CLAUDE);
+  // Draw body
+  if (character->isGhost) {
+    // Ghost body (rounded top effect with multiple rects)
+    int bx = x + (character->bodyX * SCALE);
+    int by = y + (character->bodyY * SCALE);
+    int bw = character->bodyW * SCALE;
+    int bh = character->bodyH * SCALE;
+    // Rounded top
+    tft.fillRect(bx + (4 * SCALE), by, bw - (8 * SCALE), 4 * SCALE, charColor);
+    tft.fillRect(bx + (2 * SCALE), by + (2 * SCALE), bw - (4 * SCALE), 4 * SCALE, charColor);
+    // Main body
+    tft.fillRect(bx, by + (4 * SCALE), bw, bh - (4 * SCALE), charColor);
+  } else {
+    // Standard rectangular body
+    tft.fillRect(x + (character->bodyX * SCALE), y + (character->bodyY * SCALE),
+                 character->bodyW * SCALE, character->bodyH * SCALE, charColor);
+  }
 
-  // Draw legs (4 legs: shorter, thinner, wider gap between pairs)
-  int legY = y + (44 * SCALE);
-  int legH = 12 * SCALE;
-  int legW = 6 * SCALE;
-  // Left pair
-  tft.fillRect(x + (10 * SCALE), legY, legW, legH, COLOR_CLAUDE);
-  tft.fillRect(x + (18 * SCALE), legY, legW, legH, COLOR_CLAUDE);
-  // Right pair (wider gap from left pair)
-  tft.fillRect(x + (40 * SCALE), legY, legW, legH, COLOR_CLAUDE);
-  tft.fillRect(x + (48 * SCALE), legY, legW, legH, COLOR_CLAUDE);
+  // Draw arms (if exists)
+  if (character->hasArms) {
+    int armY = y + (character->armY * SCALE);
+    int armW = character->armW * SCALE;
+    int armH = character->armH * SCALE;
+    tft.fillRect(x + (character->armLeftX * SCALE), armY, armW, armH, charColor);
+    tft.fillRect(x + (character->armRightX * SCALE), armY, armW, armH, charColor);
+  }
+
+  // Draw legs or tail parts
+  for (int i = 0; i < character->partCount; i++) {
+    tft.fillRect(x + (character->partX[i] * SCALE), y + (character->partY[i] * SCALE),
+                 character->partW[i] * SCALE, character->partH[i] * SCALE, charColor);
+  }
 
   // Draw eyes based on type
-  drawEyes(tft, x, y, eyeType);
+  drawEyes(tft, x, y, eyeType, character);
 }
 
 // Draw eyes based on eye type (scaled 2x)
-void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType) {
+void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Eye base positions (scaled 2x)
-  int leftEyeX = x + (14 * SCALE);
-  int rightEyeX = x + (44 * SCALE);
-  int eyeY = y + (22 * SCALE);
+  int leftEyeX = x + (character->eyeLeftX * SCALE);
+  int rightEyeX = x + (character->eyeRightX * SCALE);
+  int eyeY = y + (character->eyeY * SCALE);
+  int eyeSize = character->eyeSize;
 
   switch (eyeType) {
     case EYE_NORMAL:
@@ -334,19 +408,20 @@ void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int perce
 }
 
 // Draw blink animation (for idle state)
-void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame) {
-  int leftEyeX = x + (14 * SCALE);
-  int rightEyeX = x + (44 * SCALE);
-  int eyeY = y + (22 * SCALE);
+void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame, const CharacterGeometry* character = &CHAR_CLAWD) {
+  int leftEyeX = x + (character->eyeLeftX * SCALE);
+  int rightEyeX = x + (character->eyeRightX * SCALE);
+  int eyeY = y + (character->eyeY * SCALE);
+  int eyeSize = character->eyeSize;
 
   if (frame == 0) {
-    // Eyes closed (thin line, 6x2 -> 12x4)
-    tft.fillRect(leftEyeX, eyeY + (2 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
-    tft.fillRect(rightEyeX, eyeY + (2 * SCALE), 6 * SCALE, 2 * SCALE, COLOR_EYE);
+    // Eyes closed (thin line)
+    tft.fillRect(leftEyeX, eyeY + (2 * SCALE), eyeSize * SCALE, 2 * SCALE, COLOR_EYE);
+    tft.fillRect(rightEyeX, eyeY + (2 * SCALE), eyeSize * SCALE, 2 * SCALE, COLOR_EYE);
   } else {
-    // Eyes open (normal, 6x6 -> 12x12)
-    tft.fillRect(leftEyeX, eyeY, 6 * SCALE, 6 * SCALE, COLOR_EYE);
-    tft.fillRect(rightEyeX, eyeY, 6 * SCALE, 6 * SCALE, COLOR_EYE);
+    // Eyes open (normal)
+    tft.fillRect(leftEyeX, eyeY, eyeSize * SCALE, eyeSize * SCALE, COLOR_EYE);
+    tft.fillRect(rightEyeX, eyeY, eyeSize * SCALE, eyeSize * SCALE, COLOR_EYE);
   }
 }
 

@@ -63,13 +63,15 @@ build_payload() {
   local event="$2"
   local tool="$3"
   local project="$4"
+  local character="${CLAUDE_MONITOR_CHARACTER:-clawd}"
 
   jq -n \
     --arg state "$state" \
     --arg event "$event" \
     --arg tool "$tool" \
     --arg project "$project" \
-    '{state: $state, event: $event, tool: $tool, project: $project}'
+    --arg character "$character" \
+    '{state: $state, event: $event, tool: $tool, project: $project, character: $character}'
 }
 
 # ============================================================================

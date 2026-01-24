@@ -44,6 +44,7 @@ TFT_eSPI tft = TFT_eSPI();
 // State
 String currentState = "idle";
 String previousState = "";
+String currentCharacter = "clawd";  // "clawd" or "kiro"
 String currentProject = "";
 String currentTool = "";
 String currentModel = "";
@@ -134,6 +135,14 @@ void processInput(String input) {
   currentModel = doc["model"].as<String>();
   currentMemory = doc["memory"].as<String>();
 
+  // Parse character (default to clawd if not specified or invalid)
+  String charInput = doc["character"].as<String>();
+  if (charInput == "kiro") {
+    currentCharacter = "kiro";
+  } else {
+    currentCharacter = "clawd";
+  }
+
   // Reset sleep timer on any input
   lastActivityTime = millis();
 
@@ -163,7 +172,8 @@ void drawStartScreen() {
   tft.fillScreen(bgColor);
 
   // Draw character in idle state (128x128)
-  drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, bgColor);
+  const CharacterGeometry* character = getCharacter(currentCharacter);
+  drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, bgColor, character);
 
   // Title
   tft.setTextColor(COLOR_TEXT_WHITE);
@@ -191,6 +201,7 @@ void drawStatus() {
   uint16_t textColor = getTextColor(currentState);
   EyeType eyeType = getEyeType(currentState);
   String statusText = getStatusText(currentState, currentTool);
+  const CharacterGeometry* character = getCharacter(currentCharacter);
 
   // Fill background
   tft.fillScreen(bgColor);
@@ -202,7 +213,7 @@ void drawStatus() {
   lastCharY = charY;
 
   // Draw character (128x128)
-  drawCharacter(tft, charX, charY, eyeType, bgColor);
+  drawCharacter(tft, charX, charY, eyeType, bgColor, character);
 
   // Status text (color based on background)
   tft.setTextColor(textColor);
@@ -273,6 +284,7 @@ void drawStatus() {
 void updateAnimation() {
   uint16_t bgColor = getBackgroundColor(currentState);
   EyeType eyeType = getEyeType(currentState);
+  const CharacterGeometry* character = getCharacter(currentCharacter);
 
   // Calculate new floating position
   int newCharX = CHAR_X_BASE + getFloatOffsetX();
@@ -283,7 +295,7 @@ void updateAnimation() {
     // Clear previous character area
     tft.fillRect(lastCharX, lastCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
     // Draw character at new position
-    drawCharacter(tft, newCharX, newCharY, eyeType, bgColor);
+    drawCharacter(tft, newCharX, newCharY, eyeType, bgColor, character);
     lastCharX = newCharX;
     lastCharY = newCharY;
   }
@@ -294,10 +306,10 @@ void updateAnimation() {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame);
   } else if (currentState == "session_start") {
     // Update sparkle animation (redraw for sparkle effect)
-    drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor);
+    drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor, character);
   } else if (currentState == "sleep") {
     // Update Zzz animation (redraw for blink effect)
-    drawCharacter(tft, newCharX, newCharY, EYE_SLEEP, bgColor);
+    drawCharacter(tft, newCharX, newCharY, EYE_SLEEP, bgColor, character);
   }
 }
 
@@ -305,18 +317,21 @@ void drawBlinkAnimation() {
   if (currentState != "idle") return;
 
   uint16_t bgColor = getBackgroundColor(currentState);
+  const CharacterGeometry* character = getCharacter(currentCharacter);
   int charX = lastCharX;  // Use current floating position
   int charY = lastCharY;
 
   // Close eyes (redraw body area with closed eyes)
-  tft.fillRect(charX + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
-  drawBlinkEyes(tft, charX, charY, 0);  // Closed
+  tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+               character->bodyW * SCALE, 30 * SCALE, character->color);
+  drawBlinkEyes(tft, charX, charY, 0, character);  // Closed
 
   delay(100);
 
   // Open eyes
-  tft.fillRect(charX + (6 * SCALE), charY + (8 * SCALE), 52 * SCALE, 30 * SCALE, COLOR_CLAUDE);
-  drawBlinkEyes(tft, charX, charY, 1);  // Open
+  tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+               character->bodyW * SCALE, 30 * SCALE, character->color);
+  drawBlinkEyes(tft, charX, charY, 1, character);  // Open
 }
 
 #ifdef USE_WIFI
