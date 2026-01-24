@@ -112,6 +112,9 @@ export CLAUDE_MONITOR_DESKTOP="~/vibe-monitor/desktop"
 # Desktop App URL (sends status updates)
 export CLAUDE_MONITOR_URL="http://127.0.0.1:19280"
 
+# Character selection (clawd or kiro)
+export CLAUDE_MONITOR_CHARACTER="clawd"
+
 # ESP32 USB Serial port (optional)
 export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
@@ -139,6 +142,15 @@ The hook sends status updates in order (only if configured):
 1. **Desktop App** - if `CLAUDE_MONITOR_URL` is set (auto-launches via `CLAUDE_MONITOR_DESKTOP` on SessionStart)
 2. **ESP32 USB Serial** - if `ESP32_SERIAL_PORT` is set
 3. **ESP32 HTTP** - if `ESP32_HTTP_URL` is set
+
+## Characters
+
+| Character | Color | Description |
+|-----------|-------|-------------|
+| `clawd` | Orange | Default character with arms and legs |
+| `kiro` | White | Ghost character with wavy tail |
+
+Set character via `CLAUDE_MONITOR_CHARACTER` environment variable or tray menu.
 
 ## State Display
 
@@ -202,7 +214,8 @@ curl -X POST http://127.0.0.1:19280/status \
   "tool": "Bash",
   "project": "my-project",
   "model": "opus",
-  "memory": "45%"
+  "memory": "45%",
+  "character": "clawd"
 }
 ```
 
@@ -371,11 +384,18 @@ vibe-monitor/
 ├── README.md                   # This document
 ├── CLAUDE.md                   # AI development guidelines
 ├── vibe-monitor.ino            # ESP32 main firmware
-├── sprites.h                   # Character rendering
+├── sprites.h                   # Character rendering (ESP32)
 ├── User_Setup.h                # TFT display configuration
 ├── hooks/                      # Claude Code hooks
 │   ├── vibe-monitor.sh         # Hook script
 │   └── .env.sample             # Environment sample
+├── shared/                     # Shared code (Desktop/Simulator)
+│   ├── config.js               # State/character configuration
+│   ├── character.js            # Character rendering logic
+│   ├── sprites.js              # Sprite definitions
+│   ├── effects.js              # Visual effects
+│   ├── icons.js                # Icon rendering
+│   └── utils.js                # Utility functions
 ├── desktop/                    # Desktop app
 │   ├── main.js                 # Electron main process
 │   ├── index.html              # Renderer

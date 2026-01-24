@@ -59,6 +59,15 @@ Run the Desktop app and use Claude Code to automatically update the status.
 | `tool_done` | Green | Tool completed |
 | `sleep` | Navy | Sleep mode (10min inactivity) |
 
+## Characters
+
+| Character | Color | Description |
+|-----------|-------|-------------|
+| `clawd` | Orange | Default character with arms and legs |
+| `kiro` | White | Ghost character with wavy tail |
+
+Change character via tray menu or POST `/status` with `character` field.
+
 ## API
 
 ### POST /status
@@ -72,7 +81,8 @@ Update status
   "tool": "Bash",
   "project": "vibe-monitor",
   "model": "opus",
-  "memory": "45%"
+  "memory": "45%",
+  "character": "clawd"
 }
 ```
 

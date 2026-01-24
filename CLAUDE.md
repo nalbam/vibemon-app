@@ -75,7 +75,8 @@ npm start
 - Animation: `animFrame % N` approach (100ms tick, frame-independent)
 - Floating animation: Cosine/Sine wave based offset (X: ±3px, Y: ±5px, ~3.2s cycle) via `getFloatOffsetX()` and `getFloatOffsetY()`
 - Working state text: Tool-based random selection via `getWorkingText(tool)` - case-insensitive tool matching, each tool has 3 possible text variants
-- JSON communication: Fields `{"state", "event", "tool", "project", "model", "memory"}`
+- JSON communication: Fields `{"state", "event", "tool", "project", "model", "memory", "character"}`
+- Character system: `clawd` (default orange), `kiro` (white ghost) - selectable via JSON or environment variable
 
 ## Testing
 
