@@ -4,9 +4,49 @@ import { hasSprite, getSprite, drawSprite } from './sprites.js';
 
 let ctx = null;
 
+// Character images cache
+const characterImages = {};
+let imagesLoaded = false;
+
+// Image paths for each character
+const CHARACTER_IMAGES = {
+  clawd: '../images/clawd-128.png',
+  kiro: '../images/kiro-128.png'
+};
+
+// Preload character images
+function preloadImages() {
+  if (imagesLoaded) return Promise.resolve();
+
+  const promises = Object.entries(CHARACTER_IMAGES).map(([name, path]) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        characterImages[name] = img;
+        resolve();
+      };
+      img.onerror = () => {
+        console.warn(`Failed to load image for ${name}: ${path}`);
+        resolve();
+      };
+      img.src = path;
+    });
+  });
+
+  return Promise.all(promises).then(() => {
+    imagesLoaded = true;
+  });
+}
+
+// Check if character has image
+function hasImage(characterName) {
+  return characterImages[characterName] !== undefined;
+}
+
 // Initialize renderer with canvas context
 export function initRenderer(canvasCtx) {
   ctx = canvasCtx;
+  preloadImages();
 }
 
 // Helper: draw scaled rect
@@ -29,8 +69,12 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
     drawMatrixBackground(animFrame, drawRect, CHAR_SIZE / SCALE, char.body);
   }
 
-  // Check if character has sprite-based rendering
-  if (hasSprite(currentCharacter)) {
+  // Use image if available
+  if (hasImage(currentCharacter)) {
+    const img = characterImages[currentCharacter];
+    ctx.drawImage(img, 0, 0, CHAR_SIZE, CHAR_SIZE);
+  } else if (hasSprite(currentCharacter)) {
+    // Fallback to sprite-based rendering
     const { sprite, palette } = getSprite(currentCharacter);
     drawSprite(ctx, sprite, palette, state.bgColor, SCALE);
   } else if (char.isGhost) {

@@ -14,40 +14,47 @@ const COLOR_SUNGLASSES_LENS = '#001100';
 const COLOR_SUNGLASSES_SHINE = '#003300';
 
 // Draw sunglasses (Matrix style)
-function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect) {
+function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro = false) {
   const lensW = eyeW + 4;
   const lensH = eyeH + 2;
-  const lensY = eyeY - 1;
-  const leftLensX = leftX - 2;
-  const rightLensX = rightX - 2;
+  // Kiro: shift up 2px
+  const lensY = eyeY - 1 - (isKiro ? 2 : 0);
+  // Kiro: left lens 2px right, right lens 6px right
+  const leftLensX = leftX - 2 + (isKiro ? 2 : 0);
+  const rightLensX = rightX - 2 + (isKiro ? 6 : 0);
+
+  // Sunglasses colors (same for all characters)
+  const frameColor = COLOR_SUNGLASSES_FRAME;
+  const lensColor = COLOR_SUNGLASSES_LENS;
+  const shineColor = COLOR_SUNGLASSES_SHINE;
 
   // Left lens (dark green tint)
-  drawRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  drawRect(leftLensX, lensY, lensW, lensH, lensColor);
   // Left lens shine
-  drawRect(leftLensX + 1, lensY + 1, 2, 1, COLOR_SUNGLASSES_SHINE);
+  drawRect(leftLensX + 1, lensY + 1, 2, 1, shineColor);
 
   // Right lens (dark green tint)
-  drawRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  drawRect(rightLensX, lensY, lensW, lensH, lensColor);
   // Right lens shine
-  drawRect(rightLensX + 1, lensY + 1, 2, 1, COLOR_SUNGLASSES_SHINE);
+  drawRect(rightLensX + 1, lensY + 1, 2, 1, shineColor);
 
   // Frame - top
-  drawRect(leftLensX - 1, lensY - 1, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
-  drawRect(rightLensX - 1, lensY - 1, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+  drawRect(leftLensX - 1, lensY - 1, lensW + 2, 1, frameColor);
+  drawRect(rightLensX - 1, lensY - 1, lensW + 2, 1, frameColor);
 
   // Frame - bottom
-  drawRect(leftLensX - 1, lensY + lensH, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
-  drawRect(rightLensX - 1, lensY + lensH, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+  drawRect(leftLensX - 1, lensY + lensH, lensW + 2, 1, frameColor);
+  drawRect(rightLensX - 1, lensY + lensH, lensW + 2, 1, frameColor);
 
   // Frame - sides
-  drawRect(leftLensX - 1, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
-  drawRect(leftLensX + lensW, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
-  drawRect(rightLensX - 1, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
-  drawRect(rightLensX + lensW, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
+  drawRect(leftLensX - 1, lensY, 1, lensH, frameColor);
+  drawRect(leftLensX + lensW, lensY, 1, lensH, frameColor);
+  drawRect(rightLensX - 1, lensY, 1, lensH, frameColor);
+  drawRect(rightLensX + lensW, lensY, 1, lensH, frameColor);
 
   // Bridge (connects two lenses)
   const bridgeY = lensY + Math.floor(lensH / 2);
-  drawRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, 1, COLOR_SUNGLASSES_FRAME);
+  drawRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, 1, frameColor);
 }
 
 // Get effect color based on character color
@@ -56,6 +63,7 @@ function getEffectColor(char) {
 }
 
 // Draw eyes (scaled 2x)
+// Note: Eyes are now part of character images, only draw effects and sunglasses
 export function drawEyes(eyeType, char, animFrame, drawRect) {
   char = char || CHARACTER_CONFIG[DEFAULT_CHARACTER];
   const leftX = char.eyes.left.x;
@@ -64,6 +72,7 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
   // Support separate width/height or fallback to size
   const eyeW = char.eyes.w || char.eyes.size || 6;
   const eyeH = char.eyes.h || char.eyes.size || 6;
+  const isKiro = char.name === 'kiro';
   const effectColor = getEffectColor(char);
 
   // Effect position (relative to character, above eyes)
@@ -71,62 +80,28 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
   const effectY = eyeY - 18;
 
   switch (eyeType) {
-    case 'normal':
-      drawRect(leftX, eyeY, eyeW, eyeH, COLOR_EYE);
-      drawRect(rightX, eyeY, eyeW, eyeH, COLOR_EYE);
-      break;
-
     case 'focused':
-      // Sunglasses for Matrix style
-      drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect);
+      // Sunglasses for Matrix style (working state)
+      drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro);
       break;
 
     case 'alert':
-      // Round eyes for alert
-      drawRect(leftX + 1, eyeY, eyeW - 2, eyeH, COLOR_EYE);
-      drawRect(leftX, eyeY + 1, eyeW, eyeH - 2, COLOR_EYE);
-      drawRect(rightX + 1, eyeY, eyeW - 2, eyeH, COLOR_EYE);
-      drawRect(rightX, eyeY + 1, eyeW, eyeH - 2, COLOR_EYE);
+      // Question mark effect (notification state)
       drawQuestionMark(effectX, effectY, drawRect);
       break;
 
     case 'sparkle':
-      drawRect(leftX, eyeY, eyeW, eyeH, COLOR_EYE);
-      drawRect(rightX, eyeY, eyeW, eyeH, COLOR_EYE);
+      // Sparkle effect (start state)
       drawSparkle(effectX, effectY + 2, animFrame, drawRect, effectColor);
       break;
 
-    case 'happy': {
-      // Happy eyes (^ ^) - use eye width for sizing
-      const unit = Math.max(2, Math.floor(eyeW / 2));
-      drawRect(leftX + unit, eyeY, unit, unit, COLOR_EYE);
-      drawRect(leftX, eyeY + unit, unit, unit, COLOR_EYE);
-      drawRect(leftX + eyeW - unit, eyeY + unit, unit, unit, COLOR_EYE);
-      drawRect(rightX + unit, eyeY, unit, unit, COLOR_EYE);
-      drawRect(rightX, eyeY + unit, unit, unit, COLOR_EYE);
-      drawRect(rightX + eyeW - unit, eyeY + unit, unit, unit, COLOR_EYE);
-      break;
-    }
-
-    case 'thinking': {
-      // Thinking eyes - looking up (pupils at top)
-      const pupilH = Math.max(2, Math.floor(eyeH / 3));
-      // Draw pupils at top of eyes
-      drawRect(leftX + 1, eyeY, eyeW - 2, pupilH, COLOR_EYE);
-      drawRect(rightX + 1, eyeY, eyeW - 2, pupilH, COLOR_EYE);
-      // Draw thought bubble effect
+    case 'thinking':
+      // Thought bubble effect (thinking state)
       drawThoughtBubble(effectX, effectY, animFrame, drawRect, effectColor);
-      break;
-    }
-
-    case 'blink':
-      drawRect(leftX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
-      drawRect(rightX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
       break;
 
     case 'sleep':
-      drawRect(leftX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
-      drawRect(rightX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
+      // Zzz effect (sleep state)
       drawZzz(effectX, effectY, animFrame, drawRect, effectColor);
       break;
   }
