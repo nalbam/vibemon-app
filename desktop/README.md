@@ -45,10 +45,15 @@ Uses `hooks/vibe-monitor.sh` - see [main README](../README.md#claude-code-setup)
 
 #### Kiro IDE
 
-Copy hook files to your project's `.kiro/hooks/` folder:
+Copy hook files to `~/.kiro/hooks/` (or your project's `.kiro/hooks/` folder):
 
 ```bash
-cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
+# Global installation (recommended)
+mkdir -p ~/.kiro/hooks
+cp config/kiro/hooks/*.kiro.hook ~/.kiro/hooks/
+
+# Or project-level installation
+# cp config/kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 ```
 
 **Hook files:**
