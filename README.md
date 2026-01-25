@@ -117,7 +117,7 @@ Choose **one** of the following options:
 The hook script automatically loads `~/.claude/.env.local`:
 
 ```bash
-cp config/claude/hooks/.env.sample ~/.claude/.env.local
+cp config/claude/.env.sample ~/.claude/.env.local
 # Edit the file and set your values
 ```
 
@@ -134,7 +134,7 @@ fi
 Then copy the sample file:
 
 ```bash
-cp config/claude/hooks/.env.sample ~/.claude/.env.local
+cp config/claude/.env.sample ~/.claude/.env.local
 ```
 
 #### 3. Edit `~/.claude/.env.local`
@@ -506,11 +506,11 @@ vibe-monitor/
 ├── User_Setup.h                # TFT display configuration
 ├── config/                     # IDE configuration files
 │   ├── claude/                 # Claude Code settings
-│   │   ├── hooks/              # Hook scripts
-│   │   │   ├── vibe-monitor.sh # Main hook script
-│   │   │   └── .env.sample     # Environment variables sample
+│   │   ├── .env.sample         # Environment variables sample
 │   │   ├── settings.json       # Hook configuration example
-│   │   └── statusline.sh       # Statusline script (model, memory)
+│   │   ├── statusline.sh       # Statusline script (model, memory)
+│   │   └── hooks/              # Hook scripts
+│   │       └── vibe-monitor.sh # Main hook script
 │   └── kiro/                   # Kiro IDE settings
 │       └── hooks/              # Hook files
 │           ├── vibe-monitor-session-start.kiro.hook
