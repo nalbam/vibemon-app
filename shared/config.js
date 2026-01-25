@@ -64,7 +64,7 @@ export const CHARACTER_CONFIG = {
   clawd: {
     name: 'clawd',
     displayName: 'Clawd',
-    color: '#E07B39',
+    color: '#D97757',
     body: { x: 6, y: 8, w: 52, h: 36 },
     arms: { left: { x: 0, y: 22, w: 6, h: 10 }, right: { x: 58, y: 22, w: 6, h: 10 } },
     legs: [

@@ -31,7 +31,7 @@ const CHAR_SIZE = 128;
 const FLOAT_AMPLITUDE_X = 3;
 
 // ✅ 색상 상수는 의미있는 이름 사용
-const COLOR_CLAUDE = '#E07B39';
+const COLOR_CLAUDE = '#D97757';
 const COLOR_KIRO = '#FFFFFF';
 const COLOR_BG_WORKING = '#0066CC';
 ```

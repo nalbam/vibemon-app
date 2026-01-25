@@ -44,7 +44,7 @@ const CHARACTER_CONFIG = {
   clawd: {
     name: 'clawd',
     displayName: 'Clawd',
-    color: '#E07B39',
+    color: '#D97757',
     isGhost: false
   },
   kiro: {

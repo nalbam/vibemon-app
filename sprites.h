@@ -14,7 +14,7 @@
 #include "img_kiro.h"
 
 // Character colors (RGB565)
-#define COLOR_CLAUDE      0xEB66  // #E07B39 Claude orange
+#define COLOR_CLAUDE      0xDBAA  // #D97757 Claude orange (217,119,87)
 #define COLOR_KIRO        0xFFFF  // #FFFFFF White ghost
 #define COLOR_EYE         0x0000  // #000000 Black
 #define COLOR_TRANSPARENT 0x0000  // Transparent (same as background)

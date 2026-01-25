@@ -2,7 +2,7 @@ const { createCanvas } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 
-const COLOR_CLAUDE = '#E07B39';
+const COLOR_CLAUDE = '#D97757';
 const COLOR_EYE = '#000000';
 const COLOR_BG = '#FFCC00';
 
