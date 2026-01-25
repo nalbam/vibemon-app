@@ -121,3 +121,26 @@ export const CHAR_Y_BASE = 20;
 // State timeouts
 export const DONE_TO_IDLE_TIMEOUT = 60 * 1000;    // 1 minute
 export const SLEEP_TIMEOUT = 600 * 1000;          // 10 minutes
+
+// Animation constants
+export const FRAME_INTERVAL = 100;                // 100ms per frame
+export const FLOAT_CYCLE_FRAMES = 32;             // ~3.2 seconds at 100ms tick
+export const LOADING_DOT_COUNT = 4;
+export const THINKING_ANIMATION_SLOWDOWN = 3;     // 3x slower for thinking state
+export const BLINK_START_FRAME = 30;
+export const BLINK_END_FRAME = 31;
+
+// Text truncation limits
+export const PROJECT_NAME_MAX_LENGTH = 16;
+export const PROJECT_NAME_TRUNCATE_AT = 13;
+export const MODEL_NAME_MAX_LENGTH = 14;
+export const MODEL_NAME_TRUNCATE_AT = 11;
+
+// Matrix effect constants
+export const MATRIX_STREAM_DENSITY = 0.7;         // 70% of streams visible
+export const MATRIX_SPEED_MIN = 1;
+export const MATRIX_SPEED_MAX = 6;
+export const MATRIX_COLUMN_WIDTH = 4;
+export const MATRIX_FLICKER_PERIOD = 3;
+export const MATRIX_TAIL_LENGTH_FAST = 8;         // speed > 3
+export const MATRIX_TAIL_LENGTH_SLOW = 6;

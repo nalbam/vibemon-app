@@ -1,4 +1,9 @@
-import { COLOR_EYE, COLOR_WHITE, CHARACTER_CONFIG, DEFAULT_CHARACTER } from './config.js';
+import {
+  COLOR_EYE, COLOR_WHITE, CHARACTER_CONFIG, DEFAULT_CHARACTER,
+  MATRIX_STREAM_DENSITY, MATRIX_SPEED_MIN, MATRIX_SPEED_MAX,
+  MATRIX_COLUMN_WIDTH, MATRIX_FLICKER_PERIOD,
+  MATRIX_TAIL_LENGTH_FAST, MATRIX_TAIL_LENGTH_SLOW
+} from './config.js';
 
 // Effect color for white characters (orange)
 const COLOR_EFFECT_ALT = '#FFA500';
@@ -203,27 +208,29 @@ function pseudoRandom(seed) {
 // Draw matrix background effect (full area, movie style)
 export function drawMatrixBackground(animFrame, drawRect, size = 64, body = null) {
   // Draw streams across entire area (character will be drawn on top)
-  for (let i = 0; i < Math.floor(size / 4); i++) {
+  const streamCount = Math.floor(size / MATRIX_COLUMN_WIDTH);
+  for (let i = 0; i < streamCount; i++) {
     const seed = i * 23 + 7;
-    // Show ~70% of streams for dense matrix look
-    if (pseudoRandom(seed + 100) > 0.7) continue;
-    const x = i * 4;
+    // Show streams based on density setting
+    if (pseudoRandom(seed + 100) > MATRIX_STREAM_DENSITY) continue;
+    const x = i * MATRIX_COLUMN_WIDTH;
     const offset = Math.floor(pseudoRandom(seed) * size);
-    // Variable speed: some fast, some slow (1-6)
-    const speed = 1 + Math.floor(pseudoRandom(seed + 1) * 6);
+    // Variable speed
+    const speedRange = MATRIX_SPEED_MAX - MATRIX_SPEED_MIN + 1;
+    const speed = MATRIX_SPEED_MIN + Math.floor(pseudoRandom(seed + 1) * speedRange);
     // Variable tail length based on speed
-    const tailLen = speed > 3 ? 8 : 6;
+    const tailLen = speed > 3 ? MATRIX_TAIL_LENGTH_FAST : MATRIX_TAIL_LENGTH_SLOW;
     drawMatrixStreamMovie(x, 0, animFrame, drawRect, offset, size, speed, tailLen, seed);
   }
 }
 
 // Draw matrix stream with movie-style effect
 function drawMatrixStreamMovie(x, y, animFrame, drawRect, offset, height, speed, tailLen, seed) {
-  if (height < 4) return;
+  if (height < MATRIX_COLUMN_WIDTH) return;
   const pos = (animFrame * speed + offset) % height;
 
   // Head: bright white/green (flicker effect)
-  const flicker = (animFrame + seed) % 3 === 0;
+  const flicker = (animFrame + seed) % MATRIX_FLICKER_PERIOD === 0;
   const headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
   drawRect(x, y + pos, 2, 2, headColor);
 

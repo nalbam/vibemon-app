@@ -1,6 +1,10 @@
 import {
   states, CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER,
-  CHAR_X_BASE, CHAR_Y_BASE, DONE_TO_IDLE_TIMEOUT, SLEEP_TIMEOUT
+  CHAR_X_BASE, CHAR_Y_BASE, DONE_TO_IDLE_TIMEOUT, SLEEP_TIMEOUT,
+  FRAME_INTERVAL, LOADING_DOT_COUNT, THINKING_ANIMATION_SLOWDOWN,
+  BLINK_START_FRAME, BLINK_END_FRAME,
+  PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
+  MODEL_NAME_MAX_LENGTH, MODEL_NAME_TRUNCATE_AT
 } from '../shared/config.js';
 import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
 import { initRenderer, drawCharacter } from '../shared/character.js';
@@ -8,7 +12,6 @@ import { drawInfoIcons } from '../shared/icons.js';
 import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../shared/animation.js';
 
 // Animation timing
-const FRAME_INTERVAL = 100; // Target 100ms per frame
 let lastFrameTime = 0;
 
 // Current state
@@ -150,9 +153,13 @@ window.updateDisplay = function() {
   const projectName = d.projectInput.value;
   const modelName = d.modelInput.value;
   const memoryUsage = d.memoryInput.value + '%';
-  d.projectValue.textContent = projectName.length > 16 ? projectName.substring(0, 13) + '...' : projectName;
+  d.projectValue.textContent = projectName.length > PROJECT_NAME_MAX_LENGTH
+    ? projectName.substring(0, PROJECT_NAME_TRUNCATE_AT) + '...'
+    : projectName;
   d.toolValue.textContent = toolName;
-  d.modelValue.textContent = modelName.length > 14 ? modelName.substring(0, 11) + '...' : modelName;
+  d.modelValue.textContent = modelName.length > MODEL_NAME_MAX_LENGTH
+    ? modelName.substring(0, MODEL_NAME_TRUNCATE_AT) + '...'
+    : modelName;
   d.memoryValue.textContent = memoryUsage;
 
   // Update model/memory visibility (hide memory on start state)
@@ -205,8 +212,8 @@ function getEventName(state) {
 
 // Update loading dots (slower for thinking state)
 function updateLoadingDots(slow = false) {
-  const frame = slow ? Math.floor(animFrame / 3) : animFrame;
-  const activeIndex = frame % 4;
+  const frame = slow ? Math.floor(animFrame / THINKING_ANIMATION_SLOWDOWN) : animFrame;
+  const activeIndex = frame % LOADING_DOT_COUNT;
   domCache.dots.forEach((dot, i) => {
     dot.classList.toggle('dim', i !== activeIndex);
   });
@@ -266,9 +273,9 @@ function animationLoop(timestamp) {
 
     if (currentState === 'idle') {
       blinkFrame++;
-      if (blinkFrame === 30) {
+      if (blinkFrame === BLINK_START_FRAME) {
         drawCharacter('blink', currentState, currentCharacter, animFrame);
-      } else if (blinkFrame === 31) {
+      } else if (blinkFrame === BLINK_END_FRAME) {
         drawCharacter('normal', currentState, currentCharacter, animFrame);
         blinkFrame = 0;
       }
