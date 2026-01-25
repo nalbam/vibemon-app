@@ -332,9 +332,9 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
   // Effect color (yellow for white characters, white for others)
   uint16_t effectColor = (character->color == COLOR_KIRO) ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
 
-  // Effect position (relative to right eye)
+  // Effect position (relative to right eye, above eyes)
   int effectX = rightEyeX + ew + (2 * SCALE);
-  int effectY = eyeY - (4 * SCALE);
+  int effectY = eyeY - (12 * SCALE);
 
   switch (eyeType) {
     case EYE_NORMAL:

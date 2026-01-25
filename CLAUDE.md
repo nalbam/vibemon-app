@@ -53,6 +53,8 @@ open simulator/index.html
 - **Working text**: Tool-based random selection via `getWorkingText(tool)`
 - **JSON fields**: `{"state", "event", "tool", "project", "model", "memory", "character"}`
 - **Characters**: `clawd` (orange), `kiro` (white ghost)
+- **Memory hidden on start**: Memory not displayed during `start` state
+- **Project change resets**: Model/memory cleared when project changes
 
 ## States
 

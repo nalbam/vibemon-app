@@ -19,9 +19,9 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
   const eyeH = char.eyes.h || char.eyes.size || 6;
   const effectColor = getEffectColor(char);
 
-  // Effect position (relative to character)
+  // Effect position (relative to character, above eyes)
   const effectX = rightX + eyeW + 2;
-  const effectY = eyeY - 4;
+  const effectY = eyeY - 12;
 
   switch (eyeType) {
     case 'normal':

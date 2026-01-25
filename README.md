@@ -318,6 +318,11 @@ All platforms (Desktop, Simulator, ESP32) automatically transition between state
 
 Any new status update resets the timeout timer and wakes the display from sleep.
 
+### Special Behaviors
+
+- **Memory hidden on start**: Memory usage is not displayed during the `start` state for a cleaner welcome screen
+- **Project change resets data**: When switching to a different project, model and memory values are automatically cleared
+
 ## HTTP API
 
 Both Desktop App (port 19280) and ESP32 WiFi mode (port 80) support the same API.
