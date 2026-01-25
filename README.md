@@ -83,7 +83,7 @@ Vibe Monitor integrates with AI coding assistants through hooks.
 | IDE | Hook System |
 |-----|-------------|
 | **Claude Code** | Shell hooks via `settings.json` |
-| **Kiro IDE/CLI** | Agent hooks via `hooks/kiro/` |
+| **Kiro IDE/CLI** | Agent hooks via `config/kiro/hooks/` |
 
 ### How It Works
 
@@ -104,7 +104,7 @@ Claude Code uses shell hooks defined in `settings.json`.
 #### 1. Copy hook script
 
 ```bash
-cp config/hooks/vibe-monitor.sh ~/.claude/hooks/
+cp config/claude/hooks/vibe-monitor.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/vibe-monitor.sh
 ```
 
@@ -117,7 +117,7 @@ Choose **one** of the following options:
 The hook script automatically loads `~/.claude/.env.local`:
 
 ```bash
-cp config/hooks/.env.sample ~/.claude/.env.local
+cp config/claude/hooks/.env.sample ~/.claude/.env.local
 # Edit the file and set your values
 ```
 
@@ -134,7 +134,7 @@ fi
 Then copy the sample file:
 
 ```bash
-cp config/hooks/.env.sample ~/.claude/.env.local
+cp config/claude/hooks/.env.sample ~/.claude/.env.local
 ```
 
 #### 3. Edit `~/.claude/.env.local`
@@ -215,12 +215,12 @@ chmod +x ~/.claude/statusline.sh
 
 ### Kiro IDE Setup
 
-Kiro IDE uses `.kiro.hook` files in the `config/kiro/` folder.
+Kiro IDE uses `.kiro.hook` files in the `config/kiro/hooks/` folder.
 
 #### 1. Copy hook files to your project
 
 ```bash
-cp -r config/kiro/*.kiro.hook your-project/.kiro/hooks/
+cp -r config/kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 ```
 
 > **Note:** Character is auto-set to `kiro` in the hook files.
@@ -506,16 +506,17 @@ vibe-monitor/
 ├── User_Setup.h                # TFT display configuration
 ├── config/                     # IDE configuration files
 │   ├── claude/                 # Claude Code settings
+│   │   ├── hooks/              # Hook scripts
+│   │   │   ├── vibe-monitor.sh # Main hook script
+│   │   │   └── .env.sample     # Environment variables sample
 │   │   ├── settings.json       # Hook configuration example
 │   │   └── statusline.sh       # Statusline script (model, memory)
-│   ├── hooks/                  # Shared hook scripts
-│   │   ├── vibe-monitor.sh     # Main hook script
-│   │   └── .env.sample         # Environment variables sample
-│   └── kiro/                   # Kiro IDE hooks
-│       ├── vibe-monitor-session-start.kiro.hook
-│       ├── vibe-monitor-working.kiro.hook
-│       ├── vibe-monitor-tool-use.kiro.hook
-│       └── vibe-monitor-idle.kiro.hook
+│   └── kiro/                   # Kiro IDE settings
+│       └── hooks/              # Hook files
+│           ├── vibe-monitor-session-start.kiro.hook
+│           ├── vibe-monitor-working.kiro.hook
+│           ├── vibe-monitor-tool-use.kiro.hook
+│           └── vibe-monitor-idle.kiro.hook
 ├── shared/                     # Shared code (Desktop/Simulator)
 │   ├── config.js               # State/character configuration
 │   ├── character.js            # Character rendering logic

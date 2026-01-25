@@ -1,28 +1,16 @@
 #!/bin/bash
 
-# Vibe Monitor Hook
-# Supports: Claude Code, Kiro IDE, Kiro CLI
+# Vibe Monitor Hook for Claude Code
 # Desktop App + ESP32 (USB Serial / HTTP)
-# Note: Model and Memory are provided by statusline.sh (accurate data)
+# Note: Model and Memory are provided by statusline.sh
 
 # ============================================================================
 # Environment Loading
 # ============================================================================
 
-# Load environment from .env.local (if not already set in shell profile)
-# Priority: Shell environment > .env.local file
 load_env() {
-  local env_file=""
+  local env_file="$HOME/.claude/.env.local"
 
-  # Determine env file path based on script location
-  local script_path="${BASH_SOURCE[0]}"
-  if [[ "$script_path" == *".kiro"* ]]; then
-    env_file="$HOME/.kiro/.env.local"
-  else
-    env_file="$HOME/.claude/.env.local"
-  fi
-
-  # Source if file exists and variables not already set
   if [ -f "$env_file" ]; then
     # shellcheck source=/dev/null
     source "$env_file"
@@ -42,10 +30,6 @@ debug_log() {
     echo "[DEBUG] $*" >&2
   fi
 }
-
-# ============================================================================
-# Input Parsing Functions
-# ============================================================================
 
 read_input() {
   timeout 5 cat 2>/dev/null || cat
@@ -77,40 +61,14 @@ get_state() {
   local event_name="$1"
 
   case "$event_name" in
-    # Claude Code events
     "SessionStart") echo "session_start" ;;
     "UserPromptSubmit") echo "thinking" ;;
     "PreToolUse") echo "working" ;;
     # "PostToolUse") echo "tool_done" ;;
     "Stop") echo "idle" ;;
     "Notification") echo "notification" ;;
-    # Kiro CLI events
-    "AgentSpawn"|"agent_spawn") echo "session_start" ;;
-    "user_prompt_submit") echo "thinking" ;;
-    "pre_tool_use") echo "working" ;;
-    # "post_tool_use") echo "tool_done" ;;
-    "stop") echo "idle" ;;
-    # Kiro IDE events
-    "PromptSubmit") echo "thinking" ;;
-    "AgentStop") echo "idle" ;;
-    "FileCreate"|"fileCreated") echo "working" ;;
-    "FileEdited"|"fileEdited") echo "working" ;;
-    "FileDeleted"|"fileDeleted") echo "working" ;;
-    "Manual") echo "working" ;;
-    # Default
     *) echo "working" ;;
   esac
-}
-
-get_character() {
-  # Detect character based on script location
-  local script_path="${BASH_SOURCE[0]}"
-
-  if [[ "$script_path" == *".kiro"* ]]; then
-    echo "kiro"
-  else
-    echo "clawd"
-  fi
 }
 
 build_payload() {
@@ -118,14 +76,13 @@ build_payload() {
   local event="$2"
   local tool="$3"
   local project="$4"
-  local character="$5"
 
   jq -n \
     --arg state "$state" \
     --arg event "$event" \
     --arg tool "$tool" \
     --arg project "$project" \
-    --arg character "$character" \
+    --arg character "clawd" \
     '{state: $state, event: $event, tool: $tool, project: $project, character: $character}'
 }
 
@@ -190,7 +147,6 @@ launch_desktop() {
 # ============================================================================
 
 main() {
-  # Read input
   local input
   input=$(read_input)
 
@@ -201,26 +157,26 @@ main() {
   cwd=$(parse_json_field "$input" '.cwd' '')
   transcript_path=$(parse_json_field "$input" '.transcript_path' '')
 
-  # Get project name, state, and character
-  local project_name state character
+  # Get project name and state
+  local project_name state
   project_name=$(get_project_name "$cwd" "$transcript_path")
   state=$(get_state "$event_name")
-  character=$(get_character "$event_name")
 
-  debug_log "Event: $event_name, Tool: $tool_name, Project: $project_name, Character: $character"
+  debug_log "Event: $event_name, Tool: $tool_name, Project: $project_name"
 
   # Build payload (model and memory are provided by statusline.sh)
   local payload
-  payload=$(build_payload "$state" "$event_name" "$tool_name" "$project_name" "$character")
+  payload=$(build_payload "$state" "$event_name" "$tool_name" "$project_name")
 
   debug_log "Payload: $payload"
 
-  # Launch Desktop App if not running (on session start events)
+  # Check if session start event
   local is_session_start=false
-  case "$event_name" in
-    "SessionStart"|"AgentSpawn"|"agent_spawn") is_session_start=true ;;
-  esac
+  if [ "$event_name" = "SessionStart" ]; then
+    is_session_start=true
+  fi
 
+  # Launch Desktop App if not running (on session start)
   if [ -n "${VIBE_MONITOR_DESKTOP}" ] && [ -n "${VIBE_MONITOR_URL}" ] && [ "$is_session_start" = true ]; then
     if ! is_monitor_running "${VIBE_MONITOR_URL}"; then
       debug_log "Desktop App not running, launching..."
