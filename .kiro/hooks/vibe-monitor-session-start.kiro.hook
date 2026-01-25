@@ -1,0 +1,12 @@
+{
+  "name": "Vibe Monitor - Session Start",
+  "version": "1.0.0",
+  "description": "에이전트 시작 시 Vibe Monitor에 session_start 상태 전송",
+  "when": {
+    "type": "agentSpawn"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d '{\"state\":\"session_start\",\"event\":\"AgentSpawn\",\"character\":\"kiro\"}' --connect-timeout 1 --max-time 2 > /dev/null 2>&1 || true"
+  }
+}

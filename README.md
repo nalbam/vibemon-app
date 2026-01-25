@@ -193,39 +193,20 @@ Kiro IDE uses `.kiro.hook` files in the `.kiro/hooks/` folder.
 cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 ```
 
-This copies:
-- `vibe-monitor-working.kiro.hook` - Sends `working` state on `promptSubmit`
-- `vibe-monitor-idle.kiro.hook` - Sends `idle` state on `agentStop`
-
 > **Note:** Character is auto-set to `kiro` in the hook files.
 
 #### Kiro Hook Events
 
-| Kiro Event | Vibe Monitor State | Description |
-|------------|-------------------|-------------|
-| `promptSubmit` | `working` | User submits prompt |
-| `agentStop` | `idle` | Agent turn ends |
+| Hook File | Event | State | Description |
+|-----------|-------|-------|-------------|
+| `vibe-monitor-session-start.kiro.hook` | `agentSpawn` | `session_start` | Agent activated |
+| `vibe-monitor-working.kiro.hook` | `promptSubmit` | `working` | User submits prompt |
+| `vibe-monitor-tool-use.kiro.hook` | `preToolUse` | `working` | Tool execution starts |
+| `vibe-monitor-idle.kiro.hook` | `agentStop` | `idle` | Agent turn ends |
 
-#### Adding More Hooks (Optional)
+#### Available Kiro Event Types
 
-You can create additional `.kiro.hook` files for other events:
-
-```json
-{
-  "name": "Vibe Monitor - File Save",
-  "version": "1.0.0",
-  "when": {
-    "type": "fileEdited",
-    "patterns": ["**/*"]
-  },
-  "then": {
-    "type": "runCommand",
-    "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d '{\"state\":\"working\",\"event\":\"FileSave\",\"tool\":\"Edit\",\"character\":\"kiro\"}' --connect-timeout 1 --max-time 2 > /dev/null 2>&1 || true"
-  }
-}
-```
-
-Available event types: `promptSubmit`, `agentStop`, `fileEdited`, `fileCreated`, `fileDeleted`
+`agentSpawn`, `promptSubmit`, `preToolUse`, `postToolUse`, `agentStop`, `fileCreated`, `fileSaved`, `fileDeleted`
 
 ---
 
@@ -240,15 +221,14 @@ The hook sends status updates in order (only if configured):
 
 ### Event Mapping Comparison
 
-| Action | Claude Code | Kiro CLI | Kiro IDE |
-|--------|-------------|----------|----------|
-| Session start | `SessionStart` | `AgentSpawn` | - |
-| User input | - | `UserPromptSubmit` | `PromptSubmit` |
-| Before tool | `PreToolUse` | `PreToolUse` | - |
-| After tool | `PostToolUse` | `PostToolUse` | - |
-| Agent done | `Stop` | `Stop` | `AgentStop` |
-| Notification | `Notification` | - | - |
-| Manual | - | - | `Manual` |
+| Action | Claude Code | Kiro IDE |
+|--------|-------------|----------|
+| Session start | `SessionStart` | `agentSpawn` |
+| User input | `UserPromptSubmit` | `promptSubmit` |
+| Before tool | `PreToolUse` | `preToolUse` |
+| After tool | `PostToolUse` | `postToolUse` |
+| Agent done | `Stop` | `agentStop` |
+| Notification | `Notification` | - |
 
 ## Characters
 
@@ -494,9 +474,14 @@ vibe-monitor/
 ├── vibe-monitor.ino            # ESP32 main firmware
 ├── sprites.h                   # Character rendering (ESP32)
 ├── User_Setup.h                # TFT display configuration
-├── hooks/                      # IDE hooks (Claude Code / Kiro)
-│   ├── vibe-monitor.sh         # Hook script (supports both)
+├── hooks/                      # Claude Code hooks
+│   ├── vibe-monitor.sh         # Hook script
 │   └── .env.sample             # Environment sample
+├── .kiro/hooks/                # Kiro IDE hooks
+│   ├── vibe-monitor-session-start.kiro.hook
+│   ├── vibe-monitor-working.kiro.hook
+│   ├── vibe-monitor-tool-use.kiro.hook
+│   └── vibe-monitor-idle.kiro.hook
 ├── shared/                     # Shared code (Desktop/Simulator)
 │   ├── config.js               # State/character configuration
 │   ├── character.js            # Character rendering logic
