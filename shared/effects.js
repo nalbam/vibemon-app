@@ -13,8 +13,8 @@ const COLOR_SUNGLASSES_FRAME = '#111111';
 const COLOR_SUNGLASSES_LENS = '#001100';
 const COLOR_SUNGLASSES_SHINE = '#003300';
 
-// Draw sunglasses (Matrix style)
-function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro = false) {
+// Get eye cover position (used by sunglasses and sleep eyes)
+function getEyeCoverPosition(leftX, rightX, eyeY, eyeW, eyeH, isKiro = false) {
   const lensW = eyeW + 4;
   const lensH = eyeH + 2;
   // Kiro: shift up 2px
@@ -22,6 +22,12 @@ function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro = fals
   // Kiro: left lens 2px right, right lens 6px right
   const leftLensX = leftX - 2 + (isKiro ? 2 : 0);
   const rightLensX = rightX - 2 + (isKiro ? 6 : 0);
+  return { lensW, lensH, lensY, leftLensX, rightLensX };
+}
+
+// Draw sunglasses (Matrix style)
+function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro = false) {
+  const { lensW, lensH, lensY, leftLensX, rightLensX } = getEyeCoverPosition(leftX, rightX, eyeY, eyeW, eyeH, isKiro);
 
   // Sunglasses colors (same for all characters)
   const frameColor = COLOR_SUNGLASSES_FRAME;
@@ -55,6 +61,21 @@ function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect, isKiro = fals
   // Bridge (connects two lenses)
   const bridgeY = lensY + Math.floor(lensH / 2);
   drawRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, 1, frameColor);
+}
+
+// Draw sleep eyes (closed eyes with body color background)
+function drawSleepEyes(leftX, rightX, eyeY, eyeW, eyeH, drawRect, bodyColor, isKiro = false) {
+  const { lensW, lensH, lensY, leftLensX, rightLensX } = getEyeCoverPosition(leftX, rightX, eyeY, eyeW, eyeH, isKiro);
+
+  // Cover original eyes with body color (same area as sunglasses)
+  drawRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  drawRect(rightLensX, lensY, lensW, lensH, bodyColor);
+
+  // Draw closed eyes (horizontal lines in the middle)
+  const closedEyeY = lensY + Math.floor(lensH / 2);
+  const closedEyeH = 2;  // 2px thick line
+  drawRect(leftLensX + 1, closedEyeY, lensW - 2, closedEyeH, COLOR_EYE);
+  drawRect(rightLensX + 1, closedEyeY, lensW - 2, closedEyeH, COLOR_EYE);
 }
 
 // Get effect color based on character color
@@ -101,7 +122,8 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
       break;
 
     case 'sleep':
-      // Zzz effect (sleep state)
+      // Sleep eyes (closed eyes) and Zzz effect
+      drawSleepEyes(leftX, rightX, eyeY, eyeW, eyeH, drawRect, char.color, isKiro);
       drawZzz(effectX, effectY, animFrame, drawRect, effectColor);
       break;
   }

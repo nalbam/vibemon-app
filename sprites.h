@@ -278,15 +278,38 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
 #define COLOR_SUNGLASSES_LENS  0x0080  // #001100
 #define COLOR_SUNGLASSES_SHINE 0x0180  // #003300
 
+// Get eye cover position (used by sunglasses and sleep eyes)
+void getEyeCoverPosition(int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro,
+                         int &lensW, int &lensH, int &lensY, int &leftLensX, int &rightLensX) {
+  lensW = ew + (4 * SCALE);
+  lensH = eh + (2 * SCALE);
+  // Kiro: shift up 2px
+  lensY = eyeY - SCALE - (isKiro ? (2 * SCALE) : 0);
+  // Kiro: left lens 2px right, right lens 6px right
+  leftLensX = leftEyeX - (2 * SCALE) + (isKiro ? (2 * SCALE) : 0);
+  rightLensX = rightEyeX - (2 * SCALE) + (isKiro ? (6 * SCALE) : 0);
+}
+
+// Draw sleep eyes (closed eyes with body color background)
+void drawSleepEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  int lensW, lensH, lensY, leftLensX, rightLensX;
+  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
+
+  // Cover original eyes with body color (same area as sunglasses)
+  tft.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  tft.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
+
+  // Draw closed eyes (horizontal lines in the middle)
+  int closedEyeY = lensY + lensH / 2;
+  int closedEyeH = 2 * SCALE;  // 2px thick line (scaled)
+  tft.fillRect(leftLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+  tft.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+}
+
 // Draw sunglasses (Matrix style)
 void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
-  int lensW = ew + (4 * SCALE);
-  int lensH = eh + (2 * SCALE);
-  // Kiro: shift up 2px
-  int lensY = eyeY - SCALE - (isKiro ? (2 * SCALE) : 0);
-  // Kiro: left lens 2px right, right lens 6px right
-  int leftLensX = leftEyeX - (2 * SCALE) + (isKiro ? (2 * SCALE) : 0);
-  int rightLensX = rightEyeX - (2 * SCALE) + (isKiro ? (6 * SCALE) : 0);
+  int lensW, lensH, lensY, leftLensX, rightLensX;
+  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
 
   // Left lens (dark green tint)
   tft.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
@@ -358,7 +381,8 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
       break;
 
     case EYE_SLEEP:
-      // Zzz effect (sleep state)
+      // Sleep eyes (closed eyes) and Zzz effect
+      drawSleepEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
       drawZzz(tft, effectX, effectY, animFrame, effectColor);
       break;
 
