@@ -275,7 +275,7 @@ Character is **auto-detected** based on the IDE hook events. You can also manual
 |-------|------------|------|------|---------|
 | `session_start` | Cyan | ■ ■ + ✦ | Hello! | Session begins |
 | `idle` | Green | ■ ■ | Ready | Waiting for input |
-| `thinking` | Purple | ▀ ▀ + 💭 | Thinking/Hmm/Let me see | User submits prompt |
+| `thinking` | Purple | ▀ ▀ + 💭 | Thinking | User submits prompt |
 | `working` | Blue | ▬ ▬ | (tool-based) | Tool executing |
 | `notification` | Yellow | ● ● + ? | Input? | User input needed |
 | `tool_done` | Green | ∨ ∨ | Done! | Tool completed |
