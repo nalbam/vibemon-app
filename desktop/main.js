@@ -21,6 +21,10 @@ const IDLE_TO_SLEEP_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 // HTTP server for receiving status updates
 let httpServer;
 const HTTP_PORT = 19280;
+const MAX_PAYLOAD_SIZE = 10 * 1024; // 10KB limit for security
+
+// Valid states for validation
+const VALID_STATES = ['start', 'idle', 'thinking', 'working', 'notification', 'done', 'sleep'];
 
 // State colors (matching index.html)
 const STATE_COLORS = {
@@ -351,17 +355,56 @@ function startHttpServer() {
     }
 
     if (req.method === 'POST' && req.url === '/status') {
-      let body = '';
-      req.on('data', chunk => body += chunk);
+      const chunks = [];
+      let bodySize = 0;
+      let aborted = false;
+
+      req.on('data', chunk => {
+        if (aborted) return;
+        bodySize += chunk.length;
+        if (bodySize > MAX_PAYLOAD_SIZE) {
+          aborted = true;
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Payload too large' }));
+          req.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
+
       req.on('end', () => {
+        if (aborted) return;
         try {
+          const body = Buffer.concat(chunks).toString('utf-8');
           const data = JSON.parse(body);
+
+          // Validate state if provided
+          if (data.state !== undefined && !VALID_STATES.includes(data.state)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Invalid state: ${data.state}` }));
+            return;
+          }
+
+          // Validate character if provided
+          if (data.character !== undefined && !CHARACTER_NAMES.includes(data.character)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Invalid character: ${data.character}` }));
+            return;
+          }
+
           updateState(data);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, state: currentState }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+
+      req.on('error', () => {
+        if (!aborted) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request error' }));
         }
       });
     } else if (req.method === 'GET' && req.url === '/status') {
@@ -404,6 +447,13 @@ function startHttpServer() {
     } else {
       res.writeHead(404);
       res.end('Not Found');
+    }
+  });
+
+  httpServer.on('error', (err) => {
+    console.error('HTTP Server error:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${HTTP_PORT} is already in use`);
     }
   });
 
