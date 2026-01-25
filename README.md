@@ -303,8 +303,12 @@ The `working` state displays context-aware text based on the active tool:
 
 - **Floating**: All states have gentle floating motion (±3px horizontal, ±5px vertical, ~3.2s cycle)
 - **Blink**: Idle state blinks every 3 seconds
-- **Loading dots**: Working state shows animated progress dots
-- **Matrix rain**: Working state shows falling green code effect
+- **Loading dots**: Thinking/working states show animated progress dots (thinking is 3x slower)
+- **Matrix rain**: Working state shows movie-style falling green code effect
+  - Flickering white/green head
+  - Gradient tail (white → bright → mid → dim → dark)
+  - Variable speed streams (1-6, mixing slow and fast)
+  - 70% stream density
 - **Sparkle**: Session start shows rotating sparkle effect
 - **Thought bubble**: Thinking state shows animated thought bubble
 - **Zzz**: Sleep state shows blinking Z animation

@@ -55,6 +55,8 @@ open simulator/index.html
 - **Characters**: `clawd` (orange), `kiro` (white ghost)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
+- **Matrix rain (working)**: Movie-style effect with flicker head, gradient tail, variable speed (1-6)
+- **Loading dots speed**: Thinking state uses 3x slower animation than working state
 
 ## States
 
