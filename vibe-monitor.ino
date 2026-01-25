@@ -339,8 +339,9 @@ void updateAnimation() {
 
   // State-specific animations
   if (currentState == "working") {
-    // Update loading dots
+    // Update loading dots and matrix effect
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame);
+    drawCharacter(tft, newCharX, newCharY, EYE_FOCUSED, bgColor, character);
   } else if (currentState == "start") {
     // Update sparkle animation (redraw for sparkle effect)
     drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor, character);

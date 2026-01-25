@@ -475,31 +475,32 @@ void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = 
   }
 }
 
-// Matrix rain colors (green shades)
+// Matrix rain colors (green shades only)
 #define COLOR_MATRIX_BRIGHT 0x07E0  // #00FF00
-#define COLOR_MATRIX_MID    0x0660  // #00CC00
-#define COLOR_MATRIX_DIM    0x04C0  // #009900
+#define COLOR_MATRIX_MID    0x0540  // #00AA00
+#define COLOR_MATRIX_DIM    0x0320  // #006600
 
-// Draw matrix rain effect for working state (scaled 2x, very fast falling)
+// Draw matrix rain effect for working state (scaled 2x, falling green squares)
 void drawMatrix(TFT_eSPI &tft, int x, int y, int frame) {
-  int f = frame % 4;
+  int height = 24;
 
-  // Three falling streams at different speeds
-  // Stream 1 (fastest)
-  int y1 = (f * 7) % 20;
-  tft.fillRect(x, y + (y1 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (y1 > 4) tft.fillRect(x, y + ((y1 - 5) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (y1 > 9) tft.fillRect(x, y + ((y1 - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+  // Stream 1 - left column
+  int pos1 = (frame * 3) % height;
+  tft.fillRect(x, y + (pos1 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos1 >= 3) tft.fillRect(x, y + ((pos1 - 3) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos1 >= 6) tft.fillRect(x, y + ((pos1 - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
 
-  // Stream 2 (fast)
-  int y2 = ((f + 1) * 6) % 18;
-  tft.fillRect(x + (4 * SCALE), y + (y2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (y2 > 4) tft.fillRect(x + (4 * SCALE), y + ((y2 - 5) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  // Stream 2 - center column (different phase)
+  int pos2 = (frame * 3 + 8) % height;
+  tft.fillRect(x + (4 * SCALE), y + (pos2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos2 >= 3) tft.fillRect(x + (4 * SCALE), y + ((pos2 - 3) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos2 >= 6) tft.fillRect(x + (4 * SCALE), y + ((pos2 - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
 
-  // Stream 3 (fast)
-  int y3 = ((f + 2) * 5) % 16;
-  tft.fillRect(x + (8 * SCALE), y + (y3 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (y3 > 4) tft.fillRect(x + (8 * SCALE), y + ((y3 - 5) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+  // Stream 3 - right column (different phase)
+  int pos3 = (frame * 3 + 16) % height;
+  tft.fillRect(x + (8 * SCALE), y + (pos3 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos3 >= 3) tft.fillRect(x + (8 * SCALE), y + ((pos3 - 3) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos3 >= 6) tft.fillRect(x + (8 * SCALE), y + ((pos3 - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
 }
 
 // Draw loading dots animation

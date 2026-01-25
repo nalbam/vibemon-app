@@ -180,6 +180,7 @@ function startAnimation() {
 
     if (currentState === 'working') {
       updateLoadingDots();
+      drawCharacter('focused', currentState, currentCharacter, animFrame);
     }
 
     if (currentState === 'idle') {

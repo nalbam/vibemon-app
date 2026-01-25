@@ -146,29 +146,30 @@ export function drawThoughtBubble(x, y, animFrame, drawRect, color = COLOR_WHITE
   }
 }
 
-// Matrix rain colors (green shades)
+// Matrix rain colors (green shades only)
 const COLOR_MATRIX_BRIGHT = '#00FF00';
-const COLOR_MATRIX_MID = '#00CC00';
-const COLOR_MATRIX_DIM = '#009900';
+const COLOR_MATRIX_MID = '#00AA00';
+const COLOR_MATRIX_DIM = '#006600';
 
-// Draw matrix rain effect for working state (very fast falling)
+// Draw matrix rain effect for working state (falling green squares)
 export function drawMatrix(x, y, animFrame, drawRect) {
-  const frame = animFrame % 4;
+  const height = 24;
 
-  // Three falling streams at different speeds
-  // Stream 1 (fastest)
-  const y1 = (frame * 7) % 20;
-  drawRect(x, y + y1, 2, 2, COLOR_MATRIX_BRIGHT);
-  if (y1 > 4) drawRect(x, y + y1 - 5, 2, 2, COLOR_MATRIX_MID);
-  if (y1 > 9) drawRect(x, y + y1 - 10, 2, 2, COLOR_MATRIX_DIM);
+  // Stream 1 - left column
+  const pos1 = (animFrame * 3) % height;
+  drawRect(x, y + pos1, 2, 2, COLOR_MATRIX_BRIGHT);
+  if (pos1 >= 3) drawRect(x, y + pos1 - 3, 2, 2, COLOR_MATRIX_MID);
+  if (pos1 >= 6) drawRect(x, y + pos1 - 6, 2, 2, COLOR_MATRIX_DIM);
 
-  // Stream 2 (fast)
-  const y2 = ((frame + 1) * 6) % 18;
-  drawRect(x + 4, y + y2, 2, 2, COLOR_MATRIX_BRIGHT);
-  if (y2 > 4) drawRect(x + 4, y + y2 - 5, 2, 2, COLOR_MATRIX_MID);
+  // Stream 2 - center column (different phase)
+  const pos2 = (animFrame * 3 + 8) % height;
+  drawRect(x + 4, y + pos2, 2, 2, COLOR_MATRIX_BRIGHT);
+  if (pos2 >= 3) drawRect(x + 4, y + pos2 - 3, 2, 2, COLOR_MATRIX_MID);
+  if (pos2 >= 6) drawRect(x + 4, y + pos2 - 6, 2, 2, COLOR_MATRIX_DIM);
 
-  // Stream 3 (fast)
-  const y3 = ((frame + 2) * 5) % 16;
-  drawRect(x + 8, y + y3, 2, 2, COLOR_MATRIX_BRIGHT);
-  if (y3 > 4) drawRect(x + 8, y + y3 - 5, 2, 2, COLOR_MATRIX_DIM);
+  // Stream 3 - right column (different phase)
+  const pos3 = (animFrame * 3 + 16) % height;
+  drawRect(x + 8, y + pos3, 2, 2, COLOR_MATRIX_BRIGHT);
+  if (pos3 >= 3) drawRect(x + 8, y + pos3 - 3, 2, 2, COLOR_MATRIX_MID);
+  if (pos3 >= 6) drawRect(x + 8, y + pos3 - 6, 2, 2, COLOR_MATRIX_DIM);
 }
