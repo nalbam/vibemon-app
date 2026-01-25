@@ -207,7 +207,7 @@ chmod +x ~/.claude/statusline.sh
 | `SessionStart` | `session_start` | Session begins |
 | `UserPromptSubmit` | `thinking` | User submits prompt, AI starts thinking |
 | `PreToolUse` | `working` | Tool execution starts |
-| `PostToolUse` | `tool_done` | Tool execution ends |
+| `PostToolUse` | - | *(Currently disabled)* |
 | `Notification` | `notification` | User input needed |
 | `Stop` | `idle` | Agent turn ends |
 
