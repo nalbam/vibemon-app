@@ -286,7 +286,10 @@ function updateState(data) {
 function showAndPositionWindow() {
   if (mainWindow) {
     const { workArea } = screen.getPrimaryDisplay();
-    mainWindow.setPosition(workArea.x + workArea.width - 172, workArea.y);
+    const x = workArea.x + workArea.width - 172;
+    const y = workArea.y;
+    // Use setBounds for better Windows compatibility
+    mainWindow.setBounds({ x, y, width: 172, height: 348 });
     mainWindow.showInactive();
     return true;
   }
