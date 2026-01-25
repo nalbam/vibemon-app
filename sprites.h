@@ -481,26 +481,12 @@ void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = 
   }
 }
 
-// Matrix rain colors (green shades only)
+// Matrix rain colors (green shades - movie style)
+#define COLOR_MATRIX_WHITE  0xCFF9  // #CCFFCC
 #define COLOR_MATRIX_BRIGHT 0x07E0  // #00FF00
-#define COLOR_MATRIX_MID    0x0540  // #00AA00
-#define COLOR_MATRIX_DIM    0x0320  // #006600
-
-// Draw single matrix stream
-void drawMatrixStream(TFT_eSPI &tft, int x, int y, int frame, int offset, int height) {
-  int pos = (frame * 2 + offset) % height;
-  tft.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (pos >= 3) tft.fillRect(x, y + ((pos - 3) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (pos >= 6) tft.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
-}
-
-// Draw matrix rain effect for working state (small, next to eyes)
-void drawMatrix(TFT_eSPI &tft, int x, int y, int frame) {
-  int height = 24;
-  drawMatrixStream(tft, x, y, frame, 0, height);
-  drawMatrixStream(tft, x + (4 * SCALE), y, frame, 8, height);
-  drawMatrixStream(tft, x + (8 * SCALE), y, frame, 16, height);
-}
+#define COLOR_MATRIX_MID    0x05E0  // #00BB00
+#define COLOR_MATRIX_DIM    0x0440  // #008800
+#define COLOR_MATRIX_DARK   0x0220  // #004400
 
 // Pseudo-random number generator for consistent randomness
 float pseudoRandom(int seed) {
@@ -508,27 +494,38 @@ float pseudoRandom(int seed) {
   return x - floor(x);
 }
 
-// Draw matrix stream with variable speed and longer tail
-void drawMatrixStreamVar(TFT_eSPI &tft, int x, int y, int frame, int offset, int height, int speed) {
+// Draw matrix stream with movie-style effect
+void drawMatrixStreamMovie(TFT_eSPI &tft, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
   if (height < 4) return;
   int pos = (frame * speed + offset) % height;
-  tft.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (pos >= 2) tft.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (pos >= 4) tft.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
-  if (pos >= 6) tft.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+
+  // Head: bright white/green (flicker effect)
+  bool flicker = ((frame + seed) % 3) == 0;
+  uint16_t headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
+  tft.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
+
+  // Tail with gradient
+  if (pos >= 2) tft.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos >= 4) tft.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos >= 6) tft.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (tailLen >= 8 && pos >= 8) tft.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+  if (tailLen >= 8 && pos >= 10) tft.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
 }
 
-// Draw matrix background effect (full area, behind character)
+// Draw matrix background effect (full area, movie style)
 void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
   // Draw streams across entire area (character will be drawn on top)
   for (int i = 0; i < size / 4; i++) {
     int seed = i * 23 + 7;
-    // Show ~50% of streams for natural look
-    if (pseudoRandom(seed + 100) > 0.5) continue;
+    // Show ~70% of streams for dense matrix look
+    if (pseudoRandom(seed + 100) > 0.7) continue;
     int colX = x + (i * 4 * SCALE);
     int offset = (int)(pseudoRandom(seed) * size);
-    int speed = 3 + (int)(pseudoRandom(seed + 1) * 4);
-    drawMatrixStreamVar(tft, colX, y, frame, offset, size, speed);
+    // Variable speed: some fast, some slow (1-6)
+    int speed = 1 + (int)(pseudoRandom(seed + 1) * 6);
+    // Variable tail length based on speed
+    int tailLen = speed > 3 ? 8 : 6;
+    drawMatrixStreamMovie(tft, colX, y, frame, offset, size, speed, tailLen, seed);
   }
 }
 

@@ -146,26 +146,12 @@ export function drawThoughtBubble(x, y, animFrame, drawRect, color = COLOR_WHITE
   }
 }
 
-// Matrix rain colors (green shades only)
+// Matrix rain colors (green shades - movie style)
+const COLOR_MATRIX_WHITE = '#CCFFCC';
 const COLOR_MATRIX_BRIGHT = '#00FF00';
-const COLOR_MATRIX_MID = '#00AA00';
-const COLOR_MATRIX_DIM = '#006600';
-
-// Draw single matrix stream
-function drawMatrixStream(x, y, animFrame, drawRect, offset, height) {
-  const pos = (animFrame * 2 + offset) % height;
-  drawRect(x, y + pos, 2, 2, COLOR_MATRIX_BRIGHT);
-  if (pos >= 3) drawRect(x, y + pos - 3, 2, 2, COLOR_MATRIX_MID);
-  if (pos >= 6) drawRect(x, y + pos - 6, 2, 2, COLOR_MATRIX_DIM);
-}
-
-// Draw matrix rain effect for working state (small, next to eyes)
-export function drawMatrix(x, y, animFrame, drawRect) {
-  const height = 24;
-  drawMatrixStream(x, y, animFrame, drawRect, 0, height);
-  drawMatrixStream(x + 4, y, animFrame, drawRect, 8, height);
-  drawMatrixStream(x + 8, y, animFrame, drawRect, 16, height);
-}
+const COLOR_MATRIX_MID = '#00BB00';
+const COLOR_MATRIX_DIM = '#008800';
+const COLOR_MATRIX_DARK = '#004400';
 
 // Pseudo-random number generator for consistent randomness
 function pseudoRandom(seed) {
@@ -173,26 +159,42 @@ function pseudoRandom(seed) {
   return x - Math.floor(x);
 }
 
-// Draw matrix background effect (full area, behind character)
+// Draw matrix background effect (full area, movie style)
 export function drawMatrixBackground(animFrame, drawRect, size = 64, body = null) {
   // Draw streams across entire area (character will be drawn on top)
   for (let i = 0; i < Math.floor(size / 4); i++) {
     const seed = i * 23 + 7;
-    // Show ~50% of streams for natural look
-    if (pseudoRandom(seed + 100) > 0.5) continue;
+    // Show ~70% of streams for dense matrix look
+    if (pseudoRandom(seed + 100) > 0.7) continue;
     const x = i * 4;
     const offset = Math.floor(pseudoRandom(seed) * size);
-    const speed = 3 + Math.floor(pseudoRandom(seed + 1) * 4);
-    drawMatrixStreamVar(x, 0, animFrame, drawRect, offset, size, speed);
+    // Variable speed: some fast, some slow (1-6)
+    const speed = 1 + Math.floor(pseudoRandom(seed + 1) * 6);
+    // Variable tail length based on speed
+    const tailLen = speed > 3 ? 8 : 6;
+    drawMatrixStreamMovie(x, 0, animFrame, drawRect, offset, size, speed, tailLen, seed);
   }
 }
 
-// Draw matrix stream with variable speed and longer tail
-function drawMatrixStreamVar(x, y, animFrame, drawRect, offset, height, speed) {
+// Draw matrix stream with movie-style effect
+function drawMatrixStreamMovie(x, y, animFrame, drawRect, offset, height, speed, tailLen, seed) {
   if (height < 4) return;
   const pos = (animFrame * speed + offset) % height;
-  drawRect(x, y + pos, 2, 2, COLOR_MATRIX_BRIGHT);
-  if (pos >= 2) drawRect(x, y + pos - 2, 2, 2, COLOR_MATRIX_MID);
-  if (pos >= 4) drawRect(x, y + pos - 4, 2, 2, COLOR_MATRIX_DIM);
-  if (pos >= 6) drawRect(x, y + pos - 6, 2, 2, COLOR_MATRIX_DIM);
+
+  // Head: bright white/green (flicker effect)
+  const flicker = (animFrame + seed) % 3 === 0;
+  const headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
+  drawRect(x, y + pos, 2, 2, headColor);
+
+  // Tail with gradient
+  if (pos >= 2) drawRect(x, y + pos - 2, 2, 2, COLOR_MATRIX_BRIGHT);
+  if (pos >= 4) drawRect(x, y + pos - 4, 2, 2, COLOR_MATRIX_MID);
+  if (pos >= 6) drawRect(x, y + pos - 6, 2, 2, COLOR_MATRIX_MID);
+  if (tailLen >= 8 && pos >= 8) drawRect(x, y + pos - 8, 2, 2, COLOR_MATRIX_DIM);
+  if (tailLen >= 8 && pos >= 10) drawRect(x, y + pos - 10, 2, 2, COLOR_MATRIX_DARK);
+}
+
+// Legacy function for compatibility
+export function drawMatrix(x, y, animFrame, drawRect) {
+  drawMatrixBackground(animFrame, drawRect, 24, null);
 }
