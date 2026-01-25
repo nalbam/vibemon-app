@@ -21,6 +21,7 @@ const HTTP_PORT = 19280;
 const STATE_COLORS = {
   session_start: '#00CCCC',
   idle: '#00AA00',
+  thinking: '#6633CC',
   working: '#0066CC',
   notification: '#FFCC00',
   tool_done: '#00AA00',
