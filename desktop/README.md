@@ -68,6 +68,7 @@ cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
 |-------|------------|------|------|---------|
 | `session_start` | Cyan | ■ ■ + ✦ | Hello! | Session begins |
 | `idle` | Green | ■ ■ | Ready | Waiting for input |
+| `thinking` | Purple | ▀ ▀ + 💭 | Thinking/Hmm/Let me see | User submits prompt |
 | `working` | Blue | ▬ ▬ | (tool-based) | Tool executing |
 | `notification` | Yellow | ● ● + ? | Input? | User input needed |
 | `tool_done` | Green | ∨ ∨ | Done! | Tool completed |

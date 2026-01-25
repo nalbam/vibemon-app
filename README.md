@@ -161,6 +161,7 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 {
   "hooks": {
     "SessionStart": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "UserPromptSubmit": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
     "PreToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
     "PostToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
     "Notification": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
