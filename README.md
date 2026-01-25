@@ -49,7 +49,7 @@ Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what sta
 
 ## Quick Start
 
-### Desktop App (Recommended)
+### Desktop App
 
 ```bash
 cd desktop
@@ -80,10 +80,10 @@ Vibe Monitor integrates with AI coding assistants through hooks.
 
 ### Supported IDEs
 
-| IDE | Hook System | Status |
-|-----|-------------|--------|
-| **Claude Code** | Shell hooks via `settings.json` | ✅ Fully supported |
-| **Kiro IDE/CLI** | Agent hooks via `.kiro/hooks/` | ✅ Fully supported |
+| IDE | Hook System |
+|-----|-------------|
+| **Claude Code** | Shell hooks via `settings.json` |
+| **Kiro IDE/CLI** | Agent hooks via `.kiro/hooks/` |
 
 ### How It Works
 
@@ -108,7 +108,30 @@ cp hooks/vibe-monitor.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/vibe-monitor.sh
 ```
 
-#### 2. Copy environment sample
+#### 2. Configure environment variables
+
+Choose **one** of the following options:
+
+**Option A: Copy to config folder (recommended)**
+
+The hook script automatically loads `~/.claude/.env.local`:
+
+```bash
+cp hooks/.env.sample ~/.claude/.env.local
+# Edit the file and set your values
+```
+
+**Option B: Source from shell profile**
+
+Add to `~/.zshrc` or `~/.bashrc`:
+
+```bash
+if [ -f ~/.claude/.env.local ]; then
+  source ~/.claude/.env.local
+fi
+```
+
+Then copy the sample file:
 
 ```bash
 cp hooks/.env.sample ~/.claude/.env.local

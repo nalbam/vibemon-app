@@ -5,6 +5,32 @@
 # Desktop App + ESP32 (USB Serial / HTTP)
 # Note: Model and Memory are provided by statusline.sh (accurate data)
 
+# ============================================================================
+# Environment Loading
+# ============================================================================
+
+# Load environment from .env.local (if not already set in shell profile)
+# Priority: Shell environment > .env.local file
+load_env() {
+  local env_file=""
+
+  # Determine env file path based on script location
+  local script_path="${BASH_SOURCE[0]}"
+  if [[ "$script_path" == *".kiro"* ]]; then
+    env_file="$HOME/.kiro/.env.local"
+  else
+    env_file="$HOME/.claude/.env.local"
+  fi
+
+  # Source if file exists and variables not already set
+  if [ -f "$env_file" ]; then
+    # shellcheck source=/dev/null
+    source "$env_file"
+  fi
+}
+
+load_env
+
 DEBUG="${DEBUG:-0}"
 
 # ============================================================================
