@@ -89,8 +89,3 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
   // Draw eyes (for all characters)
   drawEyes(eyeType, char, animFrame, drawRect);
 }
-
-// Get context for external use
-export function getContext() {
-  return ctx;
-}

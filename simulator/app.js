@@ -1,11 +1,11 @@
 import {
   states, CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER,
-  FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, CHAR_X_BASE, CHAR_Y_BASE,
-  DONE_TO_IDLE_TIMEOUT, SLEEP_TIMEOUT
+  CHAR_X_BASE, CHAR_Y_BASE, DONE_TO_IDLE_TIMEOUT, SLEEP_TIMEOUT
 } from '../shared/config.js';
 import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
 import { initRenderer, drawCharacter } from '../shared/character.js';
 import { drawInfoIcons } from '../shared/icons.js';
+import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../shared/animation.js';
 
 // Current state
 let currentState = 'start';
@@ -19,22 +19,38 @@ let lastDoneTime = null;
 // Canvas
 let canvas, ctx;
 
-// Calculate floating X offset using cosine wave
-function getFloatOffsetX() {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
-  return Math.cos(angle) * FLOAT_AMPLITUDE_X;
-}
+// Cached DOM elements (initialized once in init())
+let domCache = null;
 
-// Calculate floating Y offset using sine wave
-function getFloatOffsetY() {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
-  return Math.sin(angle) * FLOAT_AMPLITUDE_Y;
+// Initialize DOM cache
+function initDomCache() {
+  domCache = {
+    display: document.getElementById('display'),
+    statusText: document.getElementById('status-text'),
+    loadingDots: document.getElementById('loading-dots'),
+    toolLine: document.getElementById('tool-line'),
+    modelLine: document.getElementById('model-line'),
+    memoryLine: document.getElementById('memory-line'),
+    projectValue: document.getElementById('project-value'),
+    toolValue: document.getElementById('tool-value'),
+    modelValue: document.getElementById('model-value'),
+    memoryValue: document.getElementById('memory-value'),
+    currentStateDisplay: document.getElementById('current-state-display'),
+    jsonPreview: document.getElementById('json-preview'),
+    toolInput: document.getElementById('tool-input'),
+    projectInput: document.getElementById('project-input'),
+    modelInput: document.getElementById('model-input'),
+    memoryInput: document.getElementById('memory-input'),
+    infoTexts: document.querySelectorAll('.info-text'),
+    infoValues: document.querySelectorAll('.info-value'),
+    dots: document.querySelectorAll('.dot')
+  };
 }
 
 // Update canvas position for floating effect
 function updateFloatingPosition() {
-  const offsetX = getFloatOffsetX();
-  const offsetY = getFloatOffsetY();
+  const offsetX = getFloatOffsetX(animFrame);
+  const offsetY = getFloatOffsetY(animFrame);
   canvas.style.left = (CHAR_X_BASE + offsetX) + 'px';
   canvas.style.top = (CHAR_Y_BASE + offsetY) + 'px';
 }
@@ -44,6 +60,7 @@ function init() {
   canvas = document.getElementById('character-canvas');
   ctx = canvas.getContext('2d');
   initRenderer(ctx);
+  initDomCache();
 
   // Random state selection
   const stateNames = Object.keys(states);
@@ -67,7 +84,7 @@ function init() {
 
   // Set random initial memory value (10-90%)
   const randomMemory = Math.floor(Math.random() * 81) + 10;
-  document.getElementById('memory-input').value = randomMemory;
+  domCache.memoryInput.value = randomMemory;
   document.getElementById('memory-display').textContent = randomMemory + '%';
 
   updateDisplay();
@@ -103,69 +120,54 @@ window.updateMemorySlider = function(value) {
 // Update display
 window.updateDisplay = function() {
   const state = states[currentState];
-  const display = document.getElementById('display');
-  const statusText = document.getElementById('status-text');
-  const loadingDots = document.getElementById('loading-dots');
-  const toolLine = document.getElementById('tool-line');
-  const modelLine = document.getElementById('model-line');
-  const memoryLine = document.getElementById('memory-line');
-  const projectValue = document.getElementById('project-value');
-  const toolValue = document.getElementById('tool-value');
-  const modelValue = document.getElementById('model-value');
-  const memoryValue = document.getElementById('memory-value');
-  const currentStateDisplay = document.getElementById('current-state-display');
-  const jsonPreview = document.getElementById('json-preview');
+  const d = domCache;
 
   // Update background
-  display.style.background = state.bgColor;
+  d.display.style.background = state.bgColor;
 
   // Update text and color
-  const toolName = document.getElementById('tool-input').value;
+  const toolName = d.toolInput.value;
   if (currentState === 'thinking') {
-    statusText.textContent = getThinkingText();
+    d.statusText.textContent = getThinkingText();
   } else if (currentState === 'working') {
-    statusText.textContent = getWorkingText(toolName);
+    d.statusText.textContent = getWorkingText(toolName);
   } else {
-    statusText.textContent = state.text;
+    d.statusText.textContent = state.text;
   }
-  statusText.style.color = state.textColor;
+  d.statusText.style.color = state.textColor;
 
   // Update loading dots visibility
-  loadingDots.style.display = state.showLoading ? 'flex' : 'none';
+  d.loadingDots.style.display = state.showLoading ? 'flex' : 'none';
 
   // Update tool line visibility
-  toolLine.style.display = currentState === 'working' ? 'block' : 'none';
+  d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values from inputs
-  const projectName = document.getElementById('project-input').value;
-  const modelName = document.getElementById('model-input').value;
-  const memoryUsage = document.getElementById('memory-input').value + '%';
-  projectValue.textContent = projectName.length > 16 ? projectName.substring(0, 13) + '...' : projectName;
-  toolValue.textContent = toolName;
-  modelValue.textContent = modelName.length > 14 ? modelName.substring(0, 11) + '...' : modelName;
-  memoryValue.textContent = memoryUsage;
+  const projectName = d.projectInput.value;
+  const modelName = d.modelInput.value;
+  const memoryUsage = d.memoryInput.value + '%';
+  d.projectValue.textContent = projectName.length > 16 ? projectName.substring(0, 13) + '...' : projectName;
+  d.toolValue.textContent = toolName;
+  d.modelValue.textContent = modelName.length > 14 ? modelName.substring(0, 11) + '...' : modelName;
+  d.memoryValue.textContent = memoryUsage;
 
   // Update model/memory visibility (hide memory on start state)
-  modelLine.style.display = modelName ? 'block' : 'none';
+  d.modelLine.style.display = modelName ? 'block' : 'none';
   const showMemory = currentState !== 'start' && memoryUsage;
-  memoryLine.style.display = showMemory ? 'block' : 'none';
+  d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state)
   updateMemoryBar(showMemory ? memoryUsage : null, state.bgColor);
 
-  // Update all text colors based on state
-  document.querySelectorAll('.info-text').forEach(el => {
-    el.style.color = state.textColor;
-  });
-  document.querySelectorAll('.info-value').forEach(el => {
-    el.style.color = state.textColor;
-  });
+  // Update all text colors based on state (using cached elements)
+  d.infoTexts.forEach(el => el.style.color = state.textColor);
+  d.infoValues.forEach(el => el.style.color = state.textColor);
 
   // Draw info icons
   drawInfoIcons(state.textColor, state.bgColor, iconType === 'emoji');
 
   // Update current state display
-  currentStateDisplay.textContent = currentState;
+  d.currentStateDisplay.textContent = currentState;
 
   // Update JSON preview
   const json = {
@@ -177,7 +179,7 @@ window.updateDisplay = function() {
     memory: memoryUsage,
     character: currentCharacter
   };
-  jsonPreview.textContent = JSON.stringify(json, null, 2);
+  d.jsonPreview.textContent = JSON.stringify(json, null, 2);
 
   // Draw character
   drawCharacter(state.eyeType, currentState, currentCharacter, animFrame);
@@ -199,10 +201,9 @@ function getEventName(state) {
 
 // Update loading dots (slower for thinking state)
 function updateLoadingDots(slow = false) {
-  const dots = document.querySelectorAll('.dot');
   const frame = slow ? Math.floor(animFrame / 3) : animFrame;
   const activeIndex = frame % 4;
-  dots.forEach((dot, i) => {
+  domCache.dots.forEach((dot, i) => {
     dot.classList.toggle('dim', i !== activeIndex);
   });
 }
@@ -237,6 +238,12 @@ function startAnimation() {
     animFrame++;
 
     updateFloatingPosition();
+
+    // Only redraw when necessary
+    if (!needsAnimationRedraw(currentState, animFrame, blinkFrame)) {
+      checkStateTimeouts();
+      return;
+    }
 
     if (currentState === 'start') {
       drawCharacter('sparkle', currentState, currentCharacter, animFrame);

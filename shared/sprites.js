@@ -75,7 +75,6 @@ export const KIRO_SPRITE = [
 export const KIRO_PALETTE = {
   '0': null,        // transparent (background)
   '1': '#FFFFFF',   // white body
-  '7': '#000000',   // black eyes
 };
 
 // Render sprite to canvas

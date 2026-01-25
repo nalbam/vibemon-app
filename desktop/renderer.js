@@ -1,11 +1,11 @@
 import {
   states, CHARACTER_CONFIG, DEFAULT_CHARACTER,
-  FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, CHAR_X_BASE, CHAR_Y_BASE,
-  SLEEP_TIMEOUT
+  CHAR_X_BASE, CHAR_Y_BASE, SLEEP_TIMEOUT
 } from '../shared/config.js';
 import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
 import { initRenderer, drawCharacter } from '../shared/character.js';
 import { drawInfoIcons } from '../shared/icons.js';
+import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../shared/animation.js';
 
 // Platform detection: macOS uses emoji, Windows/Linux uses pixel art
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -25,22 +25,33 @@ let lastActivityTime = Date.now();
 // Canvas
 let canvas, ctx;
 
-// Calculate floating X offset using cosine wave
-function getFloatOffsetX() {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
-  return Math.cos(angle) * FLOAT_AMPLITUDE_X;
-}
+// Cached DOM elements (initialized once in init())
+let domCache = null;
 
-// Calculate floating Y offset using sine wave
-function getFloatOffsetY() {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
-  return Math.sin(angle) * FLOAT_AMPLITUDE_Y;
+// Initialize DOM cache
+function initDomCache() {
+  domCache = {
+    display: document.getElementById('display'),
+    statusText: document.getElementById('status-text'),
+    loadingDots: document.getElementById('loading-dots'),
+    toolLine: document.getElementById('tool-line'),
+    modelLine: document.getElementById('model-line'),
+    memoryLine: document.getElementById('memory-line'),
+    projectValue: document.getElementById('project-value'),
+    toolValue: document.getElementById('tool-value'),
+    modelValue: document.getElementById('model-value'),
+    memoryValue: document.getElementById('memory-value'),
+    infoTexts: document.querySelectorAll('.info-text'),
+    infoLabels: document.querySelectorAll('.info-label'),
+    infoValues: document.querySelectorAll('.info-value'),
+    dots: document.querySelectorAll('.dot')
+  };
 }
 
 // Update canvas position for floating effect
 function updateFloatingPosition() {
-  const offsetX = getFloatOffsetX();
-  const offsetY = getFloatOffsetY();
+  const offsetX = getFloatOffsetX(animFrame);
+  const offsetY = getFloatOffsetY(animFrame);
   canvas.style.left = (CHAR_X_BASE + offsetX) + 'px';
   canvas.style.top = (CHAR_Y_BASE + offsetY) + 'px';
 }
@@ -50,6 +61,7 @@ function init() {
   canvas = document.getElementById('character-canvas');
   ctx = canvas.getContext('2d');
   initRenderer(ctx);
+  initDomCache();
 
   updateDisplay();
   startAnimation();
@@ -72,68 +84,53 @@ function init() {
 // Update display
 function updateDisplay() {
   const state = states[currentState] || states.idle;
-  const display = document.getElementById('display');
-  const statusText = document.getElementById('status-text');
-  const loadingDots = document.getElementById('loading-dots');
-  const toolLine = document.getElementById('tool-line');
-  const modelLine = document.getElementById('model-line');
-  const memoryLine = document.getElementById('memory-line');
-  const projectValue = document.getElementById('project-value');
-  const toolValue = document.getElementById('tool-value');
-  const modelValue = document.getElementById('model-value');
-  const memoryValue = document.getElementById('memory-value');
+  const d = domCache;
 
   // Update background
-  display.style.background = state.bgColor;
+  d.display.style.background = state.bgColor;
 
   // Update text and color
   if (currentState === 'thinking') {
-    statusText.textContent = getThinkingText();
+    d.statusText.textContent = getThinkingText();
   } else if (currentState === 'working') {
-    statusText.textContent = getWorkingText(currentTool);
+    d.statusText.textContent = getWorkingText(currentTool);
   } else {
-    statusText.textContent = state.text;
+    d.statusText.textContent = state.text;
   }
-  statusText.style.color = state.textColor;
+  d.statusText.style.color = state.textColor;
 
   // Update loading dots visibility
-  loadingDots.style.display = state.showLoading ? 'flex' : 'none';
+  d.loadingDots.style.display = state.showLoading ? 'flex' : 'none';
 
   // Update tool line visibility
-  toolLine.style.display = currentState === 'working' ? 'block' : 'none';
+  d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values
   const displayProject = currentProject.length > 16
     ? currentProject.substring(0, 13) + '...'
     : currentProject;
-  projectValue.textContent = displayProject;
-  toolValue.textContent = currentTool;
+  d.projectValue.textContent = displayProject;
+  d.toolValue.textContent = currentTool;
 
   // Update model value (truncate if too long)
   const displayModel = currentModel.length > 14
     ? currentModel.substring(0, 11) + '...'
     : currentModel;
-  modelValue.textContent = displayModel;
-  memoryValue.textContent = currentMemory;
+  d.modelValue.textContent = displayModel;
+  d.memoryValue.textContent = currentMemory;
 
   // Update model/memory visibility (hide memory on start state)
-  modelLine.style.display = currentModel && currentModel !== '-' ? 'block' : 'none';
+  d.modelLine.style.display = currentModel && currentModel !== '-' ? 'block' : 'none';
   const showMemory = currentState !== 'start' && currentMemory && currentMemory !== '-';
-  memoryLine.style.display = showMemory ? 'block' : 'none';
+  d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state)
   updateMemoryBar(showMemory ? currentMemory : null, state.bgColor);
 
-  // Update all text colors based on state
-  document.querySelectorAll('.info-text').forEach(el => {
-    el.style.color = state.textColor;
-  });
-  document.querySelectorAll('.info-label').forEach(el => {
-    el.style.color = state.textColor;
-  });
-  document.querySelectorAll('.info-value').forEach(el => {
-    el.style.color = state.textColor;
-  });
+  // Update all text colors based on state (using cached elements)
+  d.infoTexts.forEach(el => el.style.color = state.textColor);
+  d.infoLabels.forEach(el => el.style.color = state.textColor);
+  d.infoValues.forEach(el => el.style.color = state.textColor);
 
   // Draw info icons
   drawInfoIcons(state.textColor, state.bgColor, useEmoji);
@@ -144,10 +141,9 @@ function updateDisplay() {
 
 // Update loading dots (slower for thinking state)
 function updateLoadingDots(slow = false) {
-  const dots = document.querySelectorAll('.dot');
   const frame = slow ? Math.floor(animFrame / 3) : animFrame;
   const activeIndex = frame % 4;
-  dots.forEach((dot, i) => {
+  domCache.dots.forEach((dot, i) => {
     dot.classList.toggle('dim', i !== activeIndex);
   });
 }
@@ -169,6 +165,11 @@ function startAnimation() {
     animFrame++;
 
     updateFloatingPosition();
+
+    // Only redraw when necessary
+    if (!needsAnimationRedraw(currentState, animFrame, blinkFrame)) {
+      return;
+    }
 
     if (currentState === 'start') {
       drawCharacter('sparkle', currentState, currentCharacter, animFrame);

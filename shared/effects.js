@@ -234,8 +234,3 @@ function drawMatrixStreamMovie(x, y, animFrame, drawRect, offset, height, speed,
   if (tailLen >= 8 && pos >= 8) drawRect(x, y + pos - 8, 2, 2, COLOR_MATRIX_DIM);
   if (tailLen >= 8 && pos >= 10) drawRect(x, y + pos - 10, 2, 2, COLOR_MATRIX_DARK);
 }
-
-// Legacy function for compatibility
-export function drawMatrix(x, y, animFrame, drawRect) {
-  drawMatrixBackground(animFrame, drawRect, 24, null);
-}

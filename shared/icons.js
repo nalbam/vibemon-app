@@ -1,3 +1,18 @@
+// Cached DOM elements
+let iconCache = null;
+
+// Initialize icon cache (called once on first drawInfoIcons call)
+function initIconCache() {
+  iconCache = {
+    emojiIcons: document.querySelectorAll('.emoji-icon'),
+    pixelIcons: document.querySelectorAll('.pixel-icon'),
+    iconProject: document.getElementById('icon-project'),
+    iconTool: document.getElementById('icon-tool'),
+    iconModel: document.getElementById('icon-model'),
+    iconMemory: document.getElementById('icon-memory')
+  };
+}
+
 // Draw folder icon - 8x7 pixels
 export function drawFolderIcon(iconCtx, color) {
   iconCtx.fillStyle = color;
@@ -44,19 +59,22 @@ export function drawBrainIcon(iconCtx, color) {
 
 // Draw all info icons
 export function drawInfoIcons(color, bgColor, useEmoji) {
-  document.querySelectorAll('.emoji-icon').forEach(el => {
-    el.style.display = useEmoji ? 'inline' : 'none';
-  });
-  document.querySelectorAll('.pixel-icon').forEach(el => {
-    el.style.display = useEmoji ? 'none' : 'inline-block';
-  });
+  // Initialize cache on first call
+  if (!iconCache) {
+    initIconCache();
+  }
+
+  const c = iconCache;
+
+  // Toggle emoji/pixel icon visibility (using cached elements)
+  c.emojiIcons.forEach(el => el.style.display = useEmoji ? 'inline' : 'none');
+  c.pixelIcons.forEach(el => el.style.display = useEmoji ? 'none' : 'inline-block');
 
   if (!useEmoji) {
-    const iconIds = ['icon-project', 'icon-tool', 'icon-model', 'icon-memory'];
+    const canvases = [c.iconProject, c.iconTool, c.iconModel, c.iconMemory];
     const drawFuncs = [drawFolderIcon, drawToolIcon, drawRobotIcon, drawBrainIcon];
 
-    iconIds.forEach((id, index) => {
-      const canvas = document.getElementById(id);
+    canvases.forEach((canvas, index) => {
       if (canvas) {
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = bgColor;
