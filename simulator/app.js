@@ -145,12 +145,13 @@ window.updateDisplay = function() {
   modelValue.textContent = modelName.length > 14 ? modelName.substring(0, 11) + '...' : modelName;
   memoryValue.textContent = memoryUsage;
 
-  // Update model/memory visibility
+  // Update model/memory visibility (hide memory on start state)
   modelLine.style.display = modelName ? 'block' : 'none';
-  memoryLine.style.display = memoryUsage ? 'block' : 'none';
+  const showMemory = currentState !== 'start' && memoryUsage;
+  memoryLine.style.display = showMemory ? 'block' : 'none';
 
-  // Update memory bar
-  updateMemoryBar(memoryUsage, state.bgColor);
+  // Update memory bar (hide on start state)
+  updateMemoryBar(showMemory ? memoryUsage : null, state.bgColor);
 
   // Update all text colors based on state
   document.querySelectorAll('.info-text').forEach(el => {

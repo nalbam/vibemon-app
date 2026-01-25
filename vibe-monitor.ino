@@ -290,8 +290,8 @@ void drawStatus() {
     tft.println(displayModel);
   }
 
-  // Memory usage
-  if (currentMemory.length() > 0) {
+  // Memory usage (hide on start state)
+  if (currentMemory.length() > 0 && currentState != "start") {
     tft.setTextColor(textColor);
     tft.setTextSize(1);
     drawBrainIcon(tft, 10, MEMORY_Y, textColor);
