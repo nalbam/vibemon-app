@@ -3,7 +3,7 @@ import {
   FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, CHAR_X_BASE, CHAR_Y_BASE,
   SLEEP_TIMEOUT
 } from '../shared/config.js';
-import { getWorkingText, updateMemoryBar } from '../shared/utils.js';
+import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
 import { initRenderer, drawCharacter } from '../shared/character.js';
 import { drawInfoIcons } from '../shared/icons.js';
 
@@ -87,7 +87,9 @@ function updateDisplay() {
   display.style.background = state.bgColor;
 
   // Update text and color
-  if (currentState === 'working') {
+  if (currentState === 'thinking') {
+    statusText.textContent = getThinkingText();
+  } else if (currentState === 'working') {
     statusText.textContent = getWorkingText(currentTool);
   } else {
     statusText.textContent = state.text;
@@ -168,6 +170,11 @@ function startAnimation() {
 
     if (currentState === 'session_start') {
       drawCharacter('sparkle', currentState, currentCharacter, animFrame);
+    }
+
+    if (currentState === 'thinking') {
+      updateLoadingDots();
+      drawCharacter('thinking', currentState, currentCharacter, animFrame);
     }
 
     if (currentState === 'working') {

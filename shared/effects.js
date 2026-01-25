@@ -61,6 +61,17 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
       break;
     }
 
+    case 'thinking': {
+      // Thinking eyes - looking up (pupils at top)
+      const pupilH = Math.max(2, Math.floor(eyeH / 3));
+      // Draw pupils at top of eyes
+      drawRect(leftX + 1, eyeY, eyeW - 2, pupilH, COLOR_EYE);
+      drawRect(rightX + 1, eyeY, eyeW - 2, pupilH, COLOR_EYE);
+      // Draw thought bubble effect
+      drawThoughtBubble(effectX, effectY, animFrame, drawRect, effectColor);
+      break;
+    }
+
     case 'blink':
       drawRect(leftX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
       drawRect(rightX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/3), COLOR_EYE);
@@ -112,5 +123,24 @@ export function drawZzz(x, y, animFrame, drawRect, color = COLOR_WHITE) {
     drawRect(x + 2, y + 3, 2, 1, color);
     drawRect(x + 1, y + 4, 2, 1, color);
     drawRect(x, y + 5, 6, 1, color);
+  }
+}
+
+// Draw thought bubble animation for thinking state
+export function drawThoughtBubble(x, y, animFrame, drawRect, color = COLOR_WHITE) {
+  const frame = animFrame % 12;
+  // Small dots leading to bubble (always visible)
+  drawRect(x, y + 6, 2, 2, color);
+  drawRect(x + 2, y + 3, 2, 2, color);
+  // Main bubble (animated size)
+  if (frame < 6) {
+    // Larger bubble
+    drawRect(x + 3, y - 2, 6, 2, color);
+    drawRect(x + 2, y, 8, 3, color);
+    drawRect(x + 3, y + 3, 6, 1, color);
+  } else {
+    // Smaller bubble
+    drawRect(x + 4, y - 1, 4, 2, color);
+    drawRect(x + 3, y + 1, 6, 2, color);
   }
 }

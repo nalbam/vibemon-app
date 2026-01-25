@@ -22,6 +22,13 @@ export const states = {
     showLoading: false,
     textColor: '#FFFFFF'
   },
+  thinking: {
+    bgColor: '#6633CC',
+    text: 'Thinking',
+    eyeType: 'thinking',
+    showLoading: true,
+    textColor: '#FFFFFF'
+  },
   working: {
     bgColor: '#0066CC',
     text: 'Working',
@@ -87,6 +94,9 @@ export const CHARACTER_CONFIG = {
 
 export const CHARACTER_NAMES = Object.keys(CHARACTER_CONFIG);
 export const DEFAULT_CHARACTER = 'clawd';
+
+// Thinking state texts (random selection)
+export const THINKING_TEXTS = ['Thinking', 'Hmm', 'Let me see'];
 
 // Tool-based status texts for working state (lowercase keys)
 export const TOOL_TEXTS = {

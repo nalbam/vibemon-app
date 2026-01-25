@@ -174,6 +174,7 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 | Event | Vibe Monitor State | Description |
 |-------|-------------------|-------------|
 | `SessionStart` | `session_start` | Session begins |
+| `UserPromptSubmit` | `thinking` | User submits prompt, AI starts thinking |
 | `PreToolUse` | `working` | Tool execution starts |
 | `PostToolUse` | `tool_done` | Tool execution ends |
 | `Notification` | `notification` | User input needed |
@@ -263,6 +264,7 @@ Character is **auto-detected** based on the IDE hook events. You can also manual
 |-------|------------|------|------|---------|
 | `session_start` | Cyan | ■ ■ + ✦ | Hello! | Session begins |
 | `idle` | Green | ■ ■ | Ready | Waiting for input |
+| `thinking` | Purple | ▀ ▀ + 💭 | Thinking/Hmm/Let me see | User submits prompt |
 | `working` | Blue | ▬ ▬ | (tool-based) | Tool executing |
 | `notification` | Yellow | ● ● + ? | Input? | User input needed |
 | `tool_done` | Green | ∨ ∨ | Done! | Tool completed |

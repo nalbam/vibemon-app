@@ -3,7 +3,7 @@ import {
   FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, CHAR_X_BASE, CHAR_Y_BASE,
   SLEEP_TIMEOUT
 } from '../shared/config.js';
-import { getWorkingText, updateMemoryBar } from '../shared/utils.js';
+import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
 import { initRenderer, drawCharacter } from '../shared/character.js';
 import { drawInfoIcons } from '../shared/icons.js';
 
@@ -119,7 +119,9 @@ window.updateDisplay = function() {
 
   // Update text and color
   const toolName = document.getElementById('tool-input').value;
-  if (currentState === 'working') {
+  if (currentState === 'thinking') {
+    statusText.textContent = getThinkingText();
+  } else if (currentState === 'working') {
     statusText.textContent = getWorkingText(toolName);
   } else {
     statusText.textContent = state.text;
@@ -183,6 +185,7 @@ function getEventName(state) {
   const events = {
     session_start: 'SessionStart',
     idle: 'Stop',
+    thinking: 'UserPromptSubmit',
     working: 'PreToolUse',
     notification: 'Notification',
     tool_done: 'PostToolUse',
@@ -220,6 +223,11 @@ function startAnimation() {
 
     if (currentState === 'session_start') {
       drawCharacter('sparkle', currentState, currentCharacter, animFrame);
+    }
+
+    if (currentState === 'thinking') {
+      updateLoadingDots();
+      drawCharacter('thinking', currentState, currentCharacter, animFrame);
     }
 
     if (currentState === 'working') {

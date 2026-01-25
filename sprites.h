@@ -188,6 +188,7 @@ bool isValidCharacter(String name) {
 
 // Background colors by state (RGB565)
 #define COLOR_BG_IDLE     0x0540  // #00AA00 Green
+#define COLOR_BG_THINKING 0x61A6  // #6633CC Purple
 #define COLOR_BG_WORKING  0x0339  // #0066CC Blue
 #define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
 #define COLOR_BG_SESSION  0x0666  // #00CCCC Cyan
@@ -207,6 +208,7 @@ bool isValidCharacter(String name) {
 enum EyeType {
   EYE_SPARKLE,     // session_start: normal + sparkle
   EYE_NORMAL,      // idle: square eyes
+  EYE_THINKING,    // thinking: looking up eyes + thought bubble
   EYE_FOCUSED,     // working: horizontal flat eyes
   EYE_ALERT,       // notification: round eyes
   EYE_HAPPY,       // done: curved happy eyes
@@ -215,6 +217,9 @@ enum EyeType {
 
 // Animation frame counter
 extern int animFrame;
+
+// Thinking state texts (random selection)
+const char* THINKING_TEXTS[] = {"Thinking", "Hmm", "Let me see"};
 
 // Tool-based status texts for working state
 const char* BASH_TEXTS[] = {"Running", "Executing", "Processing"};
@@ -369,6 +374,17 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
       break;
     }
 
+    case EYE_THINKING: {
+      // Thinking eyes - looking up (pupils at top)
+      int pupilH = max(2, eh / 3);
+      // Draw pupils at top of eyes
+      tft.fillRect(leftEyeX + SCALE, eyeY, ew - 2*SCALE, pupilH, COLOR_EYE);
+      tft.fillRect(rightEyeX + SCALE, eyeY, ew - 2*SCALE, pupilH, COLOR_EYE);
+      // Draw thought bubble effect
+      drawThoughtBubble(tft, effectX, effectY, animFrame, effectColor);
+      break;
+    }
+
     case EYE_SLEEP:
       tft.fillRect(leftEyeX, eyeY + eh/3, ew, eh/3, COLOR_EYE);
       tft.fillRect(rightEyeX, eyeY + eh/3, ew, eh/3, COLOR_EYE);
@@ -436,6 +452,25 @@ void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT
     tft.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 1
     tft.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 2
     tft.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color); // Bottom
+  }
+}
+
+// Draw thought bubble animation for thinking state (scaled 2x)
+void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  // Small dots leading to bubble (always visible)
+  tft.fillRect(x, y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  tft.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
+
+  // Main bubble (animated size)
+  if ((frame % 12) < 6) {
+    // Larger bubble
+    tft.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
+    tft.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);
+    tft.fillRect(x + (3 * SCALE), y + (3 * SCALE), 6 * SCALE, 1 * SCALE, color);
+  } else {
+    // Smaller bubble
+    tft.fillRect(x + (4 * SCALE), y - (1 * SCALE), 4 * SCALE, 2 * SCALE, color);
+    tft.fillRect(x + (3 * SCALE), y + (1 * SCALE), 6 * SCALE, 2 * SCALE, color);
   }
 }
 
@@ -555,6 +590,7 @@ void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame, const CharacterGeomet
 uint16_t getBackgroundColor(String state) {
   if (state == "session_start") return COLOR_BG_SESSION;
   if (state == "idle") return COLOR_BG_IDLE;
+  if (state == "thinking") return COLOR_BG_THINKING;
   if (state == "working") return COLOR_BG_WORKING;
   if (state == "notification") return COLOR_BG_NOTIFY;
   if (state == "tool_done") return COLOR_BG_DONE;
@@ -566,6 +602,7 @@ uint16_t getBackgroundColor(String state) {
 EyeType getEyeType(String state) {
   if (state == "session_start") return EYE_SPARKLE;
   if (state == "idle") return EYE_NORMAL;
+  if (state == "thinking") return EYE_THINKING;
   if (state == "working") return EYE_FOCUSED;
   if (state == "notification") return EYE_ALERT;
   if (state == "tool_done") return EYE_HAPPY;
@@ -590,10 +627,17 @@ String getWorkingText(String tool) {
   return DEFAULT_TEXTS[idx];
 }
 
+// Get thinking text (random selection)
+String getThinkingText() {
+  int idx = random(3);
+  return THINKING_TEXTS[idx];
+}
+
 // Get status text for state
 String getStatusText(String state, String tool = "") {
   if (state == "session_start") return "Hello!";
   if (state == "idle") return "Ready";
+  if (state == "thinking") return getThinkingText();
   if (state == "working") return getWorkingText(tool);
   if (state == "notification") return "Input?";
   if (state == "tool_done") return "Done!";

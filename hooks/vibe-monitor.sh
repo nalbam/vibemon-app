@@ -79,18 +79,19 @@ get_state() {
   case "$event_name" in
     # Claude Code events
     "SessionStart") echo "session_start" ;;
+    "UserPromptSubmit") echo "thinking" ;;
     "PreToolUse") echo "working" ;;
     # "PostToolUse") echo "tool_done" ;;
     "Stop") echo "idle" ;;
     "Notification") echo "notification" ;;
     # Kiro CLI events
     "AgentSpawn"|"agent_spawn") echo "session_start" ;;
-    "UserPromptSubmit"|"user_prompt_submit") echo "working" ;;
+    "user_prompt_submit") echo "thinking" ;;
     "pre_tool_use") echo "working" ;;
     # "post_tool_use") echo "tool_done" ;;
     "stop") echo "idle" ;;
     # Kiro IDE events
-    "PromptSubmit") echo "working" ;;
+    "PromptSubmit") echo "thinking" ;;
     "AgentStop") echo "idle" ;;
     "FileCreate"|"fileCreated") echo "working" ;;
     "FileEdited"|"fileEdited") echo "working" ;;

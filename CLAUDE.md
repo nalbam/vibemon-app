@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Real-time status and usage monitor for AI coding assistants (Claude Code, Kiro IDE/CLI) with pixel art character. Displays state, project, tool, model, and memory usage. Supports 6 states: session_start, idle, working, notification, tool_done, and sleep.
+Real-time status and usage monitor for AI coding assistants (Claude Code, Kiro IDE/CLI) with pixel art character. Displays state, project, tool, model, and memory usage. Supports 7 states: session_start, idle, thinking, working, notification, tool_done, and sleep.
 
 **Platforms:**
 - Desktop App (Electron) - Primary, recommended for daily use
