@@ -326,6 +326,48 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
   drawEyes(tft, x, y, eyeType, character);
 }
 
+// Sunglasses colors
+#define COLOR_SUNGLASSES_FRAME 0x0841  // #111111
+#define COLOR_SUNGLASSES_LENS  0x0080  // #001100
+#define COLOR_SUNGLASSES_SHINE 0x0180  // #003300
+
+// Draw sunglasses (Matrix style)
+void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh) {
+  int lensW = ew + (4 * SCALE);
+  int lensH = eh + (2 * SCALE);
+  int lensY = eyeY - SCALE;
+  int leftLensX = leftEyeX - (2 * SCALE);
+  int rightLensX = rightEyeX - (2 * SCALE);
+
+  // Left lens (dark green tint)
+  tft.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  // Left lens shine
+  tft.fillRect(leftLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+
+  // Right lens (dark green tint)
+  tft.fillRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  // Right lens shine
+  tft.fillRect(rightLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+
+  // Frame - top
+  tft.fillRect(leftLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  tft.fillRect(rightLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+
+  // Frame - bottom
+  tft.fillRect(leftLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  tft.fillRect(rightLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+
+  // Frame - sides
+  tft.fillRect(leftLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  tft.fillRect(leftLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  tft.fillRect(rightLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  tft.fillRect(rightLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+
+  // Bridge (connects two lenses)
+  int bridgeY = lensY + lensH / 2;
+  tft.fillRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, SCALE, COLOR_SUNGLASSES_FRAME);
+}
+
 // Draw eyes based on eye type (scaled 2x)
 void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Eye base positions (scaled 2x)
@@ -349,9 +391,8 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
       break;
 
     case EYE_FOCUSED:
-      tft.fillRect(leftEyeX, eyeY + eh/3, ew, eh/2, COLOR_EYE);
-      tft.fillRect(rightEyeX, eyeY + eh/3, ew, eh/2, COLOR_EYE);
-      // Matrix effect is drawn in background by drawMatrixBackground
+      // Sunglasses for Matrix style
+      drawSunglasses(tft, leftEyeX, rightEyeX, eyeY, ew, eh);
       break;
 
     case EYE_ALERT:

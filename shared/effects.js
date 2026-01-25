@@ -3,6 +3,48 @@ import { COLOR_EYE, COLOR_WHITE, CHARACTER_CONFIG, DEFAULT_CHARACTER } from './c
 // Effect color for white characters (orange)
 const COLOR_EFFECT_ALT = '#FFA500';
 
+// Sunglasses colors
+const COLOR_SUNGLASSES_FRAME = '#111111';
+const COLOR_SUNGLASSES_LENS = '#001100';
+const COLOR_SUNGLASSES_SHINE = '#003300';
+
+// Draw sunglasses (Matrix style)
+function drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect) {
+  const lensW = eyeW + 4;
+  const lensH = eyeH + 2;
+  const lensY = eyeY - 1;
+  const leftLensX = leftX - 2;
+  const rightLensX = rightX - 2;
+
+  // Left lens (dark green tint)
+  drawRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  // Left lens shine
+  drawRect(leftLensX + 1, lensY + 1, 2, 1, COLOR_SUNGLASSES_SHINE);
+
+  // Right lens (dark green tint)
+  drawRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  // Right lens shine
+  drawRect(rightLensX + 1, lensY + 1, 2, 1, COLOR_SUNGLASSES_SHINE);
+
+  // Frame - top
+  drawRect(leftLensX - 1, lensY - 1, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+  drawRect(rightLensX - 1, lensY - 1, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+
+  // Frame - bottom
+  drawRect(leftLensX - 1, lensY + lensH, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+  drawRect(rightLensX - 1, lensY + lensH, lensW + 2, 1, COLOR_SUNGLASSES_FRAME);
+
+  // Frame - sides
+  drawRect(leftLensX - 1, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
+  drawRect(leftLensX + lensW, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
+  drawRect(rightLensX - 1, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
+  drawRect(rightLensX + lensW, lensY, 1, lensH, COLOR_SUNGLASSES_FRAME);
+
+  // Bridge (connects two lenses)
+  const bridgeY = lensY + Math.floor(lensH / 2);
+  drawRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, 1, COLOR_SUNGLASSES_FRAME);
+}
+
 // Get effect color based on character color
 function getEffectColor(char) {
   return char.color === '#FFFFFF' ? COLOR_EFFECT_ALT : COLOR_WHITE;
@@ -30,9 +72,8 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
       break;
 
     case 'focused':
-      drawRect(leftX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/2), COLOR_EYE);
-      drawRect(rightX, eyeY + Math.floor(eyeH/3), eyeW, Math.floor(eyeH/2), COLOR_EYE);
-      // Matrix effect is drawn in background by drawMatrixBackground
+      // Sunglasses for Matrix style
+      drawSunglasses(leftX, rightX, eyeY, eyeW, eyeH, drawRect);
       break;
 
     case 'alert':
