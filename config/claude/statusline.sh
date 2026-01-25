@@ -1,0 +1,208 @@
+#!/bin/bash
+
+# Claude Code Statusline Hook
+# Displays minimal status line: project, model, memory
+
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
+read_input() {
+  cat
+}
+
+parse_json_field() {
+  local input="$1"
+  local field="$2"
+  local default="${3:-}"
+  echo "$input" | jq -r "$field // \"$default\"" 2>/dev/null
+}
+
+# ============================================================================
+# Context Window Functions
+# ============================================================================
+
+get_context_usage() {
+  local input="$1"
+
+  # Try pre-calculated percentage first
+  local used_pct
+  used_pct=$(parse_json_field "$input" '.context_window.used_percentage' '0')
+
+  if [ -n "$used_pct" ] && [ "$used_pct" != "null" ] && [ "$used_pct" != "0" ]; then
+    printf "%.0f%%" "$used_pct"
+    return
+  fi
+
+  # Fallback: calculate from current_usage
+  local context_size current_tokens
+  context_size=$(parse_json_field "$input" '.context_window.context_window_size' '0')
+
+  if [ "$context_size" -gt 0 ] 2>/dev/null; then
+    local input_tokens cache_creation cache_read
+    input_tokens=$(parse_json_field "$input" '.context_window.current_usage.input_tokens' '0')
+    cache_creation=$(parse_json_field "$input" '.context_window.current_usage.cache_creation_input_tokens' '0')
+    cache_read=$(parse_json_field "$input" '.context_window.current_usage.cache_read_input_tokens' '0')
+
+    current_tokens=$((input_tokens + cache_creation + cache_read))
+    if [ "$current_tokens" -gt 0 ]; then
+      echo "$((current_tokens * 100 / context_size))%"
+      return
+    fi
+  fi
+
+  echo ""
+}
+
+# ============================================================================
+# Desktop App Functions
+# ============================================================================
+
+is_desktop_running() {
+  curl -s "http://127.0.0.1:19280/health" \
+    --connect-timeout 1 \
+    --max-time 1 \
+    > /dev/null 2>&1
+}
+
+send_to_desktop() {
+  local project="$1"
+  local model="$2"
+  local memory="$3"
+
+  # Only send if VIBE_MONITOR_DESKTOP is set and app is running
+  [ -z "${VIBE_MONITOR_DESKTOP}" ] && return
+  [ -z "$project" ] && return
+  is_desktop_running || return
+
+  # Build JSON payload with project for session matching
+  local payload="{\"project\":\"$project\""
+
+  if [ -n "$model" ]; then
+    payload="${payload},\"model\":\"$model\""
+  fi
+
+  if [ -n "$memory" ]; then
+    payload="${payload},\"memory\":\"$memory\""
+  fi
+
+  payload="${payload}}"
+
+  curl -s -X POST "http://127.0.0.1:19280/status" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    --connect-timeout 1 \
+    --max-time 2 \
+    > /dev/null 2>&1
+}
+
+# ============================================================================
+# ANSI Colors
+# ============================================================================
+
+C_RESET='\033[0m'
+C_GREEN='\033[32m'
+C_YELLOW='\033[33m'
+C_RED='\033[31m'
+C_MAGENTA='\033[35m'
+C_BLUE='\033[34m'
+
+# ============================================================================
+# Progress Bar Functions
+# ============================================================================
+
+build_progress_bar() {
+  local percent="$1"
+  local width="${2:-10}"
+
+  # Remove % sign if present
+  percent="${percent%\%}"
+
+  # Handle empty or invalid input
+  if [ -z "$percent" ] || ! [[ "$percent" =~ ^[0-9]+$ ]]; then
+    echo ""
+    return
+  fi
+
+  local filled=$((percent * width / 100))
+  local empty=$((width - filled))
+
+  # Color based on usage level
+  local color="$C_GREEN"
+  if [ "$percent" -ge 90 ]; then
+    color="$C_RED"
+  elif [ "$percent" -ge 75 ]; then
+    color="$C_YELLOW"
+  fi
+
+  # Build the bar
+  local bar=""
+  for ((i=0; i<filled; i++)); do
+    bar="${bar}━"
+  done
+  for ((i=0; i<empty; i++)); do
+    bar="${bar}╌"
+  done
+
+  printf "%b%s%b %s%%" "$color" "$bar" "$C_RESET" "$percent"
+}
+
+# ============================================================================
+# Statusline Output
+# ============================================================================
+
+build_statusline() {
+  local model="$1"
+  local dir_name="$2"
+  local context_usage="$3"
+
+  local SEP=" │ "
+  local status_line=""
+
+  # Directory (📂 icon)
+  status_line="${status_line}${C_BLUE}📂 ${dir_name}${C_RESET}"
+
+  # Model (🤖 icon) - remove "Claude " prefix, keep version
+  local short_model="${model#Claude }"
+  status_line="${status_line}${SEP}${C_MAGENTA}🤖 ${short_model}${C_RESET}"
+
+  # Context usage with progress bar (🧠 icon)
+  if [ -n "$context_usage" ]; then
+    local progress_bar
+    progress_bar=$(build_progress_bar "$context_usage")
+    if [ -n "$progress_bar" ]; then
+      status_line="${status_line}${SEP}🧠 ${progress_bar}"
+    fi
+  fi
+
+  printf "%b" "$status_line"
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+main() {
+  local input
+  input=$(read_input)
+
+  # Parse input fields
+  local model_display current_dir
+  model_display=$(parse_json_field "$input" '.model.display_name' 'Claude')
+  current_dir=$(parse_json_field "$input" '.workspace.current_dir' '')
+
+  local dir_name
+  dir_name=$(basename "$current_dir")
+
+  # Get context usage
+  local context_usage
+  context_usage=$(get_context_usage "$input")
+
+  # Send project, model and context usage to Desktop App (if running)
+  send_to_desktop "$dir_name" "$model_display" "$context_usage" &
+
+  # Output statusline
+  build_statusline "$model_display" "$dir_name" "$context_usage"
+}
+
+main

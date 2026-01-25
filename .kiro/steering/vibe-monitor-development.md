@@ -164,7 +164,7 @@ echo '{"state":"working","tool":"Bash"}' > /dev/cu.usbmodem1101
 ### 1. 로그 활성화
 ```bash
 # 훅 스크립트 디버그
-DEBUG=1 ~/.claude/hooks/vibe-monitor.sh
+DEBUG=1 hooks/vibe-monitor.sh
 
 # ESP32 시리얼 모니터
 screen /dev/cu.usbmodem1101 115200

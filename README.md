@@ -83,7 +83,7 @@ Vibe Monitor integrates with AI coding assistants through hooks.
 | IDE | Hook System |
 |-----|-------------|
 | **Claude Code** | Shell hooks via `settings.json` |
-| **Kiro IDE/CLI** | Agent hooks via `.kiro/hooks/` |
+| **Kiro IDE/CLI** | Agent hooks via `hooks/kiro/` |
 
 ### How It Works
 
@@ -104,7 +104,7 @@ Claude Code uses shell hooks defined in `settings.json`.
 #### 1. Copy hook script
 
 ```bash
-cp hooks/vibe-monitor.sh ~/.claude/hooks/
+cp config/hooks/vibe-monitor.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/vibe-monitor.sh
 ```
 
@@ -117,7 +117,7 @@ Choose **one** of the following options:
 The hook script automatically loads `~/.claude/.env.local`:
 
 ```bash
-cp hooks/.env.sample ~/.claude/.env.local
+cp config/hooks/.env.sample ~/.claude/.env.local
 # Edit the file and set your values
 ```
 
@@ -134,7 +134,7 @@ fi
 Then copy the sample file:
 
 ```bash
-cp hooks/.env.sample ~/.claude/.env.local
+cp config/hooks/.env.sample ~/.claude/.env.local
 ```
 
 #### 3. Edit `~/.claude/.env.local`
@@ -170,6 +170,36 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 }
 ```
 
+#### 5. Statusline (Optional)
+
+Claude Code statusline shows project, model, and memory usage:
+
+```
+📂 vibe-monitor │ 🤖 Opus 4.5 │ 🧠 ━━━━━━━━╌╌ 80%
+```
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusline": {
+    "command": "~/.claude/statusline.sh"
+  }
+}
+```
+
+Copy the script:
+
+```bash
+cp config/claude/statusline.sh ~/.claude/statusline.sh
+chmod +x ~/.claude/statusline.sh
+```
+
+**Data Source:**
+- `📂 Project` ← `.workspace.current_dir`
+- `🤖 Model` ← `.model.display_name`
+- `🧠 Memory` ← `.context_window.used_percentage`
+
 #### Claude Code Hook Events
 
 | Event | Vibe Monitor State | Description |
@@ -185,12 +215,12 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 ### Kiro IDE Setup
 
-Kiro IDE uses `.kiro.hook` files in the `.kiro/hooks/` folder.
+Kiro IDE uses `.kiro.hook` files in the `config/kiro/` folder.
 
 #### 1. Copy hook files to your project
 
 ```bash
-cp -r .kiro/hooks/*.kiro.hook your-project/.kiro/hooks/
+cp -r config/kiro/*.kiro.hook your-project/.kiro/hooks/
 ```
 
 > **Note:** Character is auto-set to `kiro` in the hook files.
@@ -474,14 +504,18 @@ vibe-monitor/
 ├── vibe-monitor.ino            # ESP32 main firmware
 ├── sprites.h                   # Character rendering (ESP32)
 ├── User_Setup.h                # TFT display configuration
-├── hooks/                      # Claude Code hooks
-│   ├── vibe-monitor.sh         # Hook script
-│   └── .env.sample             # Environment sample
-├── .kiro/hooks/                # Kiro IDE hooks
-│   ├── vibe-monitor-session-start.kiro.hook
-│   ├── vibe-monitor-working.kiro.hook
-│   ├── vibe-monitor-tool-use.kiro.hook
-│   └── vibe-monitor-idle.kiro.hook
+├── config/                     # IDE configuration files
+│   ├── claude/                 # Claude Code settings
+│   │   ├── settings.json       # Hook configuration example
+│   │   └── statusline.sh       # Statusline script (model, memory)
+│   ├── hooks/                  # Shared hook scripts
+│   │   ├── vibe-monitor.sh     # Main hook script
+│   │   └── .env.sample         # Environment variables sample
+│   └── kiro/                   # Kiro IDE hooks
+│       ├── vibe-monitor-session-start.kiro.hook
+│       ├── vibe-monitor-working.kiro.hook
+│       ├── vibe-monitor-tool-use.kiro.hook
+│       └── vibe-monitor-idle.kiro.hook
 ├── shared/                     # Shared code (Desktop/Simulator)
 │   ├── config.js               # State/character configuration
 │   ├── character.js            # Character rendering logic

@@ -27,7 +27,6 @@ __pycache__
 # maven
 build/
 builds/
-config/
 target/
 
 # eclipse
