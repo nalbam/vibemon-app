@@ -19,9 +19,9 @@ function getEyeCoverPosition(leftX, rightX, eyeY, eyeW, eyeH, isKiro = false) {
   const lensH = eyeH + 2;
   // Kiro: shift up 2px
   const lensY = eyeY - 1 - (isKiro ? 2 : 0);
-  // Kiro: left lens 2px right, right lens 6px right
+  // Kiro: left lens 2px right, right lens 5px right
   const leftLensX = leftX - 2 + (isKiro ? 2 : 0);
-  const rightLensX = rightX - 2 + (isKiro ? 6 : 0);
+  const rightLensX = rightX - 2 + (isKiro ? 5 : 0);
   return { lensW, lensH, lensY, leftLensX, rightLensX };
 }
 

@@ -285,9 +285,9 @@ void getEyeCoverPosition(int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, 
   lensH = eh + (2 * SCALE);
   // Kiro: shift up 2px
   lensY = eyeY - SCALE - (isKiro ? (2 * SCALE) : 0);
-  // Kiro: left lens 2px right, right lens 6px right
+  // Kiro: left lens 2px right, right lens 5px right
   leftLensX = leftEyeX - (2 * SCALE) + (isKiro ? (2 * SCALE) : 0);
-  rightLensX = rightEyeX - (2 * SCALE) + (isKiro ? (6 * SCALE) : 0);
+  rightLensX = rightEyeX - (2 * SCALE) + (isKiro ? (5 * SCALE) : 0);
 }
 
 // Draw sleep eyes (closed eyes with body color background)
