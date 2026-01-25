@@ -205,7 +205,7 @@ function updateLoadingDots() {
 
 // Check sleep timer
 function checkSleepTimer() {
-  if (currentState === 'idle' || currentState === 'tool_done') {
+  if (currentState === 'session_start' || currentState === 'idle' || currentState === 'tool_done') {
     const elapsed = Date.now() - lastActivityTime;
     if (elapsed >= SLEEP_TIMEOUT) {
       currentState = 'sleep';

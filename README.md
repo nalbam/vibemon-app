@@ -309,7 +309,7 @@ The `working` state displays context-aware text based on the active tool:
 
 ### Sleep Mode
 
-Automatically transitions to `sleep` after 10 minutes of inactivity from `idle` or `tool_done`. Any new status update wakes the display.
+Automatically transitions to `sleep` after 10 minutes of inactivity from `session_start`, `idle` or `tool_done`. Any new status update wakes the display.
 
 ## HTTP API
 

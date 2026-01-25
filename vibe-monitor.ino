@@ -103,13 +103,13 @@ void loop() {
     drawBlinkAnimation();
   }
 
-  // Check sleep timer (only from idle or tool_done)
+  // Check sleep timer (only from session_start, idle or tool_done)
   checkSleepTimer();
 }
 
 // Check if should transition to sleep state
 void checkSleepTimer() {
-  if (currentState == "idle" || currentState == "tool_done") {
+  if (currentState == "session_start" || currentState == "idle" || currentState == "tool_done") {
     if (millis() - lastActivityTime >= SLEEP_TIMEOUT) {
       previousState = currentState;
       currentState = "sleep";
