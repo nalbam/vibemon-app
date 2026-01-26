@@ -4,23 +4,6 @@
 # Displays minimal status line: project, model, memory
 
 # ============================================================================
-# Environment Loading
-# ============================================================================
-
-load_env() {
-  local env_file="$HOME/.claude/.env.local"
-
-  if [ -f "$env_file" ]; then
-    # shellcheck source=/dev/null
-    source "$env_file"
-  fi
-}
-
-load_env
-
-DEBUG="${DEBUG:-0}"
-
-# ============================================================================
 # Utility Functions
 # ============================================================================
 
@@ -72,25 +55,24 @@ get_context_usage() {
 }
 
 # ============================================================================
-# VibeMon App Functions
+# VibeMon Functions
 # ============================================================================
 
-is_vibemon_running() {
-  curl -s "${VIBE_MONITOR_URL}/health" \
-    --connect-timeout 1 \
-    --max-time 1 \
-    > /dev/null 2>&1
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VIBE_MONITOR_SCRIPT="${SCRIPT_DIR}/hooks/vibe-monitor.sh"
 
 send_to_vibemon() {
   local project="$1"
   local model="$2"
   local memory="$3"
 
-  # Only send if VIBE_MONITOR_URL is set and app is running
-  [ -z "${VIBE_MONITOR_URL}" ] && return
+  # Only send if project is set
   [ -z "$project" ] && return
-  is_vibemon_running || return
+
+  # Check if vibe-monitor.sh exists
+  if [ ! -x "$VIBE_MONITOR_SCRIPT" ]; then
+    return
+  fi
 
   # Build JSON payload with project for session matching
   local payload="{\"project\":\"$project\""
@@ -105,12 +87,8 @@ send_to_vibemon() {
 
   payload="${payload}}"
 
-  curl -s -X POST "${VIBE_MONITOR_URL}/status" \
-    -H "Content-Type: application/json" \
-    -d "$payload" \
-    --connect-timeout 1 \
-    --max-time 2 \
-    > /dev/null 2>&1
+  # Route through vibe-monitor.sh for proper desktop/usb/http routing
+  "$VIBE_MONITOR_SCRIPT" --json "$payload"
 }
 
 # ============================================================================

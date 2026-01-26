@@ -108,34 +108,58 @@ launch_desktop() {
 }
 
 # ============================================================================
-# Main
+# Lock/Unlock Functions (Desktop App only)
 # ============================================================================
 
-main() {
-  local event_type="${1:-}"
+send_lock() {
+  local project="$1"
 
-  if [ -z "$event_type" ]; then
-    debug_log "No event type provided"
-    exit 0
+  if [ -z "${VIBE_MONITOR_URL}" ]; then
+    debug_log "VIBE_MONITOR_URL not set"
+    return 1
   fi
 
-  # Get state from event type
-  local state
-  state=$(get_state "$event_type")
-
-  debug_log "Event: $event_type, State: $state"
-
-  # Build payload
   local payload
-  payload=$(build_payload "$state" "$event_type")
+  payload=$(jq -n --arg project "$project" '{project: $project}')
 
-  debug_log "Payload: $payload"
+  debug_log "Locking project: $project"
+  curl -s -X POST "${VIBE_MONITOR_URL}/lock" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    --connect-timeout 2 \
+    --max-time 5
+}
 
-  # Check if start event
-  local is_start=false
-  if [ "$event_type" = "agentSpawn" ]; then
-    is_start=true
+send_unlock() {
+  if [ -z "${VIBE_MONITOR_URL}" ]; then
+    debug_log "VIBE_MONITOR_URL not set"
+    return 1
   fi
+
+  debug_log "Unlocking"
+  curl -s -X POST "${VIBE_MONITOR_URL}/unlock" \
+    --connect-timeout 2 \
+    --max-time 5
+}
+
+get_status() {
+  if [ -z "${VIBE_MONITOR_URL}" ]; then
+    debug_log "VIBE_MONITOR_URL not set"
+    return 1
+  fi
+
+  curl -s "${VIBE_MONITOR_URL}/status" \
+    --connect-timeout 2 \
+    --max-time 5
+}
+
+# ============================================================================
+# Send to All Targets
+# ============================================================================
+
+send_to_all() {
+  local payload="$1"
+  local is_start="${2:-false}"
 
   # Launch Desktop App if not running (on start)
   if [ -n "${VIBE_MONITOR_URL}" ] && [ "$is_start" = true ]; then
@@ -177,6 +201,66 @@ main() {
       debug_log "ESP32 HTTP failed"
     fi
   fi
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+main() {
+  # Check for command modes
+  case "$1" in
+    --json)
+      local payload="$2"
+      if [ -z "$payload" ]; then
+        debug_log "No payload provided with --json"
+        exit 1
+      fi
+      debug_log "Direct JSON mode: $payload"
+      send_to_all "$payload" "false"
+      exit 0
+      ;;
+    --lock)
+      local project="${2:-$(basename "$(pwd)")}"
+      send_lock "$project"
+      exit $?
+      ;;
+    --unlock)
+      send_unlock
+      exit $?
+      ;;
+    --status)
+      get_status
+      exit $?
+      ;;
+  esac
+
+  local event_type="${1:-}"
+
+  if [ -z "$event_type" ]; then
+    debug_log "No event type provided"
+    exit 0
+  fi
+
+  # Get state from event type
+  local state
+  state=$(get_state "$event_type")
+
+  debug_log "Event: $event_type, State: $state"
+
+  # Build payload
+  local payload
+  payload=$(build_payload "$state" "$event_type")
+
+  debug_log "Payload: $payload"
+
+  # Check if start event
+  local is_start=false
+  if [ "$event_type" = "agentSpawn" ]; then
+    is_start=true
+  fi
+
+  send_to_all "$payload" "$is_start"
 }
 
 main "$@"

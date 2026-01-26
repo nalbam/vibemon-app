@@ -12,24 +12,20 @@ Lock vibe-monitor to the current project.
 Run the following command to lock the current project:
 
 ```bash
-curl -s -X POST http://127.0.0.1:19280/lock \
-  -H "Content-Type: application/json" \
-  -d "{\"project\":\"$(basename $(pwd))\"}"
+~/.claude/hooks/vibe-monitor.sh --lock
 ```
 
 ## Related Commands
 
 ```bash
 # Unlock
-curl -s -X POST http://127.0.0.1:19280/unlock
+~/.claude/hooks/vibe-monitor.sh --unlock
 
 # Check status
-curl -s http://127.0.0.1:19280/status | jq
+~/.claude/hooks/vibe-monitor.sh --status | jq
 
 # Lock specific project
-curl -s -X POST http://127.0.0.1:19280/lock \
-  -H "Content-Type: application/json" \
-  -d '{"project":"project-name"}'
+~/.claude/hooks/vibe-monitor.sh --lock "project-name"
 ```
 
 ## When Locked
