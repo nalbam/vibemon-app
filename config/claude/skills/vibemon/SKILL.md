@@ -12,20 +12,20 @@ Lock vibe-monitor to the current project.
 Run the following command to lock the current project:
 
 ```bash
-~/.claude/hooks/vibe-monitor.sh --lock
+python3 ~/.claude/hooks/vibe-monitor.py --lock
 ```
 
 ## Related Commands
 
 ```bash
 # Unlock
-~/.claude/hooks/vibe-monitor.sh --unlock
+python3 ~/.claude/hooks/vibe-monitor.py --unlock
 
 # Check status
-~/.claude/hooks/vibe-monitor.sh --status | jq
+python3 ~/.claude/hooks/vibe-monitor.py --status
 
 # Lock specific project
-~/.claude/hooks/vibe-monitor.sh --lock "project-name"
+python3 ~/.claude/hooks/vibe-monitor.py --lock "project-name"
 ```
 
 ## When Locked

@@ -423,7 +423,7 @@ function updateState(data) {
     return;
   }
 
-  // If state is provided (from vibe-monitor.sh), update all fields
+  // If state is provided (from vibe-monitor.py), update all fields
   if (data.state !== undefined) {
     currentState = data.state;
     if (data.character !== undefined) {
@@ -444,7 +444,7 @@ function updateState(data) {
     // Set up state timeout for auto-transitions
     setupStateTimeout();
   } else {
-    // If no state (from statusline.sh), only update model/memory if project matches
+    // If no state (from statusline.py), only update model/memory if project matches
     if (data.project !== undefined && data.project === currentProject) {
       if (data.model !== undefined) currentModel = data.model;
       if (data.memory !== undefined) currentMemory = data.memory;
