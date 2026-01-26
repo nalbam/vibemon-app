@@ -15,7 +15,7 @@ AI coding assistant status monitor with pixel art character.
 ## Quick Start
 
 ```bash
-npx vibe-monitor@latest
+npx vibe-monitor
 ```
 
 ### Stop
