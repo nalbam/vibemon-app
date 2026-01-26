@@ -1,5 +1,5 @@
 ---
-name: vibemon-lock
+name: vibemon
 description: Use when you want to lock vibe-monitor to current project, preventing display updates from other projects
 ---
 
