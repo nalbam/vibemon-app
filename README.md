@@ -49,37 +49,21 @@ Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what sta
 
 ## Prerequisites
 
-The hook scripts require the following tools to be installed:
+The hook scripts require Python 3 (included in macOS and most Linux distributions).
 
 | Tool | Required For | macOS | Ubuntu/Debian | Alpine |
 |------|--------------|-------|---------------|--------|
-| **jq** | JSON parsing (required) | `brew install jq` | `apt install jq` | `apk add jq` |
-| **curl** | HTTP requests (required) | Built-in | `apt install curl` | `apk add curl` |
+| **Python 3** | Hook scripts (required) | Built-in | Built-in | `apk add python3` |
 | **Node.js** | Desktop App only | `brew install node` | `apt install nodejs npm` | `apk add nodejs npm` |
 
 ### Quick Check
 
 ```bash
-# Verify jq is installed
-jq --version
-
-# Verify curl is installed
-curl --version
+# Verify Python 3 is installed
+python3 --version
 ```
 
-### Install All (macOS)
-
-```bash
-brew install jq curl node
-```
-
-### Install All (Ubuntu/Debian)
-
-```bash
-sudo apt install jq curl nodejs npm
-```
-
-> **Note:** `stty` (for ESP32 serial) and other basic utilities (`basename`, `dirname`, `date`) are included in all Unix systems.
+> **Note:** `stty` (for ESP32 serial) is included in all Unix systems.
 
 ## Quick Start
 
@@ -711,19 +695,16 @@ vibe-monitor/
 │   ├── claude/                 # Claude Code settings
 │   │   ├── .env.sample         # Environment variables sample
 │   │   ├── settings.json       # Hook configuration example
-│   │   ├── statusline.py       # Statusline script (Python)
-│   │   ├── statusline.sh       # Statusline script (Bash, legacy)
+│   │   ├── statusline.py       # Statusline script
 │   │   ├── hooks/              # Hook scripts
-│   │   │   ├── vibe-monitor.py # Main hook script (Python)
-│   │   │   └── vibe-monitor.sh # Main hook script (Bash, legacy)
+│   │   │   └── vibe-monitor.py # Main hook script
 │   │   └── skills/             # Claude Code skills
 │   │       └── vibemon/        # Vibe monitor skill
 │   │           └── SKILL.md    # Skill documentation
 │   └── kiro/                   # Kiro IDE settings
 │       ├── .env.sample         # Environment variables sample
 │       └── hooks/              # Hook files
-│           ├── vibe-monitor.py # Main hook script (Python)
-│           ├── vibe-monitor.sh # Main hook script (Bash, legacy)
+│           ├── vibe-monitor.py # Main hook script
 │           ├── vibe-monitor-agent-spawn.kiro.hook
 │           ├── vibe-monitor-prompt-submit.kiro.hook
 │           ├── vibe-monitor-pre-tool-use.kiro.hook

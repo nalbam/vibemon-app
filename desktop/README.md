@@ -30,8 +30,7 @@ Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what sta
 
 | Tool | Required | Install |
 |------|----------|---------|
-| **jq** | Yes | `brew install jq` (macOS) / `apt install jq` (Ubuntu) |
-| **curl** | Yes | Built-in on macOS / `apt install curl` (Ubuntu) |
+| **Python 3** | Yes | Built-in on macOS and most Linux |
 | **Node.js** | Yes | `brew install node` (macOS) / `apt install nodejs npm` (Ubuntu) |
 
 ## Quick Start
@@ -131,14 +130,14 @@ Claude Code uses **hooks** and **statusline** to send data:
 mkdir -p ~/.claude/hooks
 
 # Download hook script
-curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/hooks/vibe-monitor.sh \
-  -o ~/.claude/hooks/vibe-monitor.sh
-chmod +x ~/.claude/hooks/vibe-monitor.sh
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/hooks/vibe-monitor.py \
+  -o ~/.claude/hooks/vibe-monitor.py
+chmod +x ~/.claude/hooks/vibe-monitor.py
 
 # Download statusline script
-curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/statusline.sh \
-  -o ~/.claude/statusline.sh
-chmod +x ~/.claude/statusline.sh
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/statusline.py \
+  -o ~/.claude/statusline.py
+chmod +x ~/.claude/statusline.py
 
 # Download environment sample
 curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/.env.sample \
@@ -150,15 +149,15 @@ curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claud
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
-    "UserPromptSubmit": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
-    "PreToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
-    "Notification": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
-    "Stop": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }]
+    "SessionStart": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
+    "UserPromptSubmit": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
+    "PreToolUse": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
+    "Notification": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
+    "Stop": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
   },
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh"
+    "command": "python3 ~/.claude/statusline.py"
   }
 }
 ```
@@ -182,9 +181,9 @@ export VIBE_MONITOR_URL="http://127.0.0.1:19280"
 mkdir -p ~/.kiro/hooks
 
 # Download hook script
-curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/hooks/vibe-monitor.sh \
-  -o ~/.kiro/hooks/vibe-monitor.sh
-chmod +x ~/.kiro/hooks/vibe-monitor.sh
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/hooks/vibe-monitor.py \
+  -o ~/.kiro/hooks/vibe-monitor.py
+chmod +x ~/.kiro/hooks/vibe-monitor.py
 
 # Download hook files
 for hook in agent-spawn agent-stop pre-tool-use prompt-submit; do
@@ -311,7 +310,7 @@ Click the system tray icon to:
 |-------|----------|
 | Window not appearing | Check system tray icon, or run `curl -X POST http://127.0.0.1:19280/show` |
 | Port already in use | Check with `lsof -i :19280` and kill existing process |
-| Hook not working | Verify `jq` and `curl` are installed: `jq --version && curl --version` |
+| Hook not working | Verify Python 3 is installed: `python3 --version` |
 
 ## Build
 
