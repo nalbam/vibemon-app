@@ -13,6 +13,10 @@ let currentTool = '';
 let currentModel = '';
 let currentMemory = '';
 
+// Project lock feature
+let projectList = [];       // List of incoming projects (order preserved)
+let lockedProject = null;   // Locked project name (null = unlocked)
+
 // State timeout management (must match shared/config.js)
 // NOTE: Cannot import ESM from CommonJS, keep in sync manually
 let stateTimeoutTimer = null;
@@ -197,7 +201,63 @@ function updateTrayIcon() {
   }
 }
 
+function buildProjectLockSubmenu() {
+  const items = [];
+
+  if (projectList.length === 0) {
+    items.push({
+      label: 'No projects',
+      enabled: false
+    });
+  } else {
+    // List all projects sorted by name
+    const sortedProjects = [...projectList].sort((a, b) => a.localeCompare(b));
+    sortedProjects.forEach(project => {
+      const isLocked = project === lockedProject;
+      items.push({
+        label: isLocked ? `🔒 ${project}` : `○ ${project}`,
+        type: 'radio',
+        checked: isLocked,
+        click: () => {
+          lockProject(project);
+          // Switch display to the locked project's state
+          if (project !== currentProject) {
+            currentProject = project;
+            currentModel = '';
+            currentMemory = '';
+            currentTool = '';
+            if (mainWindow) {
+              mainWindow.webContents.send('state-update', {
+                state: currentState,
+                project: project,
+                tool: '',
+                model: '',
+                memory: ''
+              });
+            }
+          }
+        }
+      });
+    });
+
+    items.push({ type: 'separator' });
+  }
+
+  // Unlock option
+  items.push({
+    label: 'Unlock',
+    enabled: lockedProject !== null,
+    click: () => unlockProject()
+  });
+
+  return items;
+}
+
 function updateTrayMenu() {
+  const projectDisplay = currentProject
+    ? (lockedProject === currentProject ? `${currentProject} 🔒` : currentProject)
+    : '-';
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: `State: ${currentState}`,
@@ -205,6 +265,10 @@ function updateTrayMenu() {
     },
     {
       label: `Character: ${currentCharacter}`,
+      enabled: false
+    },
+    {
+      label: `Project: ${projectDisplay}`,
       enabled: false
     },
     { type: 'separator' },
@@ -230,6 +294,10 @@ function updateTrayMenu() {
           click: () => updateState({ state: currentState, character: name })
         };
       })
+    },
+    {
+      label: 'Project Lock',
+      submenu: buildProjectLockSubmenu()
     },
     { type: 'separator' },
     {
@@ -298,7 +366,53 @@ function setupStateTimeout() {
   }
 }
 
+// Add project to list if not already present
+function addProjectToList(project) {
+  if (project && !projectList.includes(project)) {
+    projectList.push(project);
+  }
+}
+
+// Lock to a specific project
+function lockProject(project) {
+  if (project) {
+    addProjectToList(project);
+    lockedProject = project;
+    updateTrayMenu();
+  }
+}
+
+// Unlock project
+function unlockProject() {
+  lockedProject = null;
+  updateTrayMenu();
+}
+
 function updateState(data) {
+  const incomingProject = data.project;
+
+  // Add incoming project to list
+  if (incomingProject) {
+    addProjectToList(incomingProject);
+  }
+
+  // Auto-lock: first project gets locked automatically
+  if (incomingProject && projectList.length === 1 && lockedProject === null) {
+    lockedProject = incomingProject;
+  }
+
+  // Check if update should be blocked due to project lock
+  const isLocked = lockedProject !== null;
+  const isDifferentProject = incomingProject && incomingProject !== lockedProject;
+  const shouldBlockUpdate = isLocked && isDifferentProject;
+
+  // If locked to different project, only update project list (already done above)
+  // Skip display update but continue to return success
+  if (shouldBlockUpdate) {
+    updateTrayMenu();  // Update menu to show new project in list
+    return;
+  }
+
   // If state is provided (from vibe-monitor.sh), update all fields
   if (data.state !== undefined) {
     currentState = data.state;
@@ -420,8 +534,37 @@ function startHttpServer() {
         project: currentProject,
         tool: currentTool,
         model: currentModel,
-        memory: currentMemory
+        memory: currentMemory,
+        locked: lockedProject,
+        projects: projectList
       }));
+    } else if (req.method === 'POST' && req.url === '/lock') {
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
+      req.on('end', () => {
+        try {
+          const body = chunks.length > 0 ? Buffer.concat(chunks).toString('utf-8') : '{}';
+          const data = JSON.parse(body);
+          const projectToLock = data.project || currentProject;
+
+          if (!projectToLock) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No project to lock' }));
+            return;
+          }
+
+          lockProject(projectToLock);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, locked: lockedProject }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+    } else if (req.method === 'POST' && req.url === '/unlock') {
+      unlockProject();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, locked: null }));
     } else if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok' }));

@@ -58,6 +58,12 @@ bool needsRedraw = true;
 int lastCharX = CHAR_X_BASE;  // Track last character X for efficient redraw
 int lastCharY = CHAR_Y_BASE;  // Track last character Y for efficient redraw
 
+// Project lock feature
+#define MAX_PROJECTS 10
+char projectList[MAX_PROJECTS][32];  // List of incoming projects
+int projectCount = 0;
+char lockedProject[32] = "";  // Locked project name (empty = unlocked)
+
 // Dirty rect tracking for efficient redraws
 bool dirtyCharacter = true;
 bool dirtyStatus = true;
@@ -81,6 +87,71 @@ AppState parseState(const char* stateStr) {
   if (strcmp(stateStr, "done") == 0) return STATE_DONE;
   if (strcmp(stateStr, "sleep") == 0) return STATE_SLEEP;
   return STATE_IDLE;  // default
+}
+
+// Project lock helper: Check if project exists in list
+bool projectExists(const char* project) {
+  for (int i = 0; i < projectCount; i++) {
+    if (strcmp(projectList[i], project) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Project lock helper: Add project to list (if not exists, max 10)
+void addProjectToList(const char* project) {
+  if (strlen(project) == 0) return;
+  if (projectExists(project)) return;
+  if (projectCount >= MAX_PROJECTS) {
+    // Remove oldest project (shift array)
+    for (int i = 0; i < MAX_PROJECTS - 1; i++) {
+      strcpy(projectList[i], projectList[i + 1]);
+    }
+    projectCount = MAX_PROJECTS - 1;
+  }
+  strncpy(projectList[projectCount], project, sizeof(projectList[0]) - 1);
+  projectList[projectCount][sizeof(projectList[0]) - 1] = '\0';
+  projectCount++;
+}
+
+// Project lock helper: Lock to a specific project
+void lockProject(const char* project) {
+  if (strlen(project) > 0) {
+    addProjectToList(project);
+    strncpy(lockedProject, project, sizeof(lockedProject) - 1);
+    lockedProject[sizeof(lockedProject) - 1] = '\0';
+    Serial.print("{\"locked\":\"");
+    Serial.print(lockedProject);
+    Serial.println("\"}");
+  }
+}
+
+// Project lock helper: Unlock project
+void unlockProject() {
+  lockedProject[0] = '\0';
+  Serial.println("{\"locked\":null}");
+}
+
+// Project lock helper: Check if locked to different project
+bool isLockedToDifferentProject(const char* project) {
+  if (strlen(lockedProject) == 0) return false;  // Not locked
+  if (strlen(project) == 0) return false;  // No project specified
+  return strcmp(lockedProject, project) != 0;
+}
+
+// Helper: Get state string from enum
+const char* getStateString(AppState state) {
+  switch (state) {
+    case STATE_START: return "start";
+    case STATE_IDLE: return "idle";
+    case STATE_THINKING: return "thinking";
+    case STATE_WORKING: return "working";
+    case STATE_NOTIFICATION: return "notification";
+    case STATE_DONE: return "done";
+    case STATE_SLEEP: return "sleep";
+    default: return "idle";
+  }
 }
 
 void setup() {
@@ -178,7 +249,68 @@ void processInput(const char* input) {
   DeserializationError error = deserializeJson(doc, input);
 
   if (error) {
-    Serial.println("JSON parse error");
+    Serial.println("{\"error\":\"JSON parse error\"}");
+    return;
+  }
+
+  // Handle command (lock/unlock)
+  const char* command = doc["command"] | "";
+  if (strlen(command) > 0) {
+    if (strcmp(command, "lock") == 0) {
+      const char* projectToLock = doc["project"] | currentProject;
+      if (strlen(projectToLock) > 0) {
+        lockProject(projectToLock);
+      } else {
+        Serial.println("{\"error\":\"No project to lock\"}");
+      }
+      return;
+    } else if (strcmp(command, "unlock") == 0) {
+      unlockProject();
+      return;
+    } else if (strcmp(command, "reboot") == 0) {
+      Serial.println("{\"ok\":true,\"rebooting\":true}");
+      delay(100);  // Allow serial output to complete
+      ESP.restart();
+      return;
+    } else if (strcmp(command, "status") == 0) {
+      // Return current status
+      Serial.print("{\"state\":\"");
+      Serial.print(getStateString(currentState));
+      Serial.print("\",\"project\":\"");
+      Serial.print(currentProject);
+      Serial.print("\",\"locked\":");
+      if (strlen(lockedProject) > 0) {
+        Serial.print("\"");
+        Serial.print(lockedProject);
+        Serial.print("\"");
+      } else {
+        Serial.print("null");
+      }
+      Serial.print(",\"projectCount\":");
+      Serial.print(projectCount);
+      Serial.println("}");
+      return;
+    }
+  }
+
+  // Get incoming project
+  const char* incomingProject = doc["project"] | "";
+
+  // Add incoming project to list
+  if (strlen(incomingProject) > 0) {
+    addProjectToList(incomingProject);
+  }
+
+  // Auto-lock: first project gets locked automatically
+  if (strlen(incomingProject) > 0 && projectCount == 1 && strlen(lockedProject) == 0) {
+    strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
+    lockedProject[sizeof(lockedProject) - 1] = '\0';
+  }
+
+  // Check if update should be blocked due to project lock
+  if (isLockedToDifferentProject(incomingProject)) {
+    // Silently ignore update from different project
+    Serial.println("{\"ok\":true,\"blocked\":true}");
     return;
   }
 
@@ -485,6 +617,10 @@ void setupWiFi() {
 
     // HTTP server setup
     server.on("/status", HTTP_POST, handleStatus);
+    server.on("/status", HTTP_GET, handleStatusGet);
+    server.on("/lock", HTTP_POST, handleLock);
+    server.on("/unlock", HTTP_POST, handleUnlock);
+    server.on("/reboot", HTTP_POST, handleReboot);
     server.begin();
   } else {
     tft.println("Failed");
@@ -499,5 +635,63 @@ void handleStatus() {
   } else {
     server.send(400, "application/json", "{\"error\":\"no body\"}");
   }
+}
+
+void handleStatusGet() {
+  String response = "{\"state\":\"";
+  response += getStateString(currentState);
+  response += "\",\"project\":\"";
+  response += currentProject;
+  response += "\",\"locked\":";
+  if (strlen(lockedProject) > 0) {
+    response += "\"";
+    response += lockedProject;
+    response += "\"";
+  } else {
+    response += "null";
+  }
+  response += ",\"projectCount\":";
+  response += projectCount;
+  response += "}";
+  server.send(200, "application/json", response);
+}
+
+void handleLock() {
+  if (server.hasArg("plain")) {
+    StaticJsonDocument<128> doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (!error) {
+      const char* projectToLock = doc["project"] | currentProject;
+      if (strlen(projectToLock) > 0) {
+        lockProject(projectToLock);
+        String response = "{\"success\":true,\"locked\":\"";
+        response += lockedProject;
+        response += "\"}";
+        server.send(200, "application/json", response);
+        return;
+      }
+    }
+  }
+  // No body or no project - lock current project
+  if (strlen(currentProject) > 0) {
+    lockProject(currentProject);
+    String response = "{\"success\":true,\"locked\":\"";
+    response += lockedProject;
+    response += "\"}";
+    server.send(200, "application/json", response);
+  } else {
+    server.send(400, "application/json", "{\"error\":\"No project to lock\"}");
+  }
+}
+
+void handleUnlock() {
+  unlockProject();
+  server.send(200, "application/json", "{\"success\":true,\"locked\":null}");
+}
+
+void handleReboot() {
+  server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
+  delay(100);  // Allow HTTP response to complete
+  ESP.restart();
 }
 #endif
