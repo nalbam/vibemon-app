@@ -48,13 +48,13 @@ get_state() {
 
 build_payload() {
   local state="$1"
-  local event="$2"
+  local project="$2"
 
   jq -n \
     --arg state "$state" \
-    --arg event "$event" \
+    --arg project "$project" \
     --arg character "kiro" \
-    '{state: $state, event: $event, character: $character}'
+    '{state: $state, project: $project, character: $character}'
 }
 
 # ============================================================================
@@ -236,11 +236,15 @@ main() {
   local state
   state=$(get_state "$event_type")
 
-  debug_log "Event: $event_type, State: $state"
+  # Get project name from current directory
+  local project_name
+  project_name=$(basename "$(pwd)")
+
+  debug_log "Event: $event_type, State: $state, Project: $project_name"
 
   # Build payload
   local payload
-  payload=$(build_payload "$state" "$event_type")
+  payload=$(build_payload "$state" "$project_name")
 
   debug_log "Payload: $payload"
 

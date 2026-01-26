@@ -97,9 +97,8 @@ get_project_metadata() {
 
 build_payload() {
   local state="$1"
-  local event="$2"
-  local tool="$3"
-  local project="$4"
+  local tool="$2"
+  local project="$3"
 
   # Get model/memory from cache
   local metadata model memory
@@ -112,13 +111,12 @@ build_payload() {
 
   jq -n \
     --arg state "$state" \
-    --arg event "$event" \
     --arg tool "$tool" \
     --arg project "$project" \
     --arg model "${model:-}" \
     --arg memory "${memory:-}" \
     --arg character "clawd" \
-    '{state: $state, event: $event, tool: $tool, project: $project, model: $model, memory: $memory, character: $character}'
+    '{state: $state, tool: $tool, project: $project, model: $model, memory: $memory, character: $character}'
 }
 
 # ============================================================================
@@ -315,7 +313,7 @@ main() {
 
   # Build payload (model and memory are provided by statusline.sh)
   local payload
-  payload=$(build_payload "$state" "$event_name" "$tool_name" "$project_name")
+  payload=$(build_payload "$state" "$tool_name" "$project_name")
 
   debug_log "Payload: $payload"
 
