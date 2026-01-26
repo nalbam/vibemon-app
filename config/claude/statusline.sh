@@ -4,6 +4,23 @@
 # Displays minimal status line: project, model, memory
 
 # ============================================================================
+# Environment Loading
+# ============================================================================
+
+load_env() {
+  local env_file="$HOME/.claude/.env.local"
+
+  if [ -f "$env_file" ]; then
+    # shellcheck source=/dev/null
+    source "$env_file"
+  fi
+}
+
+load_env
+
+DEBUG="${DEBUG:-0}"
+
+# ============================================================================
 # Utility Functions
 # ============================================================================
 
@@ -55,40 +72,79 @@ get_context_usage() {
 }
 
 # ============================================================================
-# VibeMon Functions
+# VibeMon Cache Functions
 # ============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VIBE_MONITOR_SCRIPT="${SCRIPT_DIR}/hooks/vibe-monitor.sh"
+VIBE_MONITOR_CACHE="${VIBE_MONITOR_CACHE:-$HOME/.claude/.vibe-monitor.json}"
+# Expand ~ to $HOME (tilde is not expanded when sourced from .env files)
+VIBE_MONITOR_CACHE="${VIBE_MONITOR_CACHE/#\~/$HOME}"
+VIBE_MONITOR_MAX_PROJECTS=10
 
-send_to_vibemon() {
+save_to_cache() {
   local project="$1"
   local model="$2"
   local memory="$3"
 
-  # Only send if project is set
+  # Only save if project is set
   [ -z "$project" ] && return
 
-  # Check if vibe-monitor.sh exists
-  if [ ! -x "$VIBE_MONITOR_SCRIPT" ]; then
-    return
+  local cache_dir
+  cache_dir=$(dirname "$VIBE_MONITOR_CACHE")
+
+  # Ensure cache directory exists
+  if [ ! -d "$cache_dir" ]; then
+    mkdir -p "$cache_dir" 2>/dev/null || return
   fi
 
-  # Build JSON payload with project for session matching
-  local payload="{\"project\":\"$project\""
+  local lockfile="${VIBE_MONITOR_CACHE}.lock"
+  local tmpfile="${VIBE_MONITOR_CACHE}.tmp.$$"
+  local timestamp
+  timestamp=$(date +%s)
 
-  if [ -n "$model" ]; then
-    payload="${payload},\"model\":\"$model\""
+  # Simple file-based locking (wait up to 5 seconds)
+  local wait_count=0
+  while [ -f "$lockfile" ] && [ "$wait_count" -lt 50 ]; do
+    sleep 0.1
+    wait_count=$((wait_count + 1))
+  done
+
+  # Create lock file
+  echo $$ > "$lockfile" 2>/dev/null
+
+  # Read existing cache or create empty object
+  local cache="{}"
+  if [ -f "$VIBE_MONITOR_CACHE" ]; then
+    # Validate existing cache is valid JSON
+    local existing
+    existing=$(cat "$VIBE_MONITOR_CACHE" 2>/dev/null)
+    if echo "$existing" | jq empty 2>/dev/null; then
+      cache="$existing"
+    fi
   fi
 
-  if [ -n "$memory" ]; then
-    payload="${payload},\"memory\":\"$memory\""
+  # Update cache with new project data (with timestamp)
+  # Then keep only the most recent N projects
+  local new_cache
+  new_cache=$(echo "$cache" | jq \
+    --arg project "$project" \
+    --arg model "$model" \
+    --arg memory "$memory" \
+    --argjson ts "$timestamp" \
+    --argjson max "$VIBE_MONITOR_MAX_PROJECTS" \
+    '.[$project] = {model: $model, memory: $memory, ts: $ts} |
+     to_entries | sort_by(.value.ts) | reverse | .[:$max] | from_entries' 2>/dev/null)
+
+  # Only write if jq succeeded and produced valid JSON
+  if [ -n "$new_cache" ] && echo "$new_cache" | jq empty 2>/dev/null; then
+    # Atomic write: write to temp file, then move
+    echo "$new_cache" > "$tmpfile" 2>/dev/null && mv "$tmpfile" "$VIBE_MONITOR_CACHE" 2>/dev/null
   fi
 
-  payload="${payload}}"
+  # Clean up temp file if still exists
+  rm -f "$tmpfile" 2>/dev/null
 
-  # Route through vibe-monitor.sh for proper desktop/usb/http routing
-  "$VIBE_MONITOR_SCRIPT" --json "$payload"
+  # Remove lock file
+  rm -f "$lockfile" 2>/dev/null
 }
 
 # ============================================================================
@@ -193,8 +249,8 @@ main() {
   local context_usage
   context_usage=$(get_context_usage "$input")
 
-  # Send project, model and context usage to VibeMon (if running)
-  send_to_vibemon "$dir_name" "$model_display" "$context_usage" &
+  # Save project metadata to cache (vibe-monitor.sh will read this)
+  save_to_cache "$dir_name" "$model_display" "$context_usage" &
 
   # Output statusline
   build_statusline "$model_display" "$dir_name" "$context_usage"

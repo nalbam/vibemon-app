@@ -210,16 +210,6 @@ send_to_all() {
 main() {
   # Check for command modes
   case "$1" in
-    --json)
-      local payload="$2"
-      if [ -z "$payload" ]; then
-        debug_log "No payload provided with --json"
-        exit 1
-      fi
-      debug_log "Direct JSON mode: $payload"
-      send_to_all "$payload" "false"
-      exit 0
-      ;;
     --lock)
       local project="${2:-$(basename "$(pwd)")}"
       send_lock "$project"

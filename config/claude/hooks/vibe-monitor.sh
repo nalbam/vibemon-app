@@ -32,7 +32,17 @@ debug_log() {
 }
 
 read_input() {
-  timeout 5 cat 2>/dev/null || cat
+  # timeout may not be available on macOS, use read with timeout as fallback
+  if command -v timeout > /dev/null 2>&1; then
+    timeout 5 cat 2>/dev/null || cat
+  else
+    # macOS fallback: read with timeout
+    local input=""
+    while IFS= read -r -t 5 line; do
+      input="${input}${line}"$'\n'
+    done
+    echo -n "$input"
+  fi
 }
 
 parse_json_field() {
@@ -45,6 +55,10 @@ parse_json_field() {
 # ============================================================================
 # State Functions
 # ============================================================================
+
+VIBE_MONITOR_CACHE="${VIBE_MONITOR_CACHE:-$HOME/.claude/.vibe-monitor.json}"
+# Expand ~ to $HOME (tilde is not expanded when sourced from .env files)
+VIBE_MONITOR_CACHE="${VIBE_MONITOR_CACHE/#\~/$HOME}"
 
 get_project_name() {
   local cwd="$1"
@@ -70,19 +84,41 @@ get_state() {
   esac
 }
 
+get_project_metadata() {
+  local project="$1"
+
+  if [ -z "$project" ] || [ ! -f "$VIBE_MONITOR_CACHE" ]; then
+    echo ""
+    return
+  fi
+
+  jq -r --arg project "$project" '.[$project] // empty' "$VIBE_MONITOR_CACHE" 2>/dev/null
+}
+
 build_payload() {
   local state="$1"
   local event="$2"
   local tool="$3"
   local project="$4"
 
+  # Get model/memory from cache
+  local metadata model memory
+  metadata=$(get_project_metadata "$project")
+
+  if [ -n "$metadata" ]; then
+    model=$(echo "$metadata" | jq -r '.model // empty' 2>/dev/null)
+    memory=$(echo "$metadata" | jq -r '.memory // empty' 2>/dev/null)
+  fi
+
   jq -n \
     --arg state "$state" \
     --arg event "$event" \
     --arg tool "$tool" \
     --arg project "$project" \
+    --arg model "${model:-}" \
+    --arg memory "${memory:-}" \
     --arg character "clawd" \
-    '{state: $state, event: $event, tool: $tool, project: $project, character: $character}'
+    '{state: $state, event: $event, tool: $tool, project: $project, model: $model, memory: $memory, character: $character}'
 }
 
 # ============================================================================
@@ -155,7 +191,8 @@ send_lock() {
     -H "Content-Type: application/json" \
     -d "$payload" \
     --connect-timeout 2 \
-    --max-time 5
+    --max-time 5 \
+    > /dev/null 2>&1
 }
 
 send_unlock() {
@@ -167,7 +204,8 @@ send_unlock() {
   debug_log "Unlocking"
   curl -s -X POST "${VIBE_MONITOR_URL}/unlock" \
     --connect-timeout 2 \
-    --max-time 5
+    --max-time 5 \
+    > /dev/null 2>&1
 }
 
 get_status() {
@@ -176,9 +214,10 @@ get_status() {
     return 1
   fi
 
+  # Output status to stdout for user visibility
   curl -s "${VIBE_MONITOR_URL}/status" \
     --connect-timeout 2 \
-    --max-time 5
+    --max-time 5 2>/dev/null
 }
 
 # ============================================================================
@@ -242,16 +281,6 @@ send_to_all() {
 main() {
   # Check for command modes
   case "$1" in
-    --json)
-      local payload="$2"
-      if [ -z "$payload" ]; then
-        debug_log "No payload provided with --json"
-        exit 1
-      fi
-      debug_log "Direct JSON mode: $payload"
-      send_to_all "$payload" "false"
-      exit 0
-      ;;
     --lock)
       local project="${2:-$(basename "$(pwd)")}"
       send_lock "$project"
