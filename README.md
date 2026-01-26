@@ -703,6 +703,8 @@ vibe-monitor/
 ├── img_clawd.h                 # Clawd image data (RGB565)
 ├── img_kiro.h                  # Kiro image data (RGB565)
 ├── User_Setup.h                # TFT display configuration
+├── screenshots/                # Demo images and videos
+│   └── demo.gif                # Demo animation
 ├── tools/                      # Development utilities
 │   └── png_to_rgb565.py        # PNG to RGB565 converter
 ├── config/                     # IDE configuration files
@@ -710,8 +712,11 @@ vibe-monitor/
 │   │   ├── .env.sample         # Environment variables sample
 │   │   ├── settings.json       # Hook configuration example
 │   │   ├── statusline.sh       # Statusline script (model, memory)
-│   │   └── hooks/              # Hook scripts
-│   │       └── vibe-monitor.sh # Main hook script
+│   │   ├── hooks/              # Hook scripts
+│   │   │   └── vibe-monitor.sh # Main hook script
+│   │   └── skills/             # Claude Code skills
+│   │       └── vibemon/        # Vibe monitor skill
+│   │           └── SKILL.md    # Skill documentation
 │   └── kiro/                   # Kiro IDE settings
 │       ├── .env.sample         # Environment variables sample
 │       └── hooks/              # Hook files
@@ -728,8 +733,15 @@ vibe-monitor/
 │   ├── styles.css              # Styles
 │   ├── package.json            # Dependencies
 │   ├── README.md               # Desktop-specific docs
+│   ├── start.sh                # Startup script
 │   ├── bin/cli.js              # CLI entry point (npx)
-│   ├── assets/                 # App icons
+│   ├── assets/                 # App icons and resources
+│   │   ├── characters/         # Character images
+│   │   │   ├── clawd-128.png   # Clawd character
+│   │   │   └── kiro-128.png    # Kiro character
+│   │   └── generators/         # Icon generation tools
+│   │       ├── generate-icons.js
+│   │       └── icon-generator.html
 │   └── shared/                 # Shared code (Desktop/Simulator)
 │       ├── config.js           # State/character configuration
 │       ├── character.js        # Character rendering logic
