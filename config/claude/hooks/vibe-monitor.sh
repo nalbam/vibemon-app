@@ -328,5 +328,5 @@ main() {
   send_to_all "$payload" "$is_start"
 }
 
-main
+main "$@"
 exit 0
