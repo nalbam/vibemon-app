@@ -2,7 +2,19 @@
 
 AI coding assistant status monitor with pixel art character.
 
-![Demo](https://raw.githubusercontent.com/nalbam/vibe-monitor/main/desktop/assets/demo.gif)
+Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what state it's in, which project and tool it's using, what model is active, and how much context memory is consumed.
+
+![Demo](https://raw.githubusercontent.com/nalbam/vibe-monitor/main/screenshots/demo.gif)
+
+## What It Monitors
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| **State** | Current activity state | `working`, `idle`, `notification` |
+| **Project** | Active project directory | `vibe-monitor` |
+| **Tool** | Currently executing tool | `Bash`, `Read`, `Edit` |
+| **Model** | Active model | `Opus 4.5`, `Sonnet` |
+| **Memory** | Context window usage | `45%` |
 
 ## Features
 
@@ -12,6 +24,15 @@ AI coding assistant status monitor with pixel art character.
 - **Project Lock**: Lock to a specific project to ignore updates from others
 - **HTTP API**: Easy integration with IDE hooks (Claude Code, Kiro)
 - **Draggable**: Move the window to any position
+- **Auto-launch**: Hook scripts auto-start via `npx vibe-monitor` if not running
+
+## Prerequisites
+
+| Tool | Required | Install |
+|------|----------|---------|
+| **jq** | Yes | `brew install jq` (macOS) / `apt install jq` (Ubuntu) |
+| **curl** | Yes | Built-in on macOS / `apt install curl` (Ubuntu) |
+| **Node.js** | Yes | `brew install node` (macOS) / `apt install nodejs npm` (Ubuntu) |
 
 ## Quick Start
 
@@ -48,20 +69,49 @@ npm start
 
 ## States
 
-| State | Color | Description |
-|-------|-------|-------------|
-| `start` | Cyan | Session begins |
-| `idle` | Green | Waiting for input |
-| `thinking` | Purple | Processing prompt |
-| `working` | Blue | Tool executing |
-| `notification` | Yellow | User input needed |
-| `done` | Green | Tool completed |
-| `sleep` | Navy | 5min inactivity |
+| State | Color | Eyes | Description |
+|-------|-------|------|-------------|
+| `start` | Cyan | ■ ■ + ✦ | Session begins |
+| `idle` | Green | ■ ■ | Waiting for input |
+| `thinking` | Purple | ▀ ▀ + 💭 | Processing prompt |
+| `working` | Blue | 🕶️ | Tool executing |
+| `notification` | Yellow | ● ● + ? | User input needed |
+| `done` | Green | ∨ ∨ | Done! |
+| `sleep` | Navy | ─ ─ + Z | 5min inactivity |
+
+### State Timeout
+
+| From State | Timeout | To State |
+|------------|---------|----------|
+| `start`, `done` | 1 minute | `idle` |
+| `idle`, `notification` | 5 minutes | `sleep` |
+
+### Working State Text
+
+The `working` state displays context-aware text based on the active tool:
+
+| Tool | Possible Text |
+|------|---------------|
+| Bash | Running, Executing, Processing |
+| Read | Reading, Scanning, Checking |
+| Edit | Editing, Modifying, Fixing |
+| Write | Writing, Creating, Saving |
+| Grep | Searching, Finding, Looking |
+| Task | Thinking, Working, Planning |
+
+### Animations
+
+- **Floating**: Gentle motion (±3px horizontal, ±5px vertical, ~3.2s cycle)
+- **Matrix rain**: Working state shows falling green code effect
+- **Sunglasses**: Working state character wears Matrix-style sunglasses
+- **Thought bubble**: Thinking state shows animated thought bubble
 
 ## Characters
 
-- **clawd** (default): Orange pixel art character
-- **kiro**: White ghost character
+| Character | Color | Description | Auto-selected for |
+|-----------|-------|-------------|-------------------|
+| **clawd** | Orange | Default character | Claude Code |
+| **kiro** | White | Ghost character | Kiro IDE |
 
 ## IDE Integration
 
@@ -74,19 +124,25 @@ Claude Code uses **hooks** and **statusline** to send data:
 | **Hook** | state, tool, project | Triggered on Claude Code events |
 | **Statusline** | model, memory | Continuously updated status bar |
 
-#### 1. Copy scripts
+#### 1. Download scripts
 
 ```bash
-# Create hooks directory
+# Create directories
 mkdir -p ~/.claude/hooks
 
-# Copy hook script (provides state, tool, project)
-cp config/claude/hooks/vibe-monitor.sh ~/.claude/hooks/
+# Download hook script
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/hooks/vibe-monitor.sh \
+  -o ~/.claude/hooks/vibe-monitor.sh
 chmod +x ~/.claude/hooks/vibe-monitor.sh
 
-# Copy statusline script (provides model, memory)
-cp config/claude/statusline.sh ~/.claude/statusline.sh
+# Download statusline script
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/statusline.sh \
+  -o ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
+
+# Download environment sample
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/.env.sample \
+  -o ~/.claude/.env.local
 ```
 
 #### 2. Add to `~/.claude/settings.json`
@@ -109,28 +165,41 @@ chmod +x ~/.claude/statusline.sh
 
 #### 3. Configure environment
 
-```bash
-cp config/claude/.env.sample ~/.claude/.env.local
-# Edit and set VIBE_MONITOR_URL="http://127.0.0.1:19280"
-```
+Edit `~/.claude/.env.local`:
 
-See [GitHub repository](https://github.com/nalbam/vibe-monitor) for full configuration.
+```bash
+# Desktop App URL (auto-launches via npx if not running)
+export VIBE_MONITOR_URL="http://127.0.0.1:19280"
+
+# ESP32 USB Serial port (optional)
+# export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
+```
 
 ### Kiro IDE
 
-Copy hook script and hook files to `~/.kiro/hooks/`:
-
 ```bash
-# Create hooks directory
+# Create directory
 mkdir -p ~/.kiro/hooks
 
-# Copy hook script and hook files
-cp config/kiro/hooks/vibe-monitor.sh ~/.kiro/hooks/
-cp config/kiro/hooks/*.kiro.hook ~/.kiro/hooks/
+# Download hook script
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/hooks/vibe-monitor.sh \
+  -o ~/.kiro/hooks/vibe-monitor.sh
 chmod +x ~/.kiro/hooks/vibe-monitor.sh
+
+# Download hook files
+for hook in agent-spawn agent-stop pre-tool-use prompt-submit; do
+  curl -sL "https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/hooks/vibe-monitor-${hook}.kiro.hook" \
+    -o ~/.kiro/hooks/vibe-monitor-${hook}.kiro.hook
+done
+
+# Download environment sample (optional)
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/.env.sample \
+  -o ~/.kiro/.env.local
 ```
 
 ## API
+
+Default HTTP server port: `19280`
 
 ### POST /status
 
@@ -203,10 +272,18 @@ curl http://127.0.0.1:19280/health
 
 ### POST /show
 
-Show window:
+Show window and position to top-right corner:
 
 ```bash
 curl -X POST http://127.0.0.1:19280/show
+```
+
+### GET /debug
+
+Get display and window debug information:
+
+```bash
+curl http://127.0.0.1:19280/debug
 ```
 
 ### POST /quit
@@ -220,25 +297,36 @@ curl -X POST http://127.0.0.1:19280/quit
 ## Tray Menu
 
 Click the system tray icon to:
-- Check current status
-- Manually change status
+- View current state and project
+- Manually change state
+- Switch character (Clawd/Kiro)
 - **Project Lock** - Lock/unlock to specific project
 - Toggle Always on Top
 - Show/Hide window
 - Quit
 
-## Port
+## Troubleshooting
 
-Default HTTP server port: `19280`
+| Issue | Solution |
+|-------|----------|
+| Window not appearing | Check system tray icon, or run `curl -X POST http://127.0.0.1:19280/show` |
+| Port already in use | Check with `lsof -i :19280` and kill existing process |
+| Hook not working | Verify `jq` and `curl` are installed: `jq --version && curl --version` |
 
 ## Build
 
 ```bash
-npm run build:mac     # macOS
-npm run build:win     # Windows
-npm run build:linux   # Linux
+npm run build:mac     # macOS (DMG, ZIP)
+npm run build:win     # Windows (NSIS, Portable)
+npm run build:linux   # Linux (AppImage, DEB)
 npm run build:all     # All platforms
 ```
+
+## Links
+
+- [GitHub Repository](https://github.com/nalbam/vibe-monitor)
+- [Web Simulator](https://nalbam.github.io/vibe-monitor/simulator/)
+- [ESP32 Hardware Setup](https://github.com/nalbam/vibe-monitor#esp32-setup)
 
 ## License
 
