@@ -62,10 +62,10 @@ function updateFloatingPosition() {
 }
 
 // Initialize
-function init() {
+async function init() {
   canvas = document.getElementById('character-canvas');
   ctx = canvas.getContext('2d');
-  initRenderer(ctx);
+  await initRenderer(ctx);
   initDomCache();
 
   // Random state selection
@@ -181,7 +181,6 @@ window.updateDisplay = function() {
   // Update JSON preview
   const json = {
     state: currentState,
-    event: getEventName(currentState),
     tool: currentState === 'working' ? toolName : '',
     project: projectName,
     model: modelName,
@@ -193,20 +192,6 @@ window.updateDisplay = function() {
   // Draw character
   drawCharacter(state.eyeType, currentState, currentCharacter, animFrame);
 };
-
-// Get event name for state
-function getEventName(state) {
-  const events = {
-    start: 'SessionStart',
-    idle: 'Stop',
-    thinking: 'UserPromptSubmit',
-    working: 'PreToolUse',
-    notification: 'Notification',
-    done: 'PostToolUse',
-    sleep: 'Sleep'
-  };
-  return events[state] || 'Unknown';
-}
 
 // Update loading dots (slower for thinking state)
 function updateLoadingDots(slow = false) {

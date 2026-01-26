@@ -187,3 +187,89 @@ body {
   font-size: 16px;
   font-weight: 600;
 }
+
+/* Mobile Responsive - Side by side layout */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+    align-items: flex-start;
+  }
+
+  .container {
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .device-frame {
+    padding: 10px;
+    flex-shrink: 0;
+  }
+
+  .control-panel {
+    min-width: 180px;
+    max-width: 200px;
+    padding: 12px;
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .button-group {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .state-btn {
+    padding: 6px 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .state-icon {
+    font-size: 12px;
+  }
+
+  .input-group {
+    margin-bottom: 10px;
+  }
+
+  .input-label {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .input-field {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .json-preview {
+    padding: 8px;
+    margin-top: 12px;
+  }
+
+  .json-title {
+    font-size: 9px;
+  }
+
+  .json-content {
+    font-size: 8px;
+  }
+
+  .current-state {
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+
+  .current-state-label {
+    font-size: 9px;
+  }
+
+  .current-state-value {
+    font-size: 12px;
+  }
+}

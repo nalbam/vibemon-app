@@ -43,9 +43,9 @@ function hasImage(characterName) {
 }
 
 // Initialize renderer with canvas context
-export function initRenderer(canvasCtx) {
+export async function initRenderer(canvasCtx) {
   ctx = canvasCtx;
-  preloadImages();
+  await preloadImages();
 }
 
 // Helper: draw scaled rect

@@ -65,10 +65,10 @@ function updateFloatingPosition() {
 }
 
 // Initialize
-function init() {
+async function init() {
   canvas = document.getElementById('character-canvas');
   ctx = canvas.getContext('2d');
-  initRenderer(ctx);
+  await initRenderer(ctx);
   initDomCache();
 
   // Display version (set in HTML, updated dynamically if needed)
