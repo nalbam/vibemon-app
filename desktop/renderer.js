@@ -41,6 +41,7 @@ function initDomCache() {
     display: document.getElementById('display'),
     statusText: document.getElementById('status-text'),
     loadingDots: document.getElementById('loading-dots'),
+    projectLine: document.getElementById('project-line'),
     toolLine: document.getElementById('tool-line'),
     modelLine: document.getElementById('model-line'),
     memoryLine: document.getElementById('memory-line'),
@@ -133,7 +134,9 @@ function updateDisplay() {
   d.modelValue.textContent = displayModel;
   d.memoryValue.textContent = currentMemory;
 
-  // Update model/memory visibility (hide memory on start state)
+  // Update project/model/memory visibility (hide memory on start state)
+  const showProject = currentProject && currentProject !== '-';
+  d.projectLine.style.display = showProject ? 'block' : 'none';
   d.modelLine.style.display = currentModel && currentModel !== '-' ? 'block' : 'none';
   const showMemory = currentState !== 'start' && currentMemory && currentMemory !== '-';
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
