@@ -218,25 +218,7 @@ function buildProjectLockSubmenu() {
         label: isLocked ? `🔒 ${project}` : `○ ${project}`,
         type: 'radio',
         checked: isLocked,
-        click: () => {
-          lockProject(project);
-          // Switch display to the locked project's state
-          if (project !== currentProject) {
-            currentProject = project;
-            currentModel = '';
-            currentMemory = '';
-            currentTool = '';
-            if (mainWindow) {
-              mainWindow.webContents.send('state-update', {
-                state: currentState,
-                project: project,
-                tool: '',
-                model: '',
-                memory: ''
-              });
-            }
-          }
-        }
+        click: () => lockProject(project)
       });
     });
 
@@ -376,8 +358,30 @@ function addProjectToList(project) {
 // Lock to a specific project
 function lockProject(project) {
   if (project) {
+    const previousLocked = lockedProject;
     addProjectToList(project);
     lockedProject = project;
+
+    // Transition to idle state when lock changes
+    if (previousLocked !== project) {
+      currentState = 'idle';
+      currentProject = project;
+      currentTool = '';
+      currentModel = '';
+      currentMemory = '';
+      setupStateTimeout();
+
+      if (mainWindow) {
+        mainWindow.webContents.send('state-update', {
+          state: 'idle',
+          project: project,
+          tool: '',
+          model: '',
+          memory: ''
+        });
+      }
+      updateTrayIcon();
+    }
     updateTrayMenu();
   }
 }

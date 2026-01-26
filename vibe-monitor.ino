@@ -118,12 +118,31 @@ void addProjectToList(const char* project) {
 // Project lock helper: Lock to a specific project
 void lockProject(const char* project) {
   if (strlen(project) > 0) {
+    bool changed = (strcmp(lockedProject, project) != 0);
     addProjectToList(project);
     strncpy(lockedProject, project, sizeof(lockedProject) - 1);
     lockedProject[sizeof(lockedProject) - 1] = '\0';
+
+    // Transition to idle state when lock changes
+    if (changed) {
+      previousState = currentState;
+      currentState = STATE_IDLE;
+      strncpy(currentProject, project, sizeof(currentProject) - 1);
+      currentProject[sizeof(currentProject) - 1] = '\0';
+      currentTool[0] = '\0';
+      currentModel[0] = '\0';
+      currentMemory[0] = '\0';
+      lastActivityTime = millis();
+      needsRedraw = true;
+      dirtyCharacter = true;
+      dirtyStatus = true;
+      dirtyInfo = true;
+      drawStatus();
+    }
+
     Serial.print("{\"locked\":\"");
     Serial.print(lockedProject);
-    Serial.println("\"}");
+    Serial.println("\",\"state\":\"idle\"}");
   }
 }
 

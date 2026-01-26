@@ -341,6 +341,42 @@ Any new status update resets the timeout timer and wakes the display from sleep.
 - **Memory hidden on start**: Memory usage is not displayed during the `start` state for a cleaner welcome screen
 - **Project change resets data**: When switching to a different project, model and memory values are automatically cleared
 
+## Project Lock
+
+Lock the monitor to a specific project to prevent display updates from other projects.
+
+### Features
+
+- **Auto-lock**: First incoming project is automatically locked
+- **Project list**: All incoming projects are tracked (Desktop: unlimited, ESP32: max 10)
+- **Tray menu**: Easily switch or unlock via "Project Lock" submenu
+- **API control**: Lock/unlock via HTTP API or ESP32 serial commands
+- **State reset**: Lock change transitions state to `idle`
+
+### Tray Menu (Desktop)
+
+```
+Project: vibe-monitor 🔒
+─────────────
+Project Lock →
+  ├─ 🔒 vibe-monitor     (currently locked)
+  ├─ ○ another-project
+  └─ ─────────────
+     Unlock
+```
+
+### CLI (vibe-lock skill)
+
+```bash
+# Lock current project
+curl -s -X POST http://127.0.0.1:19280/lock \
+  -H "Content-Type: application/json" \
+  -d "{\"project\":\"$(basename $(pwd))\"}"
+
+# Unlock
+curl -s -X POST http://127.0.0.1:19280/unlock
+```
+
 ## HTTP API
 
 Both Desktop App (port 19280) and ESP32 WiFi mode (port 80) support the same API.
@@ -383,8 +419,44 @@ curl http://127.0.0.1:19280/status
   "project": "my-project",
   "tool": "Bash",
   "model": "opus",
-  "memory": "45%"
+  "memory": "45%",
+  "locked": "my-project",
+  "projects": ["my-project", "other-project"]
 }
+```
+
+> **Note:** ESP32 returns `projectCount` instead of `projects` array.
+
+### POST /lock
+
+Lock to a specific project.
+
+```bash
+# Lock specific project
+curl -X POST http://127.0.0.1:19280/lock \
+  -H "Content-Type: application/json" \
+  -d '{"project":"my-project"}'
+
+# Lock current project (no body)
+curl -X POST http://127.0.0.1:19280/lock
+```
+
+**Response:**
+```json
+{"success": true, "locked": "my-project"}
+```
+
+### POST /unlock
+
+Unlock project.
+
+```bash
+curl -X POST http://127.0.0.1:19280/unlock
+```
+
+**Response:**
+```json
+{"success": true, "locked": null}
 ```
 
 ### GET /health
@@ -417,6 +489,14 @@ Get display and window debug information.
 
 ```bash
 curl http://127.0.0.1:19280/debug
+```
+
+### POST /reboot (ESP32 WiFi only)
+
+Reboot the ESP32 device.
+
+```bash
+curl -X POST http://192.168.1.100/reboot
 ```
 
 ## Desktop App
@@ -515,6 +595,28 @@ echo '{"state":"working","tool":"Bash","project":"test","model":"opus","memory":
 
 # Test idle state
 echo '{"state":"idle","project":"test","model":"opus","memory":"45%"}' > /dev/cu.usbmodem1101
+```
+
+### Serial Commands
+
+ESP32 supports JSON commands via serial:
+
+```bash
+# Lock current project
+echo '{"command":"lock"}' > /dev/cu.usbmodem1101
+
+# Lock specific project
+echo '{"command":"lock","project":"my-project"}' > /dev/cu.usbmodem1101
+
+# Unlock
+echo '{"command":"unlock"}' > /dev/cu.usbmodem1101
+
+# Get status
+echo '{"command":"status"}' > /dev/cu.usbmodem1101
+# Response: {"state":"working","project":"my-project","locked":"my-project","projectCount":2}
+
+# Reboot device
+echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
 ```
 
 ## Troubleshooting

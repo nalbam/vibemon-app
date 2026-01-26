@@ -9,6 +9,7 @@ AI coding assistant status monitor with pixel art character.
 - **Frameless Window**: Clean floating design
 - **Always on Top**: Always displayed above other windows
 - **System Tray**: Quick control from the menu bar
+- **Project Lock**: Lock to a specific project to ignore updates from others
 - **HTTP API**: Easy integration with IDE hooks (Claude Code, Kiro)
 - **Draggable**: Move the window to any position
 
@@ -161,6 +162,37 @@ Get current status:
 curl http://127.0.0.1:19280/status
 ```
 
+**Response:**
+```json
+{
+  "state": "working",
+  "project": "my-project",
+  "tool": "Bash",
+  "model": "opus",
+  "memory": "45%",
+  "locked": "my-project",
+  "projects": ["my-project", "other-project"]
+}
+```
+
+### POST /lock
+
+Lock to a specific project:
+
+```bash
+curl -X POST http://127.0.0.1:19280/lock \
+  -H "Content-Type: application/json" \
+  -d '{"project":"my-project"}'
+```
+
+### POST /unlock
+
+Unlock project:
+
+```bash
+curl -X POST http://127.0.0.1:19280/unlock
+```
+
 ### GET /health
 
 Health check:
@@ -190,6 +222,7 @@ curl -X POST http://127.0.0.1:19280/quit
 Click the system tray icon to:
 - Check current status
 - Manually change status
+- **Project Lock** - Lock/unlock to specific project
 - Toggle Always on Top
 - Show/Hide window
 - Quit
