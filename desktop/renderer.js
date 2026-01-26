@@ -94,6 +94,14 @@ function init() {
       updateDisplay();
     });
   }
+
+  // Right-click context menu (works on all platforms)
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (window.electronAPI?.showContextMenu) {
+      window.electronAPI.showContextMenu();
+    }
+  });
 }
 
 // Update display

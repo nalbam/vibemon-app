@@ -192,6 +192,11 @@ function createTray() {
   tray = new Tray(icon);
   tray.setToolTip('Vibe Monitor');
   updateTrayMenu();
+
+  // Left-click to show menu (Windows support)
+  tray.on('click', () => {
+    tray.popUpContextMenu();
+  });
 }
 
 function updateTrayIcon() {
@@ -235,10 +240,10 @@ function buildProjectLockSubmenu() {
   return items;
 }
 
-function updateTrayMenu() {
+function buildMenuTemplate() {
   const projectDisplay = currentProject || '-';
 
-  const contextMenu = Menu.buildFromTemplate([
+  return [
     {
       label: `State: ${currentState}`,
       enabled: false
@@ -316,8 +321,11 @@ function updateTrayMenu() {
         app.quit();
       }
     }
-  ]);
+  ];
+}
 
+function updateTrayMenu() {
+  const contextMenu = Menu.buildFromTemplate(buildMenuTemplate());
   tray.setContextMenu(contextMenu);
 }
 
@@ -632,6 +640,11 @@ ipcMain.on('minimize-window', () => {
   if (mainWindow) {
     mainWindow.minimize();
   }
+});
+
+ipcMain.on('show-context-menu', (event) => {
+  const contextMenu = Menu.buildFromTemplate(buildMenuTemplate());
+  contextMenu.popup(BrowserWindow.fromWebContents(event.sender));
 });
 
 app.whenReady().then(() => {
