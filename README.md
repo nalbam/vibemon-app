@@ -700,7 +700,11 @@ vibe-monitor/
 ├── CLAUDE.md                   # AI development guidelines
 ├── vibe-monitor.ino            # ESP32 main firmware
 ├── sprites.h                   # Character rendering (ESP32)
+├── img_clawd.h                 # Clawd image data (RGB565)
+├── img_kiro.h                  # Kiro image data (RGB565)
 ├── User_Setup.h                # TFT display configuration
+├── tools/                      # Development utilities
+│   └── png_to_rgb565.py        # PNG to RGB565 converter
 ├── config/                     # IDE configuration files
 │   ├── claude/                 # Claude Code settings
 │   │   ├── .env.sample         # Environment variables sample
