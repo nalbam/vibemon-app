@@ -119,8 +119,8 @@ export const CHAR_X_BASE = 22;
 export const CHAR_Y_BASE = 20;
 
 // State timeouts
-export const DONE_TO_IDLE_TIMEOUT = 60 * 1000;    // 1 minute
-export const SLEEP_TIMEOUT = 600 * 1000;          // 10 minutes
+export const IDLE_TIMEOUT = 60 * 1000;            // 1 minute (start/done -> idle)
+export const SLEEP_TIMEOUT = 5 * 60 * 1000;       // 5 minutes (idle -> sleep)
 
 // Animation constants
 export const FRAME_INTERVAL = 100;                // 100ms per frame

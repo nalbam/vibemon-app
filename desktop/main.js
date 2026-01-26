@@ -13,10 +13,11 @@ let currentTool = '';
 let currentModel = '';
 let currentMemory = '';
 
-// State timeout management
+// State timeout management (must match shared/config.js)
+// NOTE: Cannot import ESM from CommonJS, keep in sync manually
 let stateTimeoutTimer = null;
-const DONE_TO_IDLE_TIMEOUT = 60 * 1000;      // 1 minute
-const IDLE_TO_SLEEP_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const IDLE_TIMEOUT = 60 * 1000;       // 1 minute (start/done -> idle)
+const SLEEP_TIMEOUT = 5 * 60 * 1000;  // 5 minutes (idle -> sleep)
 
 // HTTP server for receiving status updates
 let httpServer;
@@ -284,16 +285,16 @@ function clearStateTimeout() {
 function setupStateTimeout() {
   clearStateTimeout();
 
-  if (currentState === 'done') {
-    // done -> idle after 1 minute
+  if (currentState === 'start' || currentState === 'done') {
+    // start/done -> idle after 1 minute
     stateTimeoutTimer = setTimeout(() => {
       updateState({ state: 'idle' });
-    }, DONE_TO_IDLE_TIMEOUT);
-  } else if (currentState === 'idle' || currentState === 'start') {
-    // idle/start -> sleep after 10 minutes
+    }, IDLE_TIMEOUT);
+  } else if (currentState === 'idle') {
+    // idle -> sleep after 5 minutes
     stateTimeoutTimer = setTimeout(() => {
       updateState({ state: 'sleep' });
-    }, IDLE_TO_SLEEP_TIMEOUT);
+    }, SLEEP_TIMEOUT);
   }
 }
 

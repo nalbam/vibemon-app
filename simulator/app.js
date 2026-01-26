@@ -1,6 +1,6 @@
 import {
   states, CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER,
-  CHAR_X_BASE, CHAR_Y_BASE, DONE_TO_IDLE_TIMEOUT, SLEEP_TIMEOUT,
+  CHAR_X_BASE, CHAR_Y_BASE, IDLE_TIMEOUT, SLEEP_TIMEOUT,
   FRAME_INTERVAL, LOADING_DOT_COUNT, THINKING_ANIMATION_SLOWDOWN,
   BLINK_START_FRAME, BLINK_END_FRAME,
   PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
@@ -21,7 +21,6 @@ let animFrame = 0;
 let blinkFrame = 0;
 let iconType = 'emoji';
 let lastActivityTime = Date.now();
-let lastDoneTime = null;
 
 // Canvas
 let canvas, ctx;
@@ -102,7 +101,6 @@ function init() {
 window.setState = function(state) {
   currentState = state;
   lastActivityTime = Date.now();
-  lastDoneTime = (state === 'done') ? Date.now() : null;
   updateDisplay();
 };
 
@@ -223,19 +221,18 @@ function updateLoadingDots(slow = false) {
 function checkStateTimeouts() {
   const now = Date.now();
 
-  // done -> idle after 1 minute
-  if (currentState === 'done' && lastDoneTime) {
-    if (now - lastDoneTime >= DONE_TO_IDLE_TIMEOUT) {
+  // start/done -> idle after 1 minute
+  if (currentState === 'start' || currentState === 'done') {
+    if (now - lastActivityTime >= IDLE_TIMEOUT) {
       currentState = 'idle';
-      lastDoneTime = null;
       lastActivityTime = now;
       updateDisplay();
       return;
     }
   }
 
-  // idle/start -> sleep after 10 minutes
-  if (currentState === 'start' || currentState === 'idle') {
+  // idle -> sleep after 5 minutes
+  if (currentState === 'idle') {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
       currentState = 'sleep';
       updateDisplay();

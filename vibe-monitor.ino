@@ -64,10 +64,9 @@ bool dirtyStatus = true;
 bool dirtyInfo = true;
 
 // State timeouts
-#define DONE_TO_IDLE_TIMEOUT 60000   // 1 minute
-#define SLEEP_TIMEOUT 600000          // 10 minutes
+#define IDLE_TIMEOUT 60000            // 1 minute (start/done -> idle)
+#define SLEEP_TIMEOUT 300000          // 5 minutes (idle -> sleep)
 unsigned long lastActivityTime = 0;
-unsigned long lastDoneTime = 0;
 
 // JSON buffer size for StaticJsonDocument
 #define JSON_BUFFER_SIZE 256
@@ -147,12 +146,11 @@ void loop() {
 void checkSleepTimer() {
   unsigned long now = millis();
 
-  // done -> idle after 1 minute
-  if (currentState == STATE_DONE && lastDoneTime > 0) {
-    if (now - lastDoneTime >= DONE_TO_IDLE_TIMEOUT) {
+  // start/done -> idle after 1 minute
+  if (currentState == STATE_START || currentState == STATE_DONE) {
+    if (now - lastActivityTime >= IDLE_TIMEOUT) {
       previousState = currentState;
       currentState = STATE_IDLE;
-      lastDoneTime = 0;
       lastActivityTime = now;
       needsRedraw = true;
       dirtyCharacter = true;
@@ -162,8 +160,8 @@ void checkSleepTimer() {
     }
   }
 
-  // idle/start -> sleep after 10 minutes
-  if (currentState == STATE_START || currentState == STATE_IDLE) {
+  // idle -> sleep after 5 minutes
+  if (currentState == STATE_IDLE) {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
       previousState = currentState;
       currentState = STATE_SLEEP;
@@ -233,13 +231,6 @@ void processInput(const char* input) {
 
   // Reset activity timer on any input
   lastActivityTime = millis();
-
-  // Track done state time for auto-transition to idle
-  if (currentState == STATE_DONE) {
-    lastDoneTime = millis();
-  } else {
-    lastDoneTime = 0;
-  }
 
   // Redraw if state changed
   if (currentState != previousState) {
