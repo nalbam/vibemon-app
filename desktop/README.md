@@ -25,7 +25,6 @@ curl -X POST http://127.0.0.1:19280/quit
 
 # or
 pkill -f vibe-monitor
-killall Electron
 ```
 
 ## Installation
