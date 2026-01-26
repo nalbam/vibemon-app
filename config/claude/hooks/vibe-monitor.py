@@ -187,13 +187,12 @@ def launch_desktop():
     """Launch Desktop App via npx."""
     debug_log("Launching Desktop App via npx")
     try:
-        # Use shell=True to inherit PATH (needed for nvm-installed npx)
+        # Use login shell to load nvm PATH
         subprocess.Popen(
-            "npx vibe-monitor@latest",
-            shell=True,
+            ["bash", "-l", "-c", "npx vibe-monitor@latest"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env=os.environ
+            start_new_session=True
         )
         time.sleep(2)
     except Exception as e:
