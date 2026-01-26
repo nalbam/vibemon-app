@@ -19,7 +19,7 @@ const useEmoji = isMac;
 let lastFrameTime = 0;
 
 // Current state
-let currentState = 'idle';
+let currentState = 'start';
 let currentCharacter = 'clawd';
 let currentProject = '-';
 let currentTool = '-';
