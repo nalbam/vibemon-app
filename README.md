@@ -99,13 +99,26 @@ AI IDE → Hooks → Vibe Monitor
 
 ### Claude Code Setup
 
-Claude Code uses shell hooks defined in `settings.json`.
+Claude Code uses **hooks** and **statusline** to send data to Vibe Monitor.
 
-#### 1. Copy hook script
+| Source | Data Provided | JSON Fields |
+|--------|---------------|-------------|
+| **Hook** | state, event, tool, project | `.hook_event_name`, `.tool_name`, `.cwd` |
+| **Statusline** | model, memory | `.model.display_name`, `.context_window.used_percentage` |
+
+#### 1. Copy scripts
 
 ```bash
+# Create hooks directory
+mkdir -p ~/.claude/hooks
+
+# Copy hook script (provides state, tool, project)
 cp config/claude/hooks/vibe-monitor.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/vibe-monitor.sh
+
+# Copy statusline script (provides model, memory)
+cp config/claude/statusline.sh ~/.claude/statusline.sh
+chmod +x ~/.claude/statusline.sh
 ```
 
 #### 2. Configure environment variables
@@ -152,7 +165,9 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 > **Note:** Character is auto-detected (Claude Code → `clawd`)
 
-#### 4. Register hook in `~/.claude/settings.json`
+#### 4. Register in `~/.claude/settings.json`
+
+Add both hooks and statusline configuration:
 
 ```json
 {
@@ -162,11 +177,15 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
     "PreToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
     "Notification": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
     "Stop": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
   }
 }
 ```
 
-#### 5. Statusline (Optional)
+#### 5. Statusline Display
 
 Claude Code statusline shows project, model, and memory usage:
 
@@ -174,27 +193,7 @@ Claude Code statusline shows project, model, and memory usage:
 📂 vibe-monitor │ 🤖 Opus 4.5 │ 🧠 ━━━━━━━━╌╌ 80%
 ```
 
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusline": {
-    "command": "~/.claude/statusline.sh"
-  }
-}
-```
-
-Copy the script:
-
-```bash
-cp config/claude/statusline.sh ~/.claude/statusline.sh
-chmod +x ~/.claude/statusline.sh
-```
-
-**Data Source:**
-- `📂 Project` ← `.workspace.current_dir`
-- `🤖 Model` ← `.model.display_name`
-- `🧠 Memory` ← `.context_window.used_percentage`
+The statusline also sends model and memory data to Vibe Monitor in the background.
 
 #### Claude Code Hook Events
 

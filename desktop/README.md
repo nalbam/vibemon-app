@@ -2,7 +2,7 @@
 
 AI coding assistant status monitor with pixel art character.
 
-![Demo](assets/demo.gif)
+![Demo](https://raw.githubusercontent.com/nalbam/vibe-monitor/main/desktop/assets/demo.gif)
 
 ## Features
 
@@ -67,27 +67,54 @@ npm start
 
 ### Claude Code
 
-Add to `~/.claude/settings.json`:
+Claude Code uses **hooks** and **statusline** to send data:
+
+| Source | Data Provided | Description |
+|--------|---------------|-------------|
+| **Hook** | state, tool, project | Triggered on Claude Code events |
+| **Statusline** | model, memory | Continuously updated status bar |
+
+#### 1. Copy scripts
+
+```bash
+# Create hooks directory
+mkdir -p ~/.claude/hooks
+
+# Copy hook script (provides state, tool, project)
+cp config/claude/hooks/vibe-monitor.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/vibe-monitor.sh
+
+# Copy statusline script (provides model, memory)
+cp config/claude/statusline.sh ~/.claude/statusline.sh
+chmod +x ~/.claude/statusline.sh
+```
+
+#### 2. Add to `~/.claude/settings.json`
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -s -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' -d \"$(jq -nc --arg state working --arg event PreToolUse --arg tool \"$CLAUDE_TOOL_NAME\" --arg project \"$(basename $PWD)\" '{state: $state, event: $event, tool: $tool, project: $project}')\" > /dev/null 2>&1 || true"
-          }
-        ]
-      }
-    ]
+    "SessionStart": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "UserPromptSubmit": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "PreToolUse": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "Notification": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }],
+    "Stop": [{ "command": "~/.claude/hooks/vibe-monitor.sh" }]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
   }
 }
 ```
 
-See [GitHub repository](https://github.com/nalbam/vibe-monitor) for full hook configuration.
+#### 3. Configure environment
+
+```bash
+cp config/claude/.env.sample ~/.claude/.env.local
+# Edit and set VIBE_MONITOR_URL="http://127.0.0.1:19280"
+```
+
+See [GitHub repository](https://github.com/nalbam/vibe-monitor) for full configuration.
 
 ### Kiro IDE
 
