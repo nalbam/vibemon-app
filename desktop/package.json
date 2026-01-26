@@ -1,6 +1,6 @@
 {
   "name": "vibe-monitor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AI coding assistant status monitor",
   "main": "main.js",
   "bin": {

@@ -7,10 +7,10 @@ let ctx = null;
 const characterImages = {};
 let imagesLoaded = false;
 
-// Image paths for each character
+// Image paths for each character (relative to this module)
 const CHARACTER_IMAGES = {
-  clawd: '../images/clawd-128.png',
-  kiro: '../images/kiro-128.png'
+  clawd: new URL('../assets/characters/clawd-128.png', import.meta.url).href,
+  kiro: new URL('../assets/characters/kiro-128.png', import.meta.url).href
 };
 
 // Preload character images

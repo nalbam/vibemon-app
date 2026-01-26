@@ -5,11 +5,11 @@ import {
   BLINK_START_FRAME, BLINK_END_FRAME,
   PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
   MODEL_NAME_MAX_LENGTH, MODEL_NAME_TRUNCATE_AT
-} from '../shared/config.js';
-import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
-import { initRenderer, drawCharacter } from '../shared/character.js';
-import { drawInfoIcons } from '../shared/icons.js';
-import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../shared/animation.js';
+} from '../desktop/shared/config.js';
+import { getThinkingText, getWorkingText, updateMemoryBar } from '../desktop/shared/utils.js';
+import { initRenderer, drawCharacter } from '../desktop/shared/character.js';
+import { drawInfoIcons } from '../desktop/shared/icons.js';
+import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../desktop/shared/animation.js';
 
 // Animation timing
 let lastFrameTime = 0;
