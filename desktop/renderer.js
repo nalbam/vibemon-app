@@ -5,11 +5,11 @@ import {
   BLINK_START_FRAME, BLINK_END_FRAME,
   PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
   MODEL_NAME_MAX_LENGTH, MODEL_NAME_TRUNCATE_AT
-} from '../shared/config.js';
-import { getThinkingText, getWorkingText, updateMemoryBar } from '../shared/utils.js';
-import { initRenderer, drawCharacter } from '../shared/character.js';
-import { drawInfoIcons } from '../shared/icons.js';
-import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from '../shared/animation.js';
+} from './shared/config.js';
+import { getThinkingText, getWorkingText, updateMemoryBar } from './shared/utils.js';
+import { initRenderer, drawCharacter } from './shared/character.js';
+import { drawInfoIcons } from './shared/icons.js';
+import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from './shared/animation.js';
 
 // Platform detection: macOS uses emoji, Windows/Linux uses pixel art
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -69,6 +69,13 @@ function init() {
   ctx = canvas.getContext('2d');
   initRenderer(ctx);
   initDomCache();
+
+  // Display version (set in HTML, updated dynamically if needed)
+  if (window.electronAPI?.getVersion) {
+    window.electronAPI.getVersion().then(version => {
+      document.getElementById('version-text').textContent = `v${version}`;
+    }).catch(() => {});
+  }
 
   updateDisplay();
   startAnimation();

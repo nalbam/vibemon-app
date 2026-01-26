@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   onStateUpdate: (callback) => {
     ipcRenderer.on('state-update', (event, data) => callback(data));
-  }
+  },
+  getVersion: () => ipcRenderer.invoke('get-version')
 });

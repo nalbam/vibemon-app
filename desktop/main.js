@@ -468,6 +468,10 @@ function startHttpServer() {
 }
 
 // IPC handlers
+ipcMain.handle('get-version', () => {
+  return app.getVersion();
+});
+
 ipcMain.on('close-window', () => {
   if (mainWindow) {
     mainWindow.hide();

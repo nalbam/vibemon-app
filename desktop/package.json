@@ -18,10 +18,10 @@
   "author": "nalbam",
   "license": "MIT",
   "dependencies": {
+    "canvas": "^3.2.1",
     "electron": "^33.0.0"
   },
   "devDependencies": {
-    "canvas": "^3.2.1",
     "electron-builder": "^25.0.0"
   },
   "files": [
@@ -31,7 +31,8 @@
     "index.html",
     "renderer.js",
     "styles.css",
-    "assets/"
+    "assets/",
+    "shared/"
   ],
   "build": {
     "appId": "com.nalbam.vibe-monitor",
