@@ -15,7 +15,17 @@ AI coding assistant status monitor with pixel art character.
 ## Quick Start
 
 ```bash
-npx vibe-monitor
+npx vibe-monitor@latest
+```
+
+### Stop
+
+```bash
+curl -X POST http://127.0.0.1:19280/quit
+
+# or
+pkill -f vibe-monitor
+killall Electron
 ```
 
 ## Installation
@@ -133,6 +143,14 @@ Show window:
 
 ```bash
 curl -X POST http://127.0.0.1:19280/show
+```
+
+### POST /quit
+
+Quit application:
+
+```bash
+curl -X POST http://127.0.0.1:19280/quit
 ```
 
 ## Tray Menu

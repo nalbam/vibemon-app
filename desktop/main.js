@@ -445,6 +445,10 @@ function startHttpServer() {
         window: windowBounds,
         platform: process.platform
       }, null, 2));
+    } else if (req.method === 'POST' && req.url === '/quit') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+      setTimeout(() => app.quit(), 100);
     } else {
       res.writeHead(404);
       res.end('Not Found');
