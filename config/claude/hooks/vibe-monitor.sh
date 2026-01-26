@@ -131,7 +131,7 @@ show_monitor_window() {
 
 launch_desktop() {
   debug_log "Launching Desktop App via npx"
-  npx vibe-monitor > /dev/null 2>&1 &
+  npx vibe-monitor@latest > /dev/null 2>&1 &
   sleep 2
 }
 
