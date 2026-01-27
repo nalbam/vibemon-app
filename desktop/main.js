@@ -58,7 +58,7 @@ ipcMain.handle('get-version', () => {
 ipcMain.on('close-window', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) {
-    win.hide();
+    win.close();
   }
 });
 
