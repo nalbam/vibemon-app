@@ -377,9 +377,10 @@ All platforms (Desktop, Simulator, ESP32) automatically transition between state
 |------------|---------|----------|
 | `start`, `done` | 1 minute | `idle` |
 | `idle`, `notification` | 5 minutes | `sleep` |
-| `sleep` (Desktop only) | 10 minutes | Window closes |
 
-Any new status update resets the timeout timer and wakes the display from sleep. When the window is closed due to prolonged sleep, it will automatically reopen when new status updates arrive.
+Any new status update resets the timeout timer and wakes the display from sleep.
+
+**Desktop only:** After 10 minutes in sleep state, the window automatically closes. It will reopen when new status updates arrive.
 
 ### Special Behaviors
 
