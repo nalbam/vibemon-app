@@ -17,6 +17,12 @@ const MAX_WINDOWS = 5;      // Maximum simultaneous windows
 // Timeouts
 const WINDOW_CLOSE_TIMEOUT = 10 * 60 * 1000;  // 10 minutes (sleep -> close window)
 
+// Lock modes (single window mode only)
+const LOCK_MODES = {
+  'first-project': 'First Project',
+  'on-thinking': 'On Thinking'
+};
+
 module.exports = {
   HTTP_PORT,
   MAX_PAYLOAD_SIZE,
@@ -26,5 +32,6 @@ module.exports = {
   SNAP_DEBOUNCE,
   WINDOW_GAP,
   MAX_WINDOWS,
-  WINDOW_CLOSE_TIMEOUT
+  WINDOW_CLOSE_TIMEOUT,
+  LOCK_MODES
 };

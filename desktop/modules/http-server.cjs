@@ -75,6 +75,24 @@ class HttpServer {
       case 'POST /quit':
         this.handlePostQuit(res);
         break;
+      case 'POST /lock':
+        await this.handlePostLock(req, res);
+        break;
+      case 'POST /unlock':
+        this.handlePostUnlock(res);
+        break;
+      case 'GET /lock-mode':
+        this.handleGetLockMode(res);
+        break;
+      case 'POST /lock-mode':
+        await this.handlePostLockMode(req, res);
+        break;
+      case 'GET /window-mode':
+        this.handleGetWindowMode(res);
+        break;
+      case 'POST /window-mode':
+        await this.handlePostWindowMode(req, res);
+        break;
       default:
         res.writeHead(404);
         res.end('Not Found');
@@ -137,6 +155,9 @@ class HttpServer {
         this.stateManager.cleanupProject(result.switchedProject);
       }
     }
+
+    // Apply auto-lock after window is successfully created (single mode only)
+    this.windowManager.applyAutoLock(projectId, stateData.state);
 
     // Update window state via windowManager
     this.windowManager.updateState(projectId, stateData);
@@ -255,6 +276,160 @@ class HttpServer {
   handlePostQuit(res) {
     sendJson(res, 200, { success: true });
     setTimeout(() => this.app.quit(), 100);
+  }
+
+  async handlePostLock(req, res) {
+    const { data, error, statusCode } = await parseJsonBody(req, MAX_PAYLOAD_SIZE);
+
+    if (error) {
+      sendError(res, statusCode, error);
+      return;
+    }
+
+    const projectId = data.project;
+
+    if (!projectId) {
+      sendError(res, 400, 'Project is required');
+      return;
+    }
+
+    // Lock only works in single mode
+    if (this.windowManager.isMultiMode()) {
+      sendJson(res, 200, {
+        success: false,
+        error: 'Lock only available in single-window mode'
+      });
+      return;
+    }
+
+    const locked = this.windowManager.lockProject(projectId);
+
+    // Update tray menu
+    if (this.onStateUpdate) {
+      this.onStateUpdate(true);
+    }
+
+    sendJson(res, 200, {
+      success: locked,
+      lockedProject: this.windowManager.getLockedProject()
+    });
+  }
+
+  handlePostUnlock(res) {
+    // Unlock only works in single mode
+    if (this.windowManager.isMultiMode()) {
+      sendJson(res, 200, {
+        success: false,
+        error: 'Unlock only available in single-window mode'
+      });
+      return;
+    }
+
+    this.windowManager.unlockProject();
+
+    // Update tray menu
+    if (this.onStateUpdate) {
+      this.onStateUpdate(true);
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      lockedProject: null
+    });
+  }
+
+  handleGetLockMode(res) {
+    sendJson(res, 200, {
+      mode: this.windowManager.getLockMode(),
+      modes: this.windowManager.getLockModes(),
+      lockedProject: this.windowManager.getLockedProject(),
+      windowMode: this.windowManager.getWindowMode()
+    });
+  }
+
+  async handlePostLockMode(req, res) {
+    const { data, error, statusCode } = await parseJsonBody(req, MAX_PAYLOAD_SIZE);
+
+    if (error) {
+      sendError(res, statusCode, error);
+      return;
+    }
+
+    const mode = data.mode;
+
+    if (!mode) {
+      sendError(res, 400, 'Mode is required');
+      return;
+    }
+
+    const success = this.windowManager.setLockMode(mode);
+
+    if (!success) {
+      sendJson(res, 200, {
+        success: false,
+        error: `Invalid mode: ${mode}`,
+        validModes: Object.keys(this.windowManager.getLockModes())
+      });
+      return;
+    }
+
+    // Update tray menu
+    if (this.onStateUpdate) {
+      this.onStateUpdate(true);
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      mode: this.windowManager.getLockMode(),
+      lockedProject: this.windowManager.getLockedProject()
+    });
+  }
+
+  handleGetWindowMode(res) {
+    sendJson(res, 200, {
+      mode: this.windowManager.getWindowMode(),
+      windowCount: this.windowManager.getWindowCount(),
+      lockedProject: this.windowManager.getLockedProject()
+    });
+  }
+
+  async handlePostWindowMode(req, res) {
+    const { data, error, statusCode } = await parseJsonBody(req, MAX_PAYLOAD_SIZE);
+
+    if (error) {
+      sendError(res, statusCode, error);
+      return;
+    }
+
+    const mode = data.mode;
+
+    if (!mode) {
+      sendError(res, 400, 'Mode is required');
+      return;
+    }
+
+    if (mode !== 'multi' && mode !== 'single') {
+      sendJson(res, 200, {
+        success: false,
+        error: `Invalid mode: ${mode}`,
+        validModes: ['multi', 'single']
+      });
+      return;
+    }
+
+    this.windowManager.setWindowMode(mode);
+
+    // Update tray menu
+    if (this.onStateUpdate) {
+      this.onStateUpdate(true);
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      mode: this.windowManager.getWindowMode(),
+      windowCount: this.windowManager.getWindowCount(),
+      lockedProject: this.windowManager.getLockedProject()
+    });
   }
 }
 

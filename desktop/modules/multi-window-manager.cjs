@@ -13,7 +13,8 @@ const {
   WINDOW_GAP,
   MAX_WINDOWS,
   SNAP_THRESHOLD,
-  SNAP_DEBOUNCE
+  SNAP_DEBOUNCE,
+  LOCK_MODES
 } = require('./constants.cjs');
 
 class MultiWindowManager {
@@ -27,13 +28,18 @@ class MultiWindowManager {
     this.store = new Store({
       defaults: {
         windowMode: 'multi',  // 'multi' or 'single'
-        lockedProject: null
+        lockedProject: null,
+        lockMode: 'on-thinking'  // 'first-project' or 'on-thinking'
       }
     });
 
     // Window mode: 'multi' (multiple windows) or 'single' (one window with lock)
     this.windowMode = this.store.get('windowMode');
     this.lockedProject = this.store.get('lockedProject');
+    this.lockMode = this.store.get('lockMode');
+
+    // Project list (tracks all projects seen)
+    this.projectList = [];
   }
 
   // ============================================================================
@@ -90,6 +96,24 @@ class MultiWindowManager {
   // ============================================================================
 
   /**
+   * Add project to the project list
+   * @param {string} project
+   */
+  addProjectToList(project) {
+    if (project && !this.projectList.includes(project)) {
+      this.projectList.push(project);
+    }
+  }
+
+  /**
+   * Get list of all known projects
+   * @returns {string[]}
+   */
+  getProjectList() {
+    return this.projectList;
+  }
+
+  /**
    * Lock to a specific project (single mode only)
    * @param {string} projectId
    * @returns {boolean}
@@ -98,6 +122,7 @@ class MultiWindowManager {
     if (this.windowMode !== 'single') return false;
     if (!projectId) return false;
 
+    this.addProjectToList(projectId);
     this.lockedProject = projectId;
     this.store.set('lockedProject', projectId);
     return true;
@@ -117,6 +142,64 @@ class MultiWindowManager {
    */
   getLockedProject() {
     return this.lockedProject;
+  }
+
+  /**
+   * Get current lock mode
+   * @returns {'first-project'|'on-thinking'}
+   */
+  getLockMode() {
+    return this.lockMode;
+  }
+
+  /**
+   * Get all available lock modes
+   * @returns {Object}
+   */
+  getLockModes() {
+    return LOCK_MODES;
+  }
+
+  /**
+   * Set lock mode (single mode only)
+   * @param {'first-project'|'on-thinking'} mode
+   * @returns {boolean}
+   */
+  setLockMode(mode) {
+    if (!LOCK_MODES[mode]) return false;
+
+    this.lockMode = mode;
+    this.lockedProject = null;  // Reset lock when mode changes
+    this.store.set('lockMode', mode);
+    this.store.set('lockedProject', null);
+    return true;
+  }
+
+  /**
+   * Apply auto-lock based on lock mode
+   * Called when a status update is received
+   * @param {string} projectId
+   * @param {string} state - Current state (thinking, working, etc.)
+   */
+  applyAutoLock(projectId, state) {
+    if (this.windowMode !== 'single') return;
+    if (!projectId) return;
+
+    this.addProjectToList(projectId);
+
+    if (this.lockMode === 'first-project') {
+      // Lock to first project if not already locked
+      if (this.projectList.length === 1 && this.lockedProject === null) {
+        this.lockedProject = projectId;
+        this.store.set('lockedProject', projectId);
+      }
+    } else if (this.lockMode === 'on-thinking') {
+      // Lock when entering thinking state
+      if (state === 'thinking') {
+        this.lockedProject = projectId;
+        this.store.set('lockedProject', projectId);
+      }
+    }
   }
 
   // ============================================================================
@@ -244,7 +327,7 @@ class MultiWindowManager {
 
       // Send initial state if available
       if (windowEntry.state) {
-        window.webContents.send('status-update', windowEntry.state);
+        window.webContents.send('state-update', windowEntry.state);
       }
 
       // Arrange all windows alphabetically
@@ -432,7 +515,7 @@ class MultiWindowManager {
    */
   sendToWindow(projectId, channel, data) {
     const entry = this.windows.get(projectId);
-    if (entry && entry.window && !entry.window.isDestroyed()) {
+    if (entry && entry.window && !entry.window.isDestroyed() && !entry.window.webContents.isDestroyed()) {
       entry.window.webContents.send(channel, data);
       return true;
     }

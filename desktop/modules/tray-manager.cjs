@@ -5,7 +5,7 @@
 const { Tray, Menu, nativeImage, BrowserWindow } = require('electron');
 const { createCanvas } = require('canvas');
 const { STATE_COLORS, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { HTTP_PORT } = require('./constants.cjs');
+const { HTTP_PORT, LOCK_MODES } = require('./constants.cjs');
 
 const COLOR_EYE = '#000000';
 
@@ -152,39 +152,62 @@ class TrayManager {
     return items;
   }
 
-  buildLockSubmenu() {
-    // Only show in single mode
-    if (this.windowManager.isMultiMode()) {
-      return [];
-    }
-
-    const lockedProject = this.windowManager.getLockedProject();
-    const projectIds = this.windowManager.getProjectIds();
-    const currentProject = projectIds.length > 0 ? projectIds[0] : null;
-
+  buildProjectLockSubmenu() {
     const items = [];
+    const lockMode = this.windowManager.getLockMode();
+    const lockedProject = this.windowManager.getLockedProject();
+    const projectList = this.windowManager.getProjectList();
 
-    if (lockedProject) {
+    // Lock Mode selection
+    items.push({
+      label: 'Lock Mode',
+      submenu: Object.entries(LOCK_MODES).map(([mode, label]) => ({
+        label: label,
+        type: 'radio',
+        checked: lockMode === mode,
+        click: () => {
+          this.windowManager.setLockMode(mode);
+          this.updateMenu();
+        }
+      }))
+    });
+
+    items.push({ type: 'separator' });
+
+    if (projectList.length === 0) {
       items.push({
-        label: `Locked: ${lockedProject}`,
+        label: 'No projects',
         enabled: false
       });
-      items.push({
-        label: 'Unlock',
-        click: () => {
-          this.windowManager.unlockProject();
-          this.updateMenu();
-        }
+    } else {
+      // List all projects sorted by name
+      const sortedProjects = [...projectList].sort((a, b) => a.localeCompare(b));
+      sortedProjects.forEach(project => {
+        const isLocked = project === lockedProject;
+        items.push({
+          label: project,
+          type: 'radio',
+          checked: isLocked,
+          click: () => {
+            this.windowManager.lockProject(project);
+            this.updateMenu();
+            this.updateIcon();
+          }
+        });
       });
-    } else if (currentProject) {
-      items.push({
-        label: `Lock to ${currentProject}`,
-        click: () => {
-          this.windowManager.lockProject(currentProject);
-          this.updateMenu();
-        }
-      });
+
+      items.push({ type: 'separator' });
     }
+
+    // Unlock option
+    items.push({
+      label: 'Unlock',
+      enabled: lockedProject !== null,
+      click: () => {
+        this.windowManager.unlockProject();
+        this.updateMenu();
+      }
+    });
 
     return items;
   }
@@ -240,7 +263,10 @@ class TrayManager {
           this.updateMenu();
         }
       },
-      ...this.buildLockSubmenu(),
+      ...(this.windowManager.isMultiMode() ? [] : [{
+        label: 'Project Lock',
+        submenu: this.buildProjectLockSubmenu()
+      }]),
       { type: 'separator' },
       {
         label: `HTTP Server: localhost:${HTTP_PORT}`,
