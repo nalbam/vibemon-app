@@ -268,6 +268,8 @@ class MultiWindowManager {
         // Remove old entry and re-register with new projectId
         this.windows.delete(oldProjectId);
         this.windows.set(projectId, entry);
+        // Update mutable projectId for event handlers using closure
+        entry.currentProjectId = projectId;
         // Update state with new project
         entry.state = entry.state
           ? { ...entry.state, project: projectId }
@@ -300,6 +302,7 @@ class MultiWindowManager {
       skipTaskbar: false,
       hasShadow: true,
       show: false,
+      focusable: false,  // Prevent stealing focus when window appears
       icon: path.join(__dirname, '..', 'assets', 'icon.png'),
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
@@ -314,9 +317,11 @@ class MultiWindowManager {
     window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
     // Store window entry with initial state
+    // currentProjectId is mutable to handle single-mode window reuse
     const windowEntry = {
       window,
-      state: null  // Initial state, will be set via updateState
+      state: null,  // Initial state, will be set via updateState
+      currentProjectId: projectId  // Mutable: updated when window is reused in single mode
     };
     this.windows.set(projectId, windowEntry);
 
@@ -337,20 +342,23 @@ class MultiWindowManager {
     });
 
     // Handle window closed
+    // Use windowEntry.currentProjectId to get the current project (handles single-mode reuse)
     window.on('closed', () => {
+      const currentProjectId = windowEntry.currentProjectId;
+
       // Clear snap timer if exists
-      const timerId = this.snapTimers.get(projectId);
+      const timerId = this.snapTimers.get(currentProjectId);
       if (timerId) {
         clearTimeout(timerId);
-        this.snapTimers.delete(projectId);
+        this.snapTimers.delete(currentProjectId);
       }
 
       // Remove from windows map
-      this.windows.delete(projectId);
+      this.windows.delete(currentProjectId);
 
       // Notify callback
       if (this.onWindowClosed) {
-        this.onWindowClosed(projectId);
+        this.onWindowClosed(currentProjectId);
       }
 
       // Rearrange remaining windows
@@ -358,8 +366,9 @@ class MultiWindowManager {
     });
 
     // Handle window move for snap to edges
+    // Use windowEntry.currentProjectId to get the current project (handles single-mode reuse)
     window.on('move', () => {
-      this.handleWindowMove(projectId);
+      this.handleWindowMove(windowEntry.currentProjectId);
     });
 
     return { window, blocked: false, switchedProject: null };
