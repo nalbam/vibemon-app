@@ -1,10 +1,12 @@
 /**
  * Multi-window management for Vibe Monitor
  * Manages multiple windows, one per project
+ * Supports both multi-window and single-window modes
  */
 
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const Store = require('electron-store');
 const {
   WINDOW_WIDTH,
   WINDOW_HEIGHT,
@@ -20,7 +22,106 @@ class MultiWindowManager {
     this.isAlwaysOnTop = true;
     this.snapTimers = new Map();  // Map<projectId, timerId>
     this.onWindowClosed = null;  // callback: (projectId) => void
+
+    // Persistent settings
+    this.store = new Store({
+      defaults: {
+        windowMode: 'multi',  // 'multi' or 'single'
+        lockedProject: null
+      }
+    });
+
+    // Window mode: 'multi' (multiple windows) or 'single' (one window with lock)
+    this.windowMode = this.store.get('windowMode');
+    this.lockedProject = this.store.get('lockedProject');
   }
+
+  // ============================================================================
+  // Window Mode Management
+  // ============================================================================
+
+  /**
+   * Get current window mode
+   * @returns {'multi'|'single'}
+   */
+  getWindowMode() {
+    return this.windowMode;
+  }
+
+  /**
+   * Set window mode
+   * @param {'multi'|'single'} mode
+   */
+  setWindowMode(mode) {
+    if (mode !== 'multi' && mode !== 'single') return;
+
+    this.windowMode = mode;
+    this.store.set('windowMode', mode);
+
+    // When switching to single mode, close extra windows
+    if (mode === 'single' && this.windows.size > 1) {
+      const projectIds = Array.from(this.windows.keys());
+      // Keep only the first (or locked) window
+      const keepProject = this.lockedProject || projectIds[0];
+      for (const projectId of projectIds) {
+        if (projectId !== keepProject) {
+          this.closeWindow(projectId);
+        }
+      }
+    }
+
+    // Clear lock when switching to multi mode
+    if (mode === 'multi') {
+      this.lockedProject = null;
+      this.store.set('lockedProject', null);
+    }
+  }
+
+  /**
+   * Check if in multi-window mode
+   * @returns {boolean}
+   */
+  isMultiMode() {
+    return this.windowMode === 'multi';
+  }
+
+  // ============================================================================
+  // Lock Management (Single Window Mode)
+  // ============================================================================
+
+  /**
+   * Lock to a specific project (single mode only)
+   * @param {string} projectId
+   * @returns {boolean}
+   */
+  lockProject(projectId) {
+    if (this.windowMode !== 'single') return false;
+    if (!projectId) return false;
+
+    this.lockedProject = projectId;
+    this.store.set('lockedProject', projectId);
+    return true;
+  }
+
+  /**
+   * Unlock project (single mode only)
+   */
+  unlockProject() {
+    this.lockedProject = null;
+    this.store.set('lockedProject', null);
+  }
+
+  /**
+   * Get locked project
+   * @returns {string|null}
+   */
+  getLockedProject() {
+    return this.lockedProject;
+  }
+
+  // ============================================================================
+  // Window Position Calculation
+  // ============================================================================
 
   /**
    * Calculate window position by index
@@ -59,20 +160,40 @@ class MultiWindowManager {
 
   /**
    * Create a window for a project
-   * Returns existing window if already exists
+   * In single mode: reuses existing window or respects lock
+   * In multi mode: creates new window per project
    * @param {string} projectId - Project identifier
-   * @returns {BrowserWindow|null}
+   * @returns {{window: BrowserWindow|null, blocked: boolean, switchedProject: string|null}}
    */
   createWindow(projectId) {
-    // Return existing window if it exists
+    // Return existing window if it exists for this project
     const existing = this.windows.get(projectId);
     if (existing) {
-      return existing.window;
+      return { window: existing.window, blocked: false, switchedProject: null };
     }
 
-    // Check if we can create more windows
+    // Single window mode handling
+    if (this.windowMode === 'single') {
+      // If locked to different project, block
+      if (this.lockedProject && this.lockedProject !== projectId) {
+        return { window: null, blocked: true, switchedProject: null };
+      }
+
+      // If window exists for different project, switch it
+      if (this.windows.size > 0) {
+        const [oldProjectId, entry] = this.windows.entries().next().value;
+        // Remove old entry and re-register with new projectId
+        this.windows.delete(oldProjectId);
+        this.windows.set(projectId, entry);
+        // Update state with new project
+        entry.state = { ...entry.state, project: projectId };
+        return { window: entry.window, blocked: false, switchedProject: oldProjectId };
+      }
+    }
+
+    // Check if we can create more windows (multi mode)
     if (!this.canCreateWindow()) {
-      return null;
+      return { window: null, blocked: false, switchedProject: null };
     }
 
     // Calculate position for new window (will be the newest, so rightmost)
@@ -156,7 +277,7 @@ class MultiWindowManager {
       this.handleWindowMove(projectId);
     });
 
-    return window;
+    return { window, blocked: false, switchedProject: null };
   }
 
   /**

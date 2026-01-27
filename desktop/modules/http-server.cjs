@@ -105,19 +105,36 @@ class HttpServer {
     const stateData = stateValidation.data;  // Extract normalized data
 
     // Get projectId from data or use default
-    const projectId = stateData.project || 'default';
+    let projectId = stateData.project || 'default';
 
     // Create window if not exists
     if (!this.windowManager.getWindow(projectId)) {
-      const windowInfo = this.windowManager.createWindow(projectId);
-      if (!windowInfo) {
-        // Max windows limit reached
+      const result = this.windowManager.createWindow(projectId);
+
+      // Blocked by lock in single mode
+      if (result.blocked) {
+        sendJson(res, 200, {
+          success: false,
+          error: 'Project locked',
+          lockedProject: this.windowManager.getLockedProject()
+        });
+        return;
+      }
+
+      // No window created (max limit in multi mode)
+      if (!result.window) {
         sendJson(res, 200, {
           success: false,
           error: `Maximum windows limit (${MAX_WINDOWS}) reached`,
           windowCount: this.windowManager.getWindowCount()
         });
         return;
+      }
+
+      // Project was switched in single mode
+      if (result.switchedProject) {
+        // Clean up old project's timers
+        this.stateManager.cleanupProject(result.switchedProject);
       }
     }
 

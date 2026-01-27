@@ -152,6 +152,43 @@ class TrayManager {
     return items;
   }
 
+  buildLockSubmenu() {
+    // Only show in single mode
+    if (this.windowManager.isMultiMode()) {
+      return [];
+    }
+
+    const lockedProject = this.windowManager.getLockedProject();
+    const projectIds = this.windowManager.getProjectIds();
+    const currentProject = projectIds.length > 0 ? projectIds[0] : null;
+
+    const items = [];
+
+    if (lockedProject) {
+      items.push({
+        label: `Locked: ${lockedProject}`,
+        enabled: false
+      });
+      items.push({
+        label: 'Unlock',
+        click: () => {
+          this.windowManager.unlockProject();
+          this.updateMenu();
+        }
+      });
+    } else if (currentProject) {
+      items.push({
+        label: `Lock to ${currentProject}`,
+        click: () => {
+          this.windowManager.lockProject(currentProject);
+          this.updateMenu();
+        }
+      });
+    }
+
+    return items;
+  }
+
   buildMenuTemplate() {
     const projectIds = this.windowManager.getProjectIds();
     const windowCount = projectIds.length;
@@ -188,11 +225,22 @@ class TrayManager {
       },
       {
         label: 'Rearrange',
-        enabled: windowCount > 1,
+        enabled: windowCount > 1 && this.windowManager.isMultiMode(),
         click: () => {
           this.windowManager.arrangeWindowsByName();
         }
       },
+      {
+        label: 'Multi-Window Mode',
+        type: 'checkbox',
+        checked: this.windowManager.isMultiMode(),
+        click: () => {
+          const newMode = this.windowManager.isMultiMode() ? 'single' : 'multi';
+          this.windowManager.setWindowMode(newMode);
+          this.updateMenu();
+        }
+      },
+      ...this.buildLockSubmenu(),
       { type: 'separator' },
       {
         label: `HTTP Server: localhost:${HTTP_PORT}`,
