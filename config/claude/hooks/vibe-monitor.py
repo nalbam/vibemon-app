@@ -92,7 +92,8 @@ def get_project_name(cwd, transcript_path):
         return os.path.basename(cwd)
     if transcript_path:
         return os.path.basename(os.path.dirname(transcript_path))
-    return ""
+    # Fallback to current working directory
+    return os.path.basename(os.getcwd())
 
 def get_state(event_name, permission_mode="default"):
     """Map event name to state, considering permission mode."""
