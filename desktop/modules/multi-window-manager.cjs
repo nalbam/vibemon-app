@@ -448,6 +448,44 @@ class MultiWindowManager {
   }
 
   /**
+   * Get states of all windows
+   * @returns {Object.<string, Object>} Map of projectId to state
+   */
+  getStates() {
+    const states = {};
+    for (const [projectId, entry] of this.windows) {
+      states[projectId] = entry.state;
+    }
+    return states;
+  }
+
+  /**
+   * Get all window entries
+   * @returns {Object.<string, {window: BrowserWindow, state: Object}>}
+   */
+  getWindows() {
+    const result = {};
+    for (const [projectId, entry] of this.windows) {
+      result[projectId] = entry;
+    }
+    return result;
+  }
+
+  /**
+   * Show and focus the first available window
+   * @returns {boolean} Whether a window was shown
+   */
+  showFirstWindow() {
+    const firstWindow = this.getFirstWindow();
+    if (firstWindow && !firstWindow.isDestroyed()) {
+      firstWindow.show();
+      firstWindow.focus();
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Get debug info for all windows
    * @returns {Object}
    */
