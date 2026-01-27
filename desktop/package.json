@@ -33,6 +33,7 @@
     "renderer.js",
     "styles.css",
     "assets/",
+    "modules/",
     "shared/"
   ],
   "build": {
