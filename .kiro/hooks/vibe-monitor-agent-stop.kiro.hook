@@ -1,7 +1,7 @@
 {
-  "name": "Vibe Monitor - Done",
+  "name": "Vibe Monitor - Agent Stop",
   "version": "1.0.0",
-  "description": "에이전트 작업 완료 시 Vibe Monitor에 done 상태 전송",
+  "description": "Send done state to Vibe Monitor on agent stop",
   "when": {
     "type": "agentStop"
   },

@@ -1,7 +1,7 @@
 {
-  "name": "Vibe Monitor - Thinking",
+  "name": "Vibe Monitor - Prompt Submit",
   "version": "1.0.0",
-  "description": "프롬프트 제출 시 Vibe Monitor에 thinking 상태 전송",
+  "description": "Send thinking state to Vibe Monitor on prompt submit",
   "when": {
     "type": "promptSubmit"
   },

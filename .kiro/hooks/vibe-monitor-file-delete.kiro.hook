@@ -1,0 +1,13 @@
+{
+  "name": "Vibe Monitor - File Delete",
+  "version": "1.0.0",
+  "description": "Send working state to Vibe Monitor on file delete",
+  "when": {
+    "type": "fileDelete",
+    "patterns": ["**/*"]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python3 ~/.kiro/hooks/vibe-monitor.py fileDelete"
+  }
+}

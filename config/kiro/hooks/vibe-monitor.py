@@ -59,9 +59,10 @@ def debug_log(msg):
 def get_state(event_type):
     """Map event type to state."""
     state_map = {
-        "agentSpawn": "start",
         "promptSubmit": "thinking",
-        "preToolUse": "working",
+        "fileCreate": "working",
+        "fileEdited": "working",
+        "fileDelete": "working",
         "agentStop": "done",
     }
     return state_map.get(event_type, "working")
@@ -293,8 +294,8 @@ def main():
     payload = build_payload(state, project_name)
     debug_log(f"Payload: {payload}")
 
-    # Check if start event
-    is_start = event_type == "agentSpawn"
+    # Check if start event (promptSubmit is typically the first event)
+    is_start = event_type == "promptSubmit"
 
     send_to_all(payload, is_start)
 
