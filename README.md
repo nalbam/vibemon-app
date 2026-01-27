@@ -332,6 +332,7 @@ Character is **auto-detected** based on the IDE hook events. You can also manual
 | `start` | Cyan | ■ ■ + ✦ | Hello! | Session begins |
 | `idle` | Green | ■ ■ | Ready | Waiting for input |
 | `thinking` | Purple | ▀ ▀ + 💭 | Thinking | User submits prompt |
+| `planning` | Teal | ▀ ▀ + 💭 | Planning | Plan mode active |
 | `working` | Blue | 🕶️ (sunglasses) | (tool-based) | Tool executing |
 | `notification` | Yellow | ● ● + ? | Input? | User input needed |
 | `done` | Green | > < | Done! | Tool completed |

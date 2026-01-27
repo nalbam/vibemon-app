@@ -77,6 +77,7 @@ npm start
 | `start` | Cyan | ■ ■ + ✦ | Session begins |
 | `idle` | Green | ■ ■ | Waiting for input |
 | `thinking` | Purple | ▀ ▀ + 💭 | Processing prompt |
+| `planning` | Teal | ▀ ▀ + 💭 | Plan mode active |
 | `working` | Blue | 🕶️ | Tool executing |
 | `notification` | Yellow | ● ● + ? | User input needed |
 | `done` | Green | > < | Done! |
@@ -222,7 +223,7 @@ curl -X POST http://127.0.0.1:19280/status \
 
 | Field | Description |
 |-------|-------------|
-| `state` | `start`, `idle`, `thinking`, `working`, `notification`, `done`, `sleep` |
+| `state` | `start`, `idle`, `thinking`, `planning`, `working`, `notification`, `done`, `sleep` |
 | `event` | `SessionStart`, `PreToolUse`, `Stop`, etc. |
 | `tool` | Tool name (e.g., `Bash`, `Read`, `Edit`) |
 | `project` | Project name |
