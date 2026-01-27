@@ -23,6 +23,10 @@ let stateTimeoutTimer = null;
 const IDLE_TIMEOUT = 60 * 1000;       // 1 minute (start/done -> idle)
 const SLEEP_TIMEOUT = 5 * 60 * 1000;  // 5 minutes (idle -> sleep)
 
+// Window auto-close timeout for prolonged sleep state
+let windowCloseTimer = null;
+const WINDOW_CLOSE_TIMEOUT = 10 * 60 * 1000;  // 10 minutes (sleep -> close window)
+
 // Snap to corner settings
 const SNAP_THRESHOLD = 30;  // pixels from edge to trigger snap
 
@@ -383,9 +387,31 @@ function clearStateTimeout() {
   }
 }
 
+// Clear window close timer
+function clearWindowCloseTimer() {
+  if (windowCloseTimer) {
+    clearTimeout(windowCloseTimer);
+    windowCloseTimer = null;
+  }
+}
+
+// Set up window close timer for prolonged sleep state
+function setupWindowCloseTimer() {
+  clearWindowCloseTimer();
+
+  if (currentState === 'sleep') {
+    windowCloseTimer = setTimeout(() => {
+      if (mainWindow) {
+        mainWindow.close();  // This will set mainWindow = null via 'closed' event
+      }
+    }, WINDOW_CLOSE_TIMEOUT);
+  }
+}
+
 // Set up state timeout based on current state
 function setupStateTimeout() {
   clearStateTimeout();
+  clearWindowCloseTimer();
 
   if (currentState === 'start' || currentState === 'done') {
     // start/done -> idle after 1 minute
@@ -397,6 +423,9 @@ function setupStateTimeout() {
     stateTimeoutTimer = setTimeout(() => {
       updateState({ state: 'sleep' });
     }, SLEEP_TIMEOUT);
+  } else if (currentState === 'sleep') {
+    // sleep -> close window after 10 minutes
+    setupWindowCloseTimer();
   }
 }
 
@@ -422,6 +451,11 @@ function lockProject(project) {
       currentModel = '';
       currentMemory = '';
       setupStateTimeout();
+
+      // Recreate window if closed
+      if (!mainWindow) {
+        createWindow();
+      }
 
       if (mainWindow) {
         mainWindow.webContents.send('state-update', {
@@ -496,6 +530,11 @@ function updateState(data) {
       if (data.memory !== undefined) currentMemory = data.memory;
     }
   }
+  // Recreate window if closed and state is not sleep
+  if (!mainWindow && data.state !== undefined && data.state !== 'sleep') {
+    createWindow();
+  }
+
   if (mainWindow) {
     mainWindow.webContents.send('state-update', data);
   }
@@ -715,6 +754,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   clearStateTimeout();
+  clearWindowCloseTimer();
   if (httpServer) {
     httpServer.close();
   }
