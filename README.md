@@ -4,19 +4,26 @@
 [![npm downloads](https://img.shields.io/npm/dm/vibe-monitor.svg)](https://www.npmjs.com/package/vibe-monitor)
 [![license](https://img.shields.io/npm/l/vibe-monitor.svg)](https://github.com/nalbam/vibe-monitor/blob/main/LICENSE)
 
-Real-time status and usage monitor for AI coding assistants with pixel art character.
+**Real-time status monitor for AI coding assistants with pixel art character display.**
 
-Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what state it's in, which project and tool it's using, what model is active, and how much context memory is consumed.
+See at a glance what your AI coding assistant is doing — thinking, writing code, or waiting for input. A cute pixel art character visually represents the current state.
+
+## Supported Tools
+
+| Tool | Description |
+|------|-------------|
+| **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** | Anthropic's official AI coding assistant |
+| **[Kiro](https://kiro.dev/)** | AWS's AI coding assistant |
 
 ## What It Monitors
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| **State** | Current Claude Code activity state | `working`, `idle`, `notification` |
-| **Project** | Active project directory name | `vibe-monitor` |
+| **State** | Current activity state | `working`, `idle`, `notification` |
+| **Project** | Active project directory | `vibe-monitor` |
 | **Tool** | Currently executing tool | `Bash`, `Read`, `Edit` |
-| **Model** | Active Claude model | `Opus 4.5`, `Sonnet` |
-| **Memory** | Context window usage percentage | `45%` |
+| **Model** | Active model | `Opus 4.5`, `Sonnet` |
+| **Memory** | Context window usage | `45%` |
 
 ## Platforms
 
@@ -96,25 +103,25 @@ open simulator/index.html
 
 See [ESP32 Setup](#esp32-setup) section below.
 
-## IDE Integration
+## Integration
 
-Vibe Monitor integrates with AI coding assistants through hooks.
+Vibe Monitor receives status updates from AI coding assistants through their hook systems.
 
-### Supported IDEs
+### Supported Tools
 
-| IDE | Hook System |
-|-----|-------------|
-| **Claude Code** | Shell hooks via `settings.json` |
-| **Kiro IDE/CLI** | Agent hooks via `config/kiro/hooks/` |
+| Tool | Hook System |
+|------|-------------|
+| **Claude Code** | Shell hooks via `~/.claude/settings.json` |
+| **Kiro** | Agent hooks via `~/.kiro/hooks/` |
 
 ### How It Works
 
 ```
-AI IDE → Hooks → Vibe Monitor
-   │                   │
-   └── Events ───────→ Display
-       (state, tool,   (Desktop App,
-        project, etc.)  ESP32, or both)
+AI Coding Assistant → Hooks → Vibe Monitor
+         │                         │
+         └── Events ─────────────→ Display
+             (state, tool,         (Desktop App,
+              project, etc.)        ESP32, or both)
 ```
 
 ---
@@ -238,9 +245,9 @@ The statusline also sends model and memory data to Vibe Monitor in the backgroun
 
 ---
 
-### Kiro IDE Setup
+### Kiro Setup
 
-Kiro IDE uses `.kiro.hook` files that call the `vibe-monitor.py` script.
+Kiro uses `.kiro.hook` files that call the `vibe-monitor.py` script.
 
 #### 1. Copy scripts
 
@@ -306,8 +313,8 @@ The hook sends status updates in order (only if configured):
 
 ### Event Mapping Comparison
 
-| Action | Claude Code | Kiro IDE | State |
-|--------|-------------|----------|-------|
+| Action | Claude Code | Kiro | State |
+|--------|-------------|------|-------|
 | Session start | `SessionStart` | `agentSpawn` | `start` |
 | User input | `UserPromptSubmit` | `promptSubmit` | `thinking` |
 | Before tool | `PreToolUse` | `preToolUse` | `working` |
@@ -321,7 +328,7 @@ The hook sends status updates in order (only if configured):
 | Character | Color | Description | Auto-selected for |
 |-----------|-------|-------------|-------------------|
 | `clawd` | Orange | Default character with arms and legs | Claude Code |
-| `kiro` | White | Ghost character with wavy tail | Kiro IDE/CLI |
+| `kiro` | White | Ghost character with wavy tail | Kiro |
 
 Character is **auto-detected** based on the IDE hook events. You can also manually change it via the system tray menu.
 

@@ -4,11 +4,16 @@
 [![npm downloads](https://img.shields.io/npm/dm/vibe-monitor.svg)](https://www.npmjs.com/package/vibe-monitor)
 [![license](https://img.shields.io/npm/l/vibe-monitor.svg)](https://github.com/nalbam/vibe-monitor/blob/main/LICENSE)
 
-AI coding assistant status monitor with pixel art character.
+**Real-time status monitor for AI coding assistants with pixel art character display.**
 
-Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what state it's in, which project and tool it's using, what model is active, and how much context memory is consumed.
+See at a glance what your AI coding assistant is doing — thinking, writing code, or waiting for input. A cute pixel art character visually represents the current state.
 
 ![Demo](https://raw.githubusercontent.com/nalbam/vibe-monitor/main/screenshots/demo.gif)
+
+## Supported Tools
+
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** - Anthropic's AI coding assistant
+- **[Kiro](https://kiro.dev/)** - AWS's AI coding assistant
 
 ## What It Monitors
 
@@ -26,35 +31,21 @@ Monitor your **Claude Code** or **Kiro IDE** sessions at a glance - see what sta
 - **Always on Top**: Always displayed above other windows
 - **System Tray**: Quick control from the menu bar
 - **Project Lock**: Lock to a specific project to ignore updates from others
-- **HTTP API**: Easy integration with IDE hooks (Claude Code, Kiro)
+- **HTTP API**: Easy integration with hooks
 - **Draggable**: Move the window to any position
 - **Auto-launch**: Hook scripts auto-start via `npx vibe-monitor` if not running
 
-## Prerequisites
+## Installation
 
-| Tool | Required | Install |
-|------|----------|---------|
-| **Python 3** | Yes | Built-in on macOS and most Linux |
-| **Node.js** | Yes | `brew install node` (macOS) / `apt install nodejs npm` (Ubuntu) |
+### npx (Recommended)
 
-## Quick Start
+Run directly without installation:
 
 ```bash
 npx vibe-monitor@latest
 ```
 
-### Stop
-
-```bash
-curl -X POST http://127.0.0.1:19280/quit
-
-# or
-pkill -f vibe-monitor
-```
-
-## Installation
-
-### From npm
+### Global Install
 
 ```bash
 npm install -g vibe-monitor
@@ -68,6 +59,22 @@ git clone https://github.com/nalbam/vibe-monitor.git
 cd vibe-monitor/desktop
 npm install
 npm start
+```
+
+## Prerequisites
+
+| Tool | Required | Install |
+|------|----------|---------|
+| **Python 3** | Yes | Built-in on macOS and most Linux |
+| **Node.js** | Yes | `brew install node` (macOS) / `apt install nodejs npm` (Ubuntu) |
+
+## Stop
+
+```bash
+curl -X POST http://127.0.0.1:19280/quit
+
+# or
+pkill -f vibe-monitor
 ```
 
 ## States
@@ -119,7 +126,7 @@ The `working` state displays context-aware text based on the active tool:
 | Character | Color | Description | Auto-selected for |
 |-----------|-------|-------------|-------------------|
 | **clawd** | Orange | Default character | Claude Code |
-| **kiro** | White | Ghost character | Kiro IDE |
+| **kiro** | White | Ghost character | Kiro |
 
 ## IDE Integration
 
@@ -190,7 +197,7 @@ export VIBE_MONITOR_URL="http://127.0.0.1:19280"
 # export ESP32_HTTP_URL="http://192.168.1.100"
 ```
 
-### Kiro IDE
+### Kiro
 
 ```bash
 # Create directory
