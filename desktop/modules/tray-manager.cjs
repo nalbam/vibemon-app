@@ -144,11 +144,6 @@ class TrayManager {
 
     items.push({ type: 'separator' });
     items.push({
-      label: 'Rearrange',
-      enabled: projectIds.length > 1,
-      click: () => this.windowManager.arrangeWindowsByName()
-    });
-    items.push({
       label: 'Close All',
       enabled: projectIds.length > 0,
       click: () => this.windowManager.closeAllWindows()
@@ -189,6 +184,13 @@ class TrayManager {
         checked: this.windowManager.getIsAlwaysOnTop(),
         click: () => {
           this.windowManager.toggleAlwaysOnTop();
+        }
+      },
+      {
+        label: 'Rearrange',
+        enabled: windowCount > 1,
+        click: () => {
+          this.windowManager.arrangeWindowsByName();
         }
       },
       { type: 'separator' },
