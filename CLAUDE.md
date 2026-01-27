@@ -58,7 +58,7 @@ open simulator/index.html
 - **Matrix rain (working)**: Movie-style effect with flicker head, gradient tail, variable speed (1-6)
 - **Sunglasses (working)**: Matrix-style dark green sunglasses with frame and shine
 - **Loading dots speed**: Thinking state uses 3x slower animation than working state
-- **Project lock**: First project auto-locks; `/lock` and `/unlock` API endpoints; lock change transitions to `idle`
+- **Project lock**: Two lock modes (`first-project`, `on-thinking`); default: `on-thinking`; `/lock`, `/unlock`, `/lock-mode` API endpoints; lock change transitions to `idle`
 - **Snap to corner**: Window snaps to screen corners when dragged within 30px of edges (150ms debounce)
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status
 

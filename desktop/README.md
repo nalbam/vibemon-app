@@ -247,6 +247,7 @@ curl http://127.0.0.1:19280/status
   "model": "opus",
   "memory": "45%",
   "locked": "my-project",
+  "lockMode": "on-thinking",
   "projects": ["my-project", "other-project"]
 }
 ```
@@ -268,6 +269,26 @@ Unlock project:
 ```bash
 curl -X POST http://127.0.0.1:19280/unlock
 ```
+
+### GET /lock-mode
+
+Get current lock mode:
+
+```bash
+curl http://127.0.0.1:19280/lock-mode
+```
+
+### POST /lock-mode
+
+Set lock mode:
+
+```bash
+curl -X POST http://127.0.0.1:19280/lock-mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"first-project"}'
+```
+
+Valid modes: `first-project`, `on-thinking` (default)
 
 ### GET /health
 

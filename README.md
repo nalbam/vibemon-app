@@ -393,11 +393,18 @@ Lock the monitor to a specific project to prevent display updates from other pro
 
 ### Features
 
-- **Auto-lock**: First incoming project is automatically locked
+- **Lock modes**: Two auto-lock strategies available (default: `on-thinking`)
 - **Project list**: All incoming projects are tracked (Desktop: unlimited, ESP32: max 10)
 - **Tray menu**: Easily switch or unlock via "Project Lock" submenu
 - **API control**: Lock/unlock via HTTP API or ESP32 serial commands
 - **State reset**: Lock change transitions state to `idle`
+
+### Lock Modes
+
+| Mode | Description |
+|------|-------------|
+| `first-project` | First incoming project is automatically locked |
+| `on-thinking` | Lock when entering thinking state (default) |
 
 ### Tray Menu (Desktop)
 
@@ -405,6 +412,10 @@ Lock the monitor to a specific project to prevent display updates from other pro
 Project: vibe-monitor 🔒
 ─────────────
 Project Lock →
+  ├─ Lock Mode →
+  │   ├─ ○ First project auto-lock
+  │   └─ ● Lock on thinking state
+  ├─ ─────────────
   ├─ 🔒 vibe-monitor     (currently locked)
   ├─ ○ another-project
   └─ ─────────────
@@ -439,6 +450,13 @@ python3 ~/.claude/hooks/vibe-monitor.py --unlock
 
 # Get current status
 python3 ~/.claude/hooks/vibe-monitor.py --status
+
+# Get current lock mode
+python3 ~/.claude/hooks/vibe-monitor.py --lock-mode
+
+# Set lock mode
+python3 ~/.claude/hooks/vibe-monitor.py --lock-mode on-thinking
+python3 ~/.claude/hooks/vibe-monitor.py --lock-mode first-project
 ```
 
 ## HTTP API
@@ -485,11 +503,12 @@ curl http://127.0.0.1:19280/status
   "model": "opus",
   "memory": "45%",
   "locked": "my-project",
+  "lockMode": "on-thinking",
   "projects": ["my-project", "other-project"]
 }
 ```
 
-> **Note:** ESP32 returns `projectCount` instead of `projects` array.
+> **Note:** ESP32 returns `projectCount` instead of `projects` array, and includes `lockMode`.
 
 ### POST /lock
 
@@ -521,6 +540,34 @@ curl -X POST http://127.0.0.1:19280/unlock
 **Response:**
 ```json
 {"success": true, "locked": null}
+```
+
+### GET /lock-mode
+
+Get current lock mode.
+
+```bash
+curl http://127.0.0.1:19280/lock-mode
+```
+
+**Response:**
+```json
+{"lockMode": "on-thinking", "modes": {"first-project": "First project auto-lock", "on-thinking": "Lock on thinking state"}}
+```
+
+### POST /lock-mode
+
+Set lock mode.
+
+```bash
+curl -X POST http://127.0.0.1:19280/lock-mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"first-project"}'
+```
+
+**Response:**
+```json
+{"success": true, "lockMode": "first-project"}
 ```
 
 ### GET /health
@@ -678,7 +725,15 @@ echo '{"command":"unlock"}' > /dev/cu.usbmodem1101
 
 # Get status
 echo '{"command":"status"}' > /dev/cu.usbmodem1101
-# Response: {"state":"working","project":"my-project","locked":"my-project","projectCount":2}
+# Response: {"state":"working","project":"my-project","locked":"my-project","lockMode":"on-thinking","projectCount":2}
+
+# Get lock mode
+echo '{"command":"lock-mode"}' > /dev/cu.usbmodem1101
+# Response: {"lockMode":"on-thinking"}
+
+# Set lock mode
+echo '{"command":"lock-mode","mode":"first-project"}' > /dev/cu.usbmodem1101
+# Response: {"lockMode":"first-project","locked":null}
 
 # Reboot device
 echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
