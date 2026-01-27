@@ -30,7 +30,7 @@ See at a glance what your AI coding assistant is doing — thinking, writing cod
 - **Frameless Window**: Clean floating design
 - **Always on Top**: Always displayed above other windows
 - **System Tray**: Quick control from the menu bar
-- **Project Lock**: Lock to a specific project to ignore updates from others
+- **Multi-window**: One window per project (up to 5 simultaneous)
 - **HTTP API**: Easy integration with hooks
 - **Draggable**: Move the window to any position
 - **Auto-launch**: Hook scripts auto-start via `npx vibe-monitor` if not running
@@ -247,7 +247,7 @@ curl -X POST http://127.0.0.1:19280/status \
 
 ### GET /status
 
-Get current status:
+Get all windows' status:
 
 ```bash
 curl http://127.0.0.1:19280/status
@@ -256,54 +256,42 @@ curl http://127.0.0.1:19280/status
 **Response:**
 ```json
 {
-  "state": "working",
-  "project": "my-project",
-  "tool": "Bash",
-  "model": "opus",
-  "memory": "45%",
-  "locked": "my-project",
-  "lockMode": "on-thinking",
-  "projects": ["my-project", "other-project"]
+  "windowCount": 2,
+  "projects": {
+    "my-project": { "state": "working", "tool": "Bash", "model": "opus" },
+    "other-project": { "state": "idle" }
+  }
 }
 ```
 
-### POST /lock
+### GET /windows
 
-Lock to a specific project:
+List all active windows:
 
 ```bash
-curl -X POST http://127.0.0.1:19280/lock \
+curl http://127.0.0.1:19280/windows
+```
+
+**Response:**
+```json
+{
+  "windowCount": 2,
+  "windows": [
+    { "project": "my-project", "state": "working", "bounds": {"x": 1748, "y": 23, "width": 172, "height": 348} },
+    { "project": "other-project", "state": "idle", "bounds": {"x": 1566, "y": 23, "width": 172, "height": 348} }
+  ]
+}
+```
+
+### POST /close
+
+Close a specific project window:
+
+```bash
+curl -X POST http://127.0.0.1:19280/close \
   -H "Content-Type: application/json" \
   -d '{"project":"my-project"}'
 ```
-
-### POST /unlock
-
-Unlock project:
-
-```bash
-curl -X POST http://127.0.0.1:19280/unlock
-```
-
-### GET /lock-mode
-
-Get current lock mode:
-
-```bash
-curl http://127.0.0.1:19280/lock-mode
-```
-
-### POST /lock-mode
-
-Set lock mode:
-
-```bash
-curl -X POST http://127.0.0.1:19280/lock-mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"first-project"}'
-```
-
-Valid modes: `first-project`, `on-thinking` (default)
 
 ### GET /health
 
@@ -315,9 +303,15 @@ curl http://127.0.0.1:19280/health
 
 ### POST /show
 
-Show window and position to top-right corner:
+Show a specific project window (or first window if no project specified):
 
 ```bash
+# Show specific project window
+curl -X POST http://127.0.0.1:19280/show \
+  -H "Content-Type: application/json" \
+  -d '{"project":"my-project"}'
+
+# Show first available window
 curl -X POST http://127.0.0.1:19280/show
 ```
 
@@ -340,12 +334,12 @@ curl -X POST http://127.0.0.1:19280/quit
 ## Tray Menu
 
 Click the system tray icon to:
-- View current state and project
-- Manually change state
+- View active windows and their states
+- Manually change state (per window)
 - Switch character (Clawd/Kiro)
-- **Project Lock** - Lock/unlock to specific project
+- Close individual project windows
 - Toggle Always on Top
-- Show/Hide window
+- Show/Hide windows
 - Quit
 
 ## Troubleshooting
