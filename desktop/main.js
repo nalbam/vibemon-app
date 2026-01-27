@@ -2,6 +2,14 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } = require
 const path = require('path');
 const http = require('http');
 const { createCanvas } = require('canvas');
+const Store = require('electron-store');
+
+// Persistent storage for settings
+const store = new Store({
+  defaults: {
+    lockMode: 'on-thinking'
+  }
+});
 
 let mainWindow;
 let tray;
@@ -16,6 +24,12 @@ let currentMemory = '';
 // Project lock feature
 let projectList = [];       // List of incoming projects (order preserved)
 let lockedProject = null;   // Locked project name (null = unlocked)
+let lockMode = store.get('lockMode');  // Load from persistent storage
+
+const LOCK_MODES = {
+  'first-project': 'First project auto-lock',
+  'on-thinking': 'Lock on thinking state'
+};
 
 // State timeout management (must match shared/config.js)
 // NOTE: Cannot import ESM from CommonJS, keep in sync manually
@@ -259,6 +273,19 @@ function updateTrayIcon() {
 function buildProjectLockSubmenu() {
   const items = [];
 
+  // Lock Mode selection
+  items.push({
+    label: 'Lock Mode',
+    submenu: Object.entries(LOCK_MODES).map(([mode, label]) => ({
+      label: label,
+      type: 'radio',
+      checked: lockMode === mode,
+      click: () => setLockMode(mode)
+    }))
+  });
+
+  items.push({ type: 'separator' });
+
   if (projectList.length === 0) {
     items.push({
       label: 'No projects',
@@ -478,6 +505,16 @@ function unlockProject() {
   updateTrayMenu();
 }
 
+// Set lock mode
+function setLockMode(mode) {
+  if (LOCK_MODES[mode]) {
+    lockMode = mode;
+    lockedProject = null;  // Reset lock when mode changes
+    store.set('lockMode', mode);  // Persist to storage
+    updateTrayMenu();
+  }
+}
+
 function updateState(data) {
   const incomingProject = data.project;
 
@@ -486,9 +523,15 @@ function updateState(data) {
     addProjectToList(incomingProject);
   }
 
-  // Auto-lock: first project gets locked automatically
-  if (incomingProject && projectList.length === 1 && lockedProject === null) {
-    lockedProject = incomingProject;
+  // Auto-lock based on lockMode
+  if (lockMode === 'first-project') {
+    if (incomingProject && projectList.length === 1 && lockedProject === null) {
+      lockedProject = incomingProject;
+    }
+  } else if (lockMode === 'on-thinking') {
+    if (data.state === 'thinking' && incomingProject) {
+      lockedProject = incomingProject;
+    }
   }
 
   // Check if update should be blocked due to project lock
@@ -631,6 +674,7 @@ function startHttpServer() {
         model: currentModel,
         memory: currentMemory,
         locked: lockedProject,
+        lockMode: lockMode,
         projects: projectList
       }));
     } else if (req.method === 'POST' && req.url === '/lock') {
@@ -660,6 +704,31 @@ function startHttpServer() {
       unlockProject();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, locked: null }));
+    } else if (req.method === 'GET' && req.url === '/lock-mode') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ lockMode: lockMode, modes: LOCK_MODES }));
+    } else if (req.method === 'POST' && req.url === '/lock-mode') {
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
+      req.on('end', () => {
+        try {
+          const body = chunks.length > 0 ? Buffer.concat(chunks).toString('utf-8') : '{}';
+          const data = JSON.parse(body);
+
+          if (!data.mode || !LOCK_MODES[data.mode]) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Invalid mode. Valid modes: ${Object.keys(LOCK_MODES).join(', ')}` }));
+            return;
+          }
+
+          setLockMode(data.mode);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, lockMode: lockMode }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
     } else if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok' }));

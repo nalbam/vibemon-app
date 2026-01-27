@@ -8,7 +8,11 @@
 
 #include <TFT_eSPI.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include "sprites.h"
+
+// Persistent storage for settings
+Preferences preferences;
 
 // WiFi (HTTP fallback, optional)
 #ifdef USE_WIFI
@@ -63,6 +67,11 @@ int lastCharY = CHAR_Y_BASE;  // Track last character Y for efficient redraw
 char projectList[MAX_PROJECTS][32];  // List of incoming projects
 int projectCount = 0;
 char lockedProject[32] = "";  // Locked project name (empty = unlocked)
+
+// Lock mode: 0 = first-project, 1 = on-thinking
+#define LOCK_MODE_FIRST_PROJECT 0
+#define LOCK_MODE_ON_THINKING 1
+int lockMode = LOCK_MODE_ON_THINKING;  // Default: on-thinking
 
 // Dirty rect tracking for efficient redraws
 bool dirtyCharacter = true;
@@ -152,6 +161,35 @@ void unlockProject() {
   Serial.println("{\"locked\":null}");
 }
 
+// Project lock helper: Set lock mode
+void setLockMode(int mode) {
+  if (mode == LOCK_MODE_FIRST_PROJECT || mode == LOCK_MODE_ON_THINKING) {
+    lockMode = mode;
+    lockedProject[0] = '\0';  // Reset lock when mode changes
+
+    // Persist to flash storage
+    preferences.begin("vibe-monitor", false);  // Read-write mode
+    preferences.putInt("lockMode", lockMode);
+    preferences.end();
+
+    Serial.print("{\"lockMode\":\"");
+    Serial.print(mode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking");
+    Serial.println("\",\"locked\":null}");
+  }
+}
+
+// Project lock helper: Get lock mode string
+const char* getLockModeString() {
+  return lockMode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking";
+}
+
+// Project lock helper: Parse lock mode string
+int parseLockMode(const char* modeStr) {
+  if (strcmp(modeStr, "first-project") == 0) return LOCK_MODE_FIRST_PROJECT;
+  if (strcmp(modeStr, "on-thinking") == 0) return LOCK_MODE_ON_THINKING;
+  return -1;  // Invalid mode
+}
+
 // Project lock helper: Check if locked to different project
 bool isLockedToDifferentProject(const char* project) {
   if (strlen(lockedProject) == 0) return false;  // Not locked
@@ -175,6 +213,11 @@ const char* getStateString(AppState state) {
 
 void setup() {
   Serial.begin(115200);
+
+  // Load settings from persistent storage
+  preferences.begin("vibe-monitor", true);  // Read-only mode
+  lockMode = preferences.getInt("lockMode", LOCK_MODE_ON_THINKING);
+  preferences.end();
 
   // TFT init
   tft.init();
@@ -305,9 +348,28 @@ void processInput(const char* input) {
       } else {
         Serial.print("null");
       }
-      Serial.print(",\"projectCount\":");
+      Serial.print(",\"lockMode\":\"");
+      Serial.print(getLockModeString());
+      Serial.print("\",\"projectCount\":");
       Serial.print(projectCount);
       Serial.println("}");
+      return;
+    } else if (strcmp(command, "lock-mode") == 0) {
+      // Get or set lock mode
+      const char* modeStr = doc["mode"] | "";
+      if (strlen(modeStr) > 0) {
+        int newMode = parseLockMode(modeStr);
+        if (newMode >= 0) {
+          setLockMode(newMode);
+        } else {
+          Serial.println("{\"error\":\"Invalid mode. Valid modes: first-project, on-thinking\"}");
+        }
+      } else {
+        // Return current lock mode
+        Serial.print("{\"lockMode\":\"");
+        Serial.print(getLockModeString());
+        Serial.println("\"}");
+      }
       return;
     }
   }
@@ -320,10 +382,20 @@ void processInput(const char* input) {
     addProjectToList(incomingProject);
   }
 
-  // Auto-lock: first project gets locked automatically
-  if (strlen(incomingProject) > 0 && projectCount == 1 && strlen(lockedProject) == 0) {
-    strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
-    lockedProject[sizeof(lockedProject) - 1] = '\0';
+  // Auto-lock based on lockMode
+  if (lockMode == LOCK_MODE_FIRST_PROJECT) {
+    // First project gets locked automatically
+    if (strlen(incomingProject) > 0 && projectCount == 1 && strlen(lockedProject) == 0) {
+      strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
+      lockedProject[sizeof(lockedProject) - 1] = '\0';
+    }
+  } else if (lockMode == LOCK_MODE_ON_THINKING) {
+    // Lock on thinking state
+    const char* stateStr = doc["state"] | "";
+    if (strcmp(stateStr, "thinking") == 0 && strlen(incomingProject) > 0) {
+      strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
+      lockedProject[sizeof(lockedProject) - 1] = '\0';
+    }
   }
 
   // Check if update should be blocked due to project lock
@@ -639,6 +711,8 @@ void setupWiFi() {
     server.on("/status", HTTP_GET, handleStatusGet);
     server.on("/lock", HTTP_POST, handleLock);
     server.on("/unlock", HTTP_POST, handleUnlock);
+    server.on("/lock-mode", HTTP_GET, handleLockModeGet);
+    server.on("/lock-mode", HTTP_POST, handleLockModePost);
     server.on("/reboot", HTTP_POST, handleReboot);
     server.begin();
   } else {
@@ -669,7 +743,9 @@ void handleStatusGet() {
   } else {
     response += "null";
   }
-  response += ",\"projectCount\":";
+  response += ",\"lockMode\":\"";
+  response += getLockModeString();
+  response += "\",\"projectCount\":";
   response += projectCount;
   response += "}";
   server.send(200, "application/json", response);
@@ -706,6 +782,35 @@ void handleLock() {
 void handleUnlock() {
   unlockProject();
   server.send(200, "application/json", "{\"success\":true,\"locked\":null}");
+}
+
+void handleLockModeGet() {
+  String response = "{\"lockMode\":\"";
+  response += getLockModeString();
+  response += "\",\"modes\":{\"first-project\":\"First project auto-lock\",\"on-thinking\":\"Lock on thinking state\"}}";
+  server.send(200, "application/json", response);
+}
+
+void handleLockModePost() {
+  if (server.hasArg("plain")) {
+    StaticJsonDocument<128> doc;
+    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    if (!error) {
+      const char* modeStr = doc["mode"] | "";
+      if (strlen(modeStr) > 0) {
+        int newMode = parseLockMode(modeStr);
+        if (newMode >= 0) {
+          setLockMode(newMode);
+          String response = "{\"success\":true,\"lockMode\":\"";
+          response += getLockModeString();
+          response += "\"}";
+          server.send(200, "application/json", response);
+          return;
+        }
+      }
+    }
+  }
+  server.send(400, "application/json", "{\"error\":\"Invalid mode. Valid modes: first-project, on-thinking\"}");
 }
 
 void handleReboot() {
