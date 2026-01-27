@@ -145,6 +145,7 @@ window.updateDisplay = function() {
   d.loadingDots.style.display = state.showLoading ? 'flex' : 'none';
 
   // Update tool line visibility
+  const isKiro = currentCharacter === 'kiro';
   d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values from inputs
@@ -160,12 +161,12 @@ window.updateDisplay = function() {
     : modelName;
   d.memoryValue.textContent = memoryUsage;
 
-  // Update model/memory visibility (hide memory on start state)
-  d.modelLine.style.display = modelName ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && memoryUsage;
+  // Update model/memory visibility (hide memory on start state, hide all for kiro)
+  d.modelLine.style.display = modelName && !isKiro ? 'block' : 'none';
+  const showMemory = currentState !== 'start' && memoryUsage && !isKiro;
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
-  // Update memory bar (hide on start state)
+  // Update memory bar (hide on start state, hide for kiro)
   updateMemoryBar(showMemory ? memoryUsage : null, state.bgColor);
 
   // Update all text colors based on state (using cached elements)

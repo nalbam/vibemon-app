@@ -67,13 +67,16 @@ def get_state(event_type):
     }
     return state_map.get(event_type, "working")
 
-def build_payload(state, project):
+def build_payload(state, project, event=None):
     """Build JSON payload for sending to monitor."""
-    return json.dumps({
+    payload = {
         "state": state,
         "project": project,
         "character": "kiro"
-    })
+    }
+    if event:
+        payload["tool"] = event
+    return json.dumps(payload)
 
 # ============================================================================
 # Send Functions
@@ -290,8 +293,8 @@ def main():
 
     debug_log(f"Event: {event_type}, State: {state}, Project: {project_name}")
 
-    # Build payload
-    payload = build_payload(state, project_name)
+    # Build payload (include event as tool)
+    payload = build_payload(state, project_name, event_type)
     debug_log(f"Payload: {payload}")
 
     # Check if start event (promptSubmit is typically the first event)
