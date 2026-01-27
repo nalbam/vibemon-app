@@ -117,7 +117,7 @@ class MultiWindowManager {
     // Show window without stealing focus once ready
     window.once('ready-to-show', () => {
       if (this.isAlwaysOnTop) {
-        window.setAlwaysOnTop(true, 'screen-saver');
+        window.setAlwaysOnTop(true, 'floating');
       }
       window.showInactive();
 
@@ -410,7 +410,7 @@ class MultiWindowManager {
     this.isAlwaysOnTop = value;
     for (const [, entry] of this.windows) {
       if (entry.window && !entry.window.isDestroyed()) {
-        entry.window.setAlwaysOnTop(value, 'screen-saver');
+        entry.window.setAlwaysOnTop(value, 'floating');
       }
     }
   }
