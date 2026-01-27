@@ -161,7 +161,7 @@ class MultiWindowManager {
 
   /**
    * Arrange all windows by project name alphabetically
-   * A-Z from right to left (A = rightmost)
+   * A-Z from left to right (Z = rightmost)
    */
   arrangeWindowsByName() {
     // Collect all windows with projectId
@@ -172,8 +172,8 @@ class MultiWindowManager {
       }
     }
 
-    // Sort alphabetically by projectId (A first)
-    windowsList.sort((a, b) => a.projectId.localeCompare(b.projectId));
+    // Sort reverse alphabetically by projectId (Z first = rightmost)
+    windowsList.sort((a, b) => b.projectId.localeCompare(a.projectId));
 
     // Assign positions (index 0 = rightmost = first alphabetically)
     let index = 0;
