@@ -2,7 +2,7 @@
 """
 Vibe Monitor Hook for Claude Code
 Desktop App + ESP32 (USB Serial / HTTP)
-Note: Model and Memory are provided by statusline.py
+Note: Model and Memory are read from statusline.py's cache file
 """
 
 import json
@@ -80,7 +80,7 @@ def parse_json_field(data, field, default=""):
 
 def get_cache_path():
     """Get the cache file path."""
-    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / ".vibe-monitor.json"))
+    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / "statusline-cache.json"))
     # Expand ~ to home directory
     if cache_path.startswith("~"):
         cache_path = str(Path.home()) + cache_path[1:]

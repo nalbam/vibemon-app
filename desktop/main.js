@@ -546,33 +546,29 @@ function updateState(data) {
     return;
   }
 
-  // If state is provided (from vibe-monitor.py), update all fields
-  if (data.state !== undefined) {
-    currentState = data.state;
-    if (data.character !== undefined) {
-      currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
-    }
-    // Clear model and memory when project changes
-    if (data.project !== undefined && data.project !== currentProject) {
-      currentModel = '';
-      currentMemory = '';
-      data.model = '';
-      data.memory = '';
-    }
-    if (data.project !== undefined) currentProject = data.project;
-    if (data.tool !== undefined) currentTool = data.tool;
-    if (data.model !== undefined) currentModel = data.model;
-    if (data.memory !== undefined) currentMemory = data.memory;
-
-    // Set up state timeout for auto-transitions
-    setupStateTimeout();
-  } else {
-    // If no state (from statusline.py), only update model/memory if project matches
-    if (data.project !== undefined && data.project === currentProject) {
-      if (data.model !== undefined) currentModel = data.model;
-      if (data.memory !== undefined) currentMemory = data.memory;
-    }
+  // All updates now include state (from vibe-monitor.py with cached model/memory)
+  if (data.state === undefined) {
+    return;  // Ignore updates without state
   }
+
+  currentState = data.state;
+  if (data.character !== undefined) {
+    currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
+  }
+  // Clear model and memory when project changes
+  if (data.project !== undefined && data.project !== currentProject) {
+    currentModel = '';
+    currentMemory = '';
+    data.model = '';
+    data.memory = '';
+  }
+  if (data.project !== undefined) currentProject = data.project;
+  if (data.tool !== undefined) currentTool = data.tool;
+  if (data.model !== undefined) currentModel = data.model;
+  if (data.memory !== undefined) currentMemory = data.memory;
+
+  // Set up state timeout for auto-transitions
+  setupStateTimeout();
   // Recreate window if closed and state is not sleep
   if (!mainWindow && data.state !== undefined && data.state !== 'sleep') {
     createWindow();

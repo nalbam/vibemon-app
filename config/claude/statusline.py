@@ -99,7 +99,7 @@ def get_context_usage(input_data):
 
 def get_cache_path():
     """Get the cache file path."""
-    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / ".vibe-monitor.json"))
+    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / "statusline-cache.json"))
     # Expand ~ to home directory
     if cache_path.startswith("~"):
         cache_path = str(Path.home()) + cache_path[1:]

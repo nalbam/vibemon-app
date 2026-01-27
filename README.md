@@ -179,8 +179,8 @@ cp config/claude/.env.sample ~/.claude/.env.local
 # export DEBUG=1
 
 # Cache file for project metadata (model, memory) - optional
-# Default: ~/.claude/.vibe-monitor.json
-# export VIBE_MONITOR_CACHE="~/.claude/.vibe-monitor.json"
+# Default: ~/.claude/statusline-cache.json
+# export VIBE_MONITOR_CACHE="~/.claude/statusline-cache.json"
 
 # Desktop App URL (auto-launches via npx if not running)
 export VIBE_MONITOR_URL="http://127.0.0.1:19280"
