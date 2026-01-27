@@ -177,7 +177,8 @@ function updateLoadingDots(slow = false) {
 
 // Check sleep timer
 function checkSleepTimer() {
-  if (currentState === 'idle') {
+  // idle/notification -> sleep after 5 minutes
+  if (currentState === 'idle' || currentState === 'notification') {
     const elapsed = Date.now() - lastActivityTime;
     if (elapsed >= SLEEP_TIMEOUT) {
       currentState = 'sleep';

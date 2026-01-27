@@ -1,6 +1,6 @@
 import {
   states, CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER,
-  CHAR_X_BASE, CHAR_Y_BASE, IDLE_TIMEOUT, SLEEP_TIMEOUT,
+  CHAR_X_BASE, CHAR_Y_BASE,
   FRAME_INTERVAL, LOADING_DOT_COUNT, THINKING_ANIMATION_SLOWDOWN,
   BLINK_START_FRAME, BLINK_END_FRAME,
   PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
@@ -20,7 +20,6 @@ let currentCharacter = 'clawd';
 let animFrame = 0;
 let blinkFrame = 0;
 let iconType = 'emoji';
-let lastActivityTime = Date.now();
 
 // Canvas
 let canvas, ctx;
@@ -100,7 +99,6 @@ async function init() {
 // Set state
 window.setState = function(state) {
   currentState = state;
-  lastActivityTime = Date.now();
   updateDisplay();
 };
 
@@ -204,29 +202,6 @@ function updateLoadingDots(slow = false) {
   });
 }
 
-// Check state timeouts
-function checkStateTimeouts() {
-  const now = Date.now();
-
-  // start/done -> idle after 1 minute
-  if (currentState === 'start' || currentState === 'done') {
-    if (now - lastActivityTime >= IDLE_TIMEOUT) {
-      currentState = 'idle';
-      lastActivityTime = now;
-      updateDisplay();
-      return;
-    }
-  }
-
-  // idle -> sleep after 5 minutes
-  if (currentState === 'idle') {
-    if (now - lastActivityTime >= SLEEP_TIMEOUT) {
-      currentState = 'sleep';
-      updateDisplay();
-    }
-  }
-}
-
 // Animation loop using requestAnimationFrame for smoother rendering
 function animationLoop(timestamp) {
   // Throttle to ~100ms intervals
@@ -281,7 +256,6 @@ function animationLoop(timestamp) {
     }
   }
 
-  checkStateTimeouts();
   requestAnimationFrame(animationLoop);
 }
 
