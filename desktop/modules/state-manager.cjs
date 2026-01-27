@@ -1,235 +1,155 @@
 /**
- * State and timer management for Vibe Monitor
+ * State and timer management for Vibe Monitor (Multi-Window Architecture)
+ *
+ * Each window manages its own state. StateManager handles:
+ * - Per-project timers (state timeouts, window close timeouts)
+ * - State data validation
  */
 
-const Store = require('electron-store');
 const { IDLE_TIMEOUT, SLEEP_TIMEOUT, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { LOCK_MODES, WINDOW_CLOSE_TIMEOUT } = require('./constants.cjs');
+const { WINDOW_CLOSE_TIMEOUT } = require('./constants.cjs');
 
 class StateManager {
   constructor() {
-    // Persistent storage for settings
-    this.store = new Store({
-      defaults: {
-        lockMode: 'on-thinking'
-      }
-    });
-
-    // Current state
-    this.currentState = 'start';
-    this.currentCharacter = 'clawd';
-    this.currentProject = '';
-    this.currentTool = '';
-    this.currentModel = '';
-    this.currentMemory = '';
-
-    // Project lock feature
-    this.projectList = [];
-    this.lockedProject = null;
-    this.lockMode = this.store.get('lockMode');
-
-    // Timers
-    this.stateTimeoutTimer = null;
-    this.windowCloseTimer = null;
+    // Per-project timers
+    this.stateTimeoutTimers = new Map();
+    this.windowCloseTimers = new Map();
 
     // Callbacks (set by main.js)
-    this.onStateChange = null;
-    this.onWindowClose = null;
+    this.onStateTimeout = null;      // (projectId, newState) => void
+    this.onWindowCloseTimeout = null; // (projectId) => void
   }
 
-  // Getters
-  getState() {
-    return {
-      state: this.currentState,
-      character: this.currentCharacter,
-      project: this.currentProject,
-      tool: this.currentTool,
-      model: this.currentModel,
-      memory: this.currentMemory,
-      locked: this.lockedProject,
-      lockMode: this.lockMode,
-      projects: this.projectList
-    };
-  }
+  // Timer management - per project
 
-  getLockMode() {
-    return this.lockMode;
-  }
-
-  getLockModes() {
-    return LOCK_MODES;
-  }
-
-  getLockedProject() {
-    return this.lockedProject;
-  }
-
-  getProjectList() {
-    return this.projectList;
-  }
-
-  // Timer management
-  clearStateTimeout() {
-    if (this.stateTimeoutTimer) {
-      clearTimeout(this.stateTimeoutTimer);
-      this.stateTimeoutTimer = null;
+  /**
+   * Clear state timeout timer for a specific project
+   * @param {string} projectId - Project identifier
+   */
+  clearStateTimeout(projectId) {
+    const timer = this.stateTimeoutTimers.get(projectId);
+    if (timer) {
+      clearTimeout(timer);
+      this.stateTimeoutTimers.delete(projectId);
     }
   }
 
-  clearWindowCloseTimer() {
-    if (this.windowCloseTimer) {
-      clearTimeout(this.windowCloseTimer);
-      this.windowCloseTimer = null;
+  /**
+   * Clear window close timer for a specific project
+   * @param {string} projectId - Project identifier
+   */
+  clearWindowCloseTimer(projectId) {
+    const timer = this.windowCloseTimers.get(projectId);
+    if (timer) {
+      clearTimeout(timer);
+      this.windowCloseTimers.delete(projectId);
     }
   }
 
-  setupWindowCloseTimer() {
-    this.clearWindowCloseTimer();
+  /**
+   * Set up window close timer for a project in sleep state
+   * @param {string} projectId - Project identifier
+   * @param {string} currentState - Current state of the project
+   */
+  setupWindowCloseTimer(projectId, currentState) {
+    this.clearWindowCloseTimer(projectId);
 
-    if (this.currentState === 'sleep' && this.onWindowClose) {
-      this.windowCloseTimer = setTimeout(() => {
-        this.onWindowClose();
+    if (currentState === 'sleep' && this.onWindowCloseTimeout) {
+      const timer = setTimeout(() => {
+        this.windowCloseTimers.delete(projectId);
+        this.onWindowCloseTimeout(projectId);
       }, WINDOW_CLOSE_TIMEOUT);
+      this.windowCloseTimers.set(projectId, timer);
     }
   }
 
-  setupStateTimeout() {
-    this.clearStateTimeout();
-    this.clearWindowCloseTimer();
+  /**
+   * Set up state timeout for automatic state transitions
+   * @param {string} projectId - Project identifier
+   * @param {string} currentState - Current state of the project
+   */
+  setupStateTimeout(projectId, currentState) {
+    this.clearStateTimeout(projectId);
+    this.clearWindowCloseTimer(projectId);
 
-    if (this.currentState === 'start' || this.currentState === 'done') {
+    if (currentState === 'start' || currentState === 'done') {
       // start/done -> idle after 1 minute
-      this.stateTimeoutTimer = setTimeout(() => {
-        this.updateState({ state: 'idle' });
+      const timer = setTimeout(() => {
+        this.stateTimeoutTimers.delete(projectId);
+        if (this.onStateTimeout) {
+          this.onStateTimeout(projectId, 'idle');
+        }
       }, IDLE_TIMEOUT);
-    } else if (this.currentState === 'idle' || this.currentState === 'notification') {
+      this.stateTimeoutTimers.set(projectId, timer);
+    } else if (currentState === 'idle' || currentState === 'notification') {
       // idle/notification -> sleep after 5 minutes
-      this.stateTimeoutTimer = setTimeout(() => {
-        this.updateState({ state: 'sleep' });
+      const timer = setTimeout(() => {
+        this.stateTimeoutTimers.delete(projectId);
+        if (this.onStateTimeout) {
+          this.onStateTimeout(projectId, 'sleep');
+        }
       }, SLEEP_TIMEOUT);
-    } else if (this.currentState === 'sleep') {
+      this.stateTimeoutTimers.set(projectId, timer);
+    } else if (currentState === 'sleep') {
       // sleep -> close window after 10 minutes
-      this.setupWindowCloseTimer();
+      this.setupWindowCloseTimer(projectId, currentState);
     }
   }
 
-  // Project management
-  addProjectToList(project) {
-    if (project && !this.projectList.includes(project)) {
-      this.projectList.push(project);
-    }
-  }
+  // Validation
 
-  lockProject(project) {
-    if (!project) return false;
-
-    const previousLocked = this.lockedProject;
-    this.addProjectToList(project);
-    this.lockedProject = project;
-
-    // Transition to idle state when lock changes
-    if (previousLocked !== project) {
-      this.currentState = 'idle';
-      this.currentProject = project;
-      this.currentTool = '';
-      this.currentModel = '';
-      this.currentMemory = '';
-      this.setupStateTimeout();
-
-      if (this.onStateChange) {
-        this.onStateChange({
-          state: 'idle',
-          project: project,
-          tool: '',
-          model: '',
-          memory: ''
-        }, true);  // true = needs window recreation
-      }
-      return true;
-    }
-    return false;
-  }
-
-  unlockProject() {
-    this.lockedProject = null;
-  }
-
-  setLockMode(mode) {
-    if (!LOCK_MODES[mode]) return false;
-
-    this.lockMode = mode;
-    this.lockedProject = null;  // Reset lock when mode changes
-    this.store.set('lockMode', mode);
-    return true;
-  }
-
-  // State update
-  updateState(data) {
-    const incomingProject = data.project;
-
-    // Add incoming project to list
-    if (incomingProject) {
-      this.addProjectToList(incomingProject);
+  /**
+   * Validate and normalize state data
+   * @param {Object} data - Incoming state data
+   * @returns {Object} Normalized data with validated character field
+   */
+  validateStateData(data) {
+    if (!data || typeof data !== 'object') {
+      return { valid: false, error: 'Invalid data format' };
     }
 
-    // Auto-lock based on lockMode
-    if (this.lockMode === 'first-project') {
-      if (incomingProject && this.projectList.length === 1 && this.lockedProject === null) {
-        this.lockedProject = incomingProject;
-      }
-    } else if (this.lockMode === 'on-thinking') {
-      if (data.state === 'thinking' && incomingProject) {
-        this.lockedProject = incomingProject;
-      }
+    // Create a new normalized data object (immutability)
+    const normalized = { ...data };
+
+    // Validate and normalize character field
+    if (normalized.character !== undefined) {
+      normalized.character = CHARACTER_CONFIG[normalized.character]
+        ? normalized.character
+        : DEFAULT_CHARACTER;
     }
-
-    // Check if update should be blocked due to project lock
-    const isLocked = this.lockedProject !== null;
-    const isDifferentProject = incomingProject && incomingProject !== this.lockedProject;
-    const shouldBlockUpdate = isLocked && isDifferentProject;
-
-    if (shouldBlockUpdate) {
-      return { blocked: true, menuUpdateOnly: true };
-    }
-
-    // Ignore updates without state
-    if (data.state === undefined) {
-      return { blocked: true, menuUpdateOnly: false };
-    }
-
-    // Update state
-    this.currentState = data.state;
-    if (data.character !== undefined) {
-      this.currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
-    }
-
-    // Clear model and memory when project changes
-    if (data.project !== undefined && data.project !== this.currentProject) {
-      this.currentModel = '';
-      this.currentMemory = '';
-      data.model = '';
-      data.memory = '';
-    }
-
-    if (data.project !== undefined) this.currentProject = data.project;
-    if (data.tool !== undefined) this.currentTool = data.tool;
-    if (data.model !== undefined) this.currentModel = data.model;
-    if (data.memory !== undefined) this.currentMemory = data.memory;
-
-    // Set up state timeout for auto-transitions
-    this.setupStateTimeout();
 
     return {
-      blocked: false,
-      needsWindowRecreation: data.state !== 'sleep',
-      data
+      valid: true,
+      data: normalized
     };
   }
 
   // Cleanup
+
+  /**
+   * Clear all timers for a specific project
+   * @param {string} projectId - Project identifier
+   */
+  cleanupProject(projectId) {
+    this.clearStateTimeout(projectId);
+    this.clearWindowCloseTimer(projectId);
+  }
+
+  /**
+   * Clear all timers for all projects
+   */
   cleanup() {
-    this.clearStateTimeout();
-    this.clearWindowCloseTimer();
+    // Clear all state timeout timers
+    for (const [, timer] of this.stateTimeoutTimers) {
+      clearTimeout(timer);
+    }
+    this.stateTimeoutTimers.clear();
+
+    // Clear all window close timers
+    for (const [, timer] of this.windowCloseTimers) {
+      clearTimeout(timer);
+    }
+    this.windowCloseTimers.clear();
   }
 }
 

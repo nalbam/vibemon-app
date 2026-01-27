@@ -4,8 +4,8 @@
 
 const { Tray, Menu, nativeImage, BrowserWindow } = require('electron');
 const { createCanvas } = require('canvas');
-const { STATE_COLORS, CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { LOCK_MODES, HTTP_PORT } = require('./constants.cjs');
+const { STATE_COLORS, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
+const { HTTP_PORT, LOCK_MODES } = require('./constants.cjs');
 
 const COLOR_EYE = '#000000';
 
@@ -81,15 +81,28 @@ function createTrayIcon(state, character = 'clawd') {
 }
 
 class TrayManager {
-  constructor(stateManager, windowManager, app) {
+  constructor(windowManager, app) {
     this.tray = null;
-    this.stateManager = stateManager;
     this.windowManager = windowManager;
     this.app = app;
   }
 
+  /**
+   * Get state from first window or return default state
+   * @returns {Object}
+   */
+  getFirstWindowState() {
+    const projectIds = this.windowManager.getProjectIds();
+    if (projectIds.length === 0) {
+      return { state: 'idle', character: DEFAULT_CHARACTER, project: null };
+    }
+    const firstProjectId = projectIds[0];
+    const state = this.windowManager.getState(firstProjectId);
+    return state || { state: 'idle', character: DEFAULT_CHARACTER, project: firstProjectId };
+  }
+
   createTray() {
-    const state = this.stateManager.getState();
+    const state = this.getFirstWindowState();
     const icon = createTrayIcon(state.state, state.character);
     this.tray = new Tray(icon);
     this.tray.setToolTip('Vibe Monitor');
@@ -105,16 +118,45 @@ class TrayManager {
 
   updateIcon() {
     if (!this.tray) return;
-    const state = this.stateManager.getState();
+    const state = this.getFirstWindowState();
     const icon = createTrayIcon(state.state, state.character);
     this.tray.setImage(icon);
   }
 
+  buildWindowsSubmenu() {
+    const projectIds = this.windowManager.getProjectIds();
+
+    if (projectIds.length === 0) {
+      return [{ label: 'No windows', enabled: false }];
+    }
+
+    const items = projectIds.map(projectId => {
+      const state = this.windowManager.getState(projectId);
+      const stateLabel = state ? state.state : 'unknown';
+      return {
+        label: `${projectId} (${stateLabel})`,
+        submenu: [
+          { label: 'Show', click: () => this.windowManager.showWindow(projectId) },
+          { label: 'Close', click: () => this.windowManager.closeWindow(projectId) }
+        ]
+      };
+    });
+
+    items.push({ type: 'separator' });
+    items.push({
+      label: 'Close All',
+      enabled: projectIds.length > 0,
+      click: () => this.windowManager.closeAllWindows()
+    });
+
+    return items;
+  }
+
   buildProjectLockSubmenu() {
     const items = [];
-    const lockMode = this.stateManager.getLockMode();
-    const lockedProject = this.stateManager.getLockedProject();
-    const projectList = this.stateManager.getProjectList();
+    const lockMode = this.windowManager.getLockMode();
+    const lockedProject = this.windowManager.getLockedProject();
+    const projectList = this.windowManager.getProjectList();
 
     // Lock Mode selection
     items.push({
@@ -124,7 +166,7 @@ class TrayManager {
         type: 'radio',
         checked: lockMode === mode,
         click: () => {
-          this.stateManager.setLockMode(mode);
+          this.windowManager.setLockMode(mode);
           this.updateMenu();
         }
       }))
@@ -147,7 +189,7 @@ class TrayManager {
           type: 'radio',
           checked: isLocked,
           click: () => {
-            this.stateManager.lockProject(project);
+            this.windowManager.lockProject(project);
             this.updateMenu();
             this.updateIcon();
           }
@@ -162,7 +204,7 @@ class TrayManager {
       label: 'Unlock',
       enabled: lockedProject !== null,
       click: () => {
-        this.stateManager.unlockProject();
+        this.windowManager.unlockProject();
         this.updateMenu();
       }
     });
@@ -171,51 +213,29 @@ class TrayManager {
   }
 
   buildMenuTemplate() {
-    const state = this.stateManager.getState();
-    const projectDisplay = state.project || '-';
+    const projectIds = this.windowManager.getProjectIds();
+    const windowCount = projectIds.length;
+    const state = this.getFirstWindowState();
+
+    // Build status display based on window count
+    let statusLabel;
+    if (windowCount === 0) {
+      statusLabel = 'No active windows';
+    } else if (windowCount === 1) {
+      statusLabel = `${state.project || 'Unknown'}: ${state.state}`;
+    } else {
+      statusLabel = `${windowCount} windows active`;
+    }
 
     return [
       {
-        label: `State: ${state.state}`,
-        enabled: false
-      },
-      {
-        label: `Character: ${state.character}`,
-        enabled: false
-      },
-      {
-        label: `Project: ${projectDisplay}`,
+        label: statusLabel,
         enabled: false
       },
       { type: 'separator' },
       {
-        label: 'Set State',
-        submenu: [
-          { label: 'Start', type: 'radio', checked: state.state === 'start', click: () => this.handleStateChange('start') },
-          { label: 'Idle', type: 'radio', checked: state.state === 'idle', click: () => this.handleStateChange('idle') },
-          { label: 'Thinking', type: 'radio', checked: state.state === 'thinking', click: () => this.handleStateChange('thinking') },
-          { label: 'Planning', type: 'radio', checked: state.state === 'planning', click: () => this.handleStateChange('planning') },
-          { label: 'Working', type: 'radio', checked: state.state === 'working', click: () => this.handleStateChange('working') },
-          { label: 'Notification', type: 'radio', checked: state.state === 'notification', click: () => this.handleStateChange('notification') },
-          { label: 'Done', type: 'radio', checked: state.state === 'done', click: () => this.handleStateChange('done') },
-          { label: 'Sleep', type: 'radio', checked: state.state === 'sleep', click: () => this.handleStateChange('sleep') }
-        ]
-      },
-      {
-        label: 'Set Character',
-        submenu: CHARACTER_NAMES.map(name => {
-          const char = CHARACTER_CONFIG[name];
-          return {
-            label: char.displayName,
-            type: 'radio',
-            checked: state.character === name,
-            click: () => this.handleCharacterChange(name)
-          };
-        })
-      },
-      {
-        label: 'Project Lock',
-        submenu: this.buildProjectLockSubmenu()
+        label: 'Windows',
+        submenu: this.buildWindowsSubmenu()
       },
       { type: 'separator' },
       {
@@ -227,11 +247,26 @@ class TrayManager {
         }
       },
       {
-        label: 'Show Window',
+        label: 'Rearrange',
+        enabled: windowCount > 1 && this.windowManager.isMultiMode(),
         click: () => {
-          this.windowManager.showWindow();
+          this.windowManager.arrangeWindowsByName();
         }
       },
+      {
+        label: 'Multi-Window Mode',
+        type: 'checkbox',
+        checked: this.windowManager.isMultiMode(),
+        click: () => {
+          const newMode = this.windowManager.isMultiMode() ? 'single' : 'multi';
+          this.windowManager.setWindowMode(newMode);
+          this.updateMenu();
+        }
+      },
+      ...(this.windowManager.isMultiMode() ? [] : [{
+        label: 'Project Lock',
+        submenu: this.buildProjectLockSubmenu()
+      }]),
       { type: 'separator' },
       {
         label: `HTTP Server: localhost:${HTTP_PORT}`,
@@ -257,28 +292,15 @@ class TrayManager {
     this.tray.setContextMenu(contextMenu);
   }
 
-  handleStateChange(newState) {
-    const result = this.stateManager.updateState({ state: newState });
-    if (!result.blocked) {
-      this.windowManager.sendToWindow('state-update', result.data);
-      this.updateIcon();
-    }
-    this.updateMenu();
-  }
-
-  handleCharacterChange(character) {
-    const currentState = this.stateManager.getState();
-    const result = this.stateManager.updateState({ state: currentState.state, character });
-    if (!result.blocked) {
-      this.windowManager.sendToWindow('state-update', result.data);
-      this.updateIcon();
-    }
-    this.updateMenu();
-  }
-
   showContextMenu(sender) {
     const contextMenu = Menu.buildFromTemplate(this.buildMenuTemplate());
-    contextMenu.popup(BrowserWindow.fromWebContents(sender));
+    const win = BrowserWindow.fromWebContents(sender);
+    if (win) {
+      contextMenu.popup({ window: win });
+    } else {
+      // Fallback: popup without specific window
+      contextMenu.popup();
+    }
   }
 }
 

@@ -2,11 +2,7 @@
  * Input validation functions for the Vibe Monitor
  */
 
-// Valid states (must match shared/config.cjs)
-const VALID_STATES = ['start', 'idle', 'thinking', 'planning', 'working', 'notification', 'done', 'sleep'];
-
-// Valid characters (must match shared/config.cjs)
-const CHARACTER_NAMES = ['clawd', 'kiro'];
+const { VALID_STATES, CHARACTER_NAMES } = require('../shared/config.cjs');
 
 // Validation limits
 const PROJECT_MAX_LENGTH = 100;
@@ -105,8 +101,6 @@ function validateStatusPayload(data) {
 }
 
 module.exports = {
-  VALID_STATES,
-  CHARACTER_NAMES,
   validateState,
   validateCharacter,
   validateProject,

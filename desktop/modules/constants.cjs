@@ -11,14 +11,16 @@ const WINDOW_WIDTH = 172;
 const WINDOW_HEIGHT = 348;
 const SNAP_THRESHOLD = 30;  // pixels from edge to trigger snap
 const SNAP_DEBOUNCE = 150;  // milliseconds
+const WINDOW_GAP = 10;      // Gap between windows (px)
+const MAX_WINDOWS = 5;      // Maximum simultaneous windows
 
 // Timeouts
 const WINDOW_CLOSE_TIMEOUT = 10 * 60 * 1000;  // 10 minutes (sleep -> close window)
 
-// Lock modes
+// Lock modes (single window mode only)
 const LOCK_MODES = {
-  'first-project': 'First project auto-lock',
-  'on-thinking': 'Lock on thinking state'
+  'first-project': 'First Project',
+  'on-thinking': 'On Thinking'
 };
 
 module.exports = {
@@ -28,6 +30,8 @@ module.exports = {
   WINDOW_HEIGHT,
   SNAP_THRESHOLD,
   SNAP_DEBOUNCE,
+  WINDOW_GAP,
+  MAX_WINDOWS,
   WINDOW_CLOSE_TIMEOUT,
   LOCK_MODES
 };
