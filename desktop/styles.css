@@ -59,6 +59,7 @@ html, body {
 
 /* Device Frame */
 .device-frame {
+  -webkit-app-region: drag;
   background: rgba(45, 45, 45, 0.95);
   padding: 0;
   border-radius: 0 0 12px 12px;
