@@ -5,7 +5,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   showContextMenu: () => ipcRenderer.send('show-context-menu'),
   onStateUpdate: (callback) => {
-    ipcRenderer.on('state-update', (event, data) => callback(data));
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('state-update', handler);
+    // Return cleanup function to prevent memory leaks
+    return () => ipcRenderer.removeListener('state-update', handler);
   },
   getVersion: () => ipcRenderer.invoke('get-version')
 });

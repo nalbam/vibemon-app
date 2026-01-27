@@ -35,6 +35,9 @@ let canvas, ctx;
 // Cached DOM elements (initialized once in init())
 let domCache = null;
 
+// IPC cleanup function
+let cleanupStateListener = null;
+
 // Initialize DOM cache
 function initDomCache() {
   domCache = {
@@ -83,7 +86,7 @@ async function init() {
 
   // Listen for state updates from main process
   if (window.electronAPI) {
-    window.electronAPI.onStateUpdate((data) => {
+    cleanupStateListener = window.electronAPI.onStateUpdate((data) => {
       if (data.state) currentState = data.state;
       if (data.character) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
       if (data.project) currentProject = data.project;
@@ -251,5 +254,14 @@ function startAnimation() {
   requestAnimationFrame(animationLoop);
 }
 
+// Cleanup on unload
+function cleanup() {
+  if (cleanupStateListener) {
+    cleanupStateListener();
+    cleanupStateListener = null;
+  }
+}
+
 // Initialize on load
 window.onload = init;
+window.onunload = cleanup;
