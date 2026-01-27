@@ -377,8 +377,9 @@ All platforms (Desktop, Simulator, ESP32) automatically transition between state
 |------------|---------|----------|
 | `start`, `done` | 1 minute | `idle` |
 | `idle`, `notification` | 5 minutes | `sleep` |
+| `sleep` (Desktop only) | 10 minutes | Window closes |
 
-Any new status update resets the timeout timer and wakes the display from sleep.
+Any new status update resets the timeout timer and wakes the display from sleep. When the window is closed due to prolonged sleep, it will automatically reopen when new status updates arrive.
 
 ### Special Behaviors
 
@@ -747,6 +748,6 @@ vibe-monitor/
 
 ## Version History
 
-- **v2.1**: Desktop app with system tray, memory bar gradient
-- **v2.0**: Pixel art character (128x128), web simulator
-- **v1.0**: Circular status display
+- **v1.1**: Desktop app with system tray, memory bar gradient
+- **v1.0**: Pixel art character (128x128), web simulator
+- **v0.1**: Circular status display

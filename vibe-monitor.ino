@@ -433,7 +433,7 @@ void drawStartScreen() {
 
   // Brand
   tft.setCursor(40, BRAND_Y);
-  tft.println("v2.0 Pixel Art");
+  tft.println("v1.1.7");
 }
 
 void drawStatus() {
