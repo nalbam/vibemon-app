@@ -915,3 +915,11 @@ vibe-monitor/
     ├── app.js                  # Simulator logic
     └── styles.css              # Simulator styles
 ```
+
+## Version History
+
+- **v1.3**: Multi-window mode (default), window mode API, enhanced lock modes
+- **v1.2**: Project lock feature, lock modes, modular desktop architecture, npx support
+- **v1.1**: Desktop app with system tray, memory bar gradient, window snap to corners
+- **v1.0**: Pixel art character (128x128), web simulator
+- **v0.1**: Circular status display
