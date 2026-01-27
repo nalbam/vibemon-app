@@ -464,6 +464,8 @@ python3 ~/.claude/hooks/vibe-monitor.py --lock-mode first-project
 
 Both Desktop App (port 19280) and ESP32 WiFi mode (port 80) support the same API.
 
+> **Note:** Desktop App has a 10KB payload size limit for security.
+
 ### POST /status
 
 Update monitor status.
@@ -833,6 +835,7 @@ vibe-monitor/
 
 ## Version History
 
-- **v1.1**: Desktop app with system tray, memory bar gradient
+- **v1.2**: Project lock feature, lock modes, modular desktop architecture, npx support
+- **v1.1**: Desktop app with system tray, memory bar gradient, window snap to corners
 - **v1.0**: Pixel art character (128x128), web simulator
 - **v0.1**: Circular status display

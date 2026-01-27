@@ -507,7 +507,7 @@ void drawStartScreen() {
 
   // Brand
   tft.setCursor(40, BRAND_Y);
-  tft.println("v1.1.7");
+  tft.println("v1.2.0");
 }
 
 void drawStatus() {
