@@ -779,8 +779,10 @@ vibe-monitor/
 │   │   ├── hooks/              # Hook scripts
 │   │   │   └── vibe-monitor.py # Main hook script
 │   │   └── skills/             # Claude Code skills
-│   │       └── vibemon/        # Vibe monitor skill
-│   │           └── SKILL.md    # Skill documentation
+│   │       ├── vibemon-lock/   # Project lock skill
+│   │       │   └── SKILL.md
+│   │       └── vibemon-mode/   # Lock mode skill
+│   │           └── SKILL.md
 │   └── kiro/                   # Kiro IDE settings
 │       ├── .env.sample         # Environment variables sample
 │       └── hooks/              # Hook files
