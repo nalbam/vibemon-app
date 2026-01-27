@@ -369,7 +369,7 @@ npm run build:all     # All platforms
 
 - [GitHub Repository](https://github.com/nalbam/vibe-monitor)
 - [Web Simulator](https://nalbam.github.io/vibe-monitor/simulator/)
-- [ESP32 Hardware Setup](https://github.com/nalbam/vibe-monitor#esp32-setup)
+- [ESP32 Hardware Setup (Experimental)](https://github.com/nalbam/vibe-monitor#esp32-setup-experimental)
 
 ## License
 

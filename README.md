@@ -30,8 +30,10 @@ See at a glance what your AI coding assistant is doing — thinking, writing cod
 | Platform | Description | Best For |
 |----------|-------------|----------|
 | **Desktop App** | Electron app with system tray | Daily use, always-visible monitoring |
-| **ESP32 Hardware** | Dedicated LCD display device | Desk companion, hardware enthusiasts |
 | **Web Simulator** | Browser-based preview | Testing, development, no installation |
+| **ESP32 Hardware** | Dedicated LCD display device (experimental) | Desk companion, hardware enthusiasts |
+
+> **Note:** ESP32 hardware support is experimental and not fully tested.
 
 ## Preview
 
@@ -99,9 +101,9 @@ No installation required - just open in browser:
 open simulator/index.html
 ```
 
-### ESP32 Hardware
+### ESP32 Hardware (Experimental)
 
-See [ESP32 Setup](#esp32-setup) section below.
+See [ESP32 Setup](#esp32-setup-experimental) section below.
 
 ## Integration
 
@@ -659,7 +661,9 @@ npm run build:all
 
 See [desktop/README.md](desktop/README.md) for WSL setup and troubleshooting.
 
-## ESP32 Setup
+## ESP32 Setup (Experimental)
+
+> **Warning:** ESP32 hardware support is experimental and not fully tested.
 
 ### Hardware
 
