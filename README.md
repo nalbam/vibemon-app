@@ -500,9 +500,14 @@ curl -X POST http://127.0.0.1:19280/status \
 }
 ```
 
+**Response:**
+```json
+{"success": true, "project": "my-project", "state": "working", "windowCount": 1}
+```
+
 ### GET /status
 
-Get current status.
+Get all windows' status.
 
 ```bash
 curl http://127.0.0.1:19280/status
@@ -511,41 +516,69 @@ curl http://127.0.0.1:19280/status
 **Response:**
 ```json
 {
-  "state": "working",
-  "project": "my-project",
-  "tool": "Bash",
-  "model": "opus",
-  "memory": "45%",
-  "locked": "my-project",
-  "lockMode": "on-thinking",
-  "projects": ["my-project", "other-project"]
+  "windowCount": 2,
+  "projects": {
+    "my-project": {"state": "working", "tool": "Bash", "model": "opus", "memory": "45%"},
+    "other-project": {"state": "idle"}
+  }
 }
 ```
 
-> **Note:** ESP32 returns `projectCount` instead of `projects` array, and includes `lockMode`.
+> **Note:** ESP32 returns a single project status with `projectCount` instead of the full projects object.
+
+### GET /windows
+
+List all active windows with their states and positions.
+
+```bash
+curl http://127.0.0.1:19280/windows
+```
+
+**Response:**
+```json
+{
+  "windowCount": 2,
+  "windows": [
+    {"project": "my-project", "state": "working", "bounds": {"x": 1748, "y": 23, "width": 172, "height": 348}},
+    {"project": "other-project", "state": "idle", "bounds": {"x": 1566, "y": 23, "width": 172, "height": 348}}
+  ]
+}
+```
+
+### POST /close
+
+Close a specific project window.
+
+```bash
+curl -X POST http://127.0.0.1:19280/close \
+  -H "Content-Type: application/json" \
+  -d '{"project":"my-project"}'
+```
+
+**Response:**
+```json
+{"success": true, "project": "my-project", "windowCount": 1}
+```
 
 ### POST /lock
 
-Lock to a specific project.
+Lock to a specific project (single-window mode only).
 
 ```bash
 # Lock specific project
 curl -X POST http://127.0.0.1:19280/lock \
   -H "Content-Type: application/json" \
   -d '{"project":"my-project"}'
-
-# Lock current project (no body)
-curl -X POST http://127.0.0.1:19280/lock
 ```
 
 **Response:**
 ```json
-{"success": true, "locked": "my-project"}
+{"success": true, "lockedProject": "my-project"}
 ```
 
 ### POST /unlock
 
-Unlock project.
+Unlock project (single-window mode only).
 
 ```bash
 curl -X POST http://127.0.0.1:19280/unlock
@@ -553,7 +586,7 @@ curl -X POST http://127.0.0.1:19280/unlock
 
 **Response:**
 ```json
-{"success": true, "locked": null}
+{"success": true, "lockedProject": null}
 ```
 
 ### GET /lock-mode
@@ -566,7 +599,12 @@ curl http://127.0.0.1:19280/lock-mode
 
 **Response:**
 ```json
-{"lockMode": "on-thinking", "modes": {"first-project": "First project auto-lock", "on-thinking": "Lock on thinking state"}}
+{
+  "mode": "on-thinking",
+  "modes": {"first-project": "First Project", "on-thinking": "On Thinking"},
+  "lockedProject": null,
+  "windowMode": "single"
+}
 ```
 
 ### POST /lock-mode
@@ -581,7 +619,7 @@ curl -X POST http://127.0.0.1:19280/lock-mode \
 
 **Response:**
 ```json
-{"success": true, "lockMode": "first-project"}
+{"success": true, "mode": "first-project", "lockedProject": null}
 ```
 
 ### GET /health
