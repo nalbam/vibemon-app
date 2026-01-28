@@ -333,8 +333,9 @@ class MultiWindowManager {
     // Show window without stealing focus once ready
     window.once('ready-to-show', () => {
       // Set always on top based on current state (active states only)
+      // Respects global isAlwaysOnTop setting
       const currentState = windowEntry.state ? windowEntry.state.state : null;
-      const shouldBeOnTop = currentState && ACTIVE_STATES.includes(currentState);
+      const shouldBeOnTop = this.isAlwaysOnTop && currentState && ACTIVE_STATES.includes(currentState);
       window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
 
       window.showInactive();
@@ -646,6 +647,7 @@ class MultiWindowManager {
    * Update always on top for a specific window based on state
    * Active states (thinking, planning, working, notification) keep always on top
    * Inactive states (start, idle, done, sleep) disable always on top
+   * Respects global isAlwaysOnTop setting (if disabled, all windows stay off top)
    * @param {string} projectId
    * @param {string} state
    */
@@ -655,7 +657,8 @@ class MultiWindowManager {
       return;
     }
 
-    const shouldBeOnTop = ACTIVE_STATES.includes(state);
+    // Respect global setting: if globally disabled, never put on top
+    const shouldBeOnTop = this.isAlwaysOnTop && ACTIVE_STATES.includes(state);
     entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
   }
 
