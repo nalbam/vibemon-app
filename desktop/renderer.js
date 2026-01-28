@@ -42,6 +42,7 @@ let cleanupStateListener = null;
 function initDomCache() {
   domCache = {
     display: document.getElementById('display'),
+    titleText: document.getElementById('title-text'),
     statusText: document.getElementById('status-text'),
     loadingDots: document.getElementById('loading-dots'),
     projectLine: document.getElementById('project-line'),
@@ -135,6 +136,10 @@ async function init() {
 function updateDisplay() {
   const state = states[currentState] || states.idle;
   const d = domCache;
+
+  // Update window title (show project name or default)
+  const titleProject = currentProject && currentProject !== '-' ? currentProject : 'VibeMon';
+  d.titleText.textContent = titleProject;
 
   // Update background
   d.display.style.background = state.bgColor;

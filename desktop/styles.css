@@ -37,10 +37,31 @@ html, body {
 
 .btn-close {
   background: #ff5f57;
+  position: relative;
 }
 
 .btn-close:hover {
   background: #ff3b30;
+}
+
+.btn-close:hover::before,
+.btn-close:hover::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 1.5px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 1px;
+}
+
+.btn-close:hover::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.btn-close:hover::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .btn-minimize {
