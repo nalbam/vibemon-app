@@ -128,7 +128,23 @@ AI Coding Assistant → Hooks → Vibe Monitor
 
 ---
 
-### Claude Code Setup
+### Quick Install (Recommended)
+
+Use the installation script for automatic setup:
+
+```bash
+python3 install.py
+```
+
+The script will:
+1. Ask which tool to configure (Claude Code, Kiro, or both)
+2. Copy hook scripts and configuration files
+3. Optionally create `.env.local` from sample
+4. Merge hooks into `settings.json` (Claude Code only)
+
+---
+
+### Claude Code Setup (Manual)
 
 Claude Code uses **hooks** and **statusline** to send data to Vibe Monitor.
 
@@ -154,28 +170,7 @@ chmod +x ~/.claude/statusline.py
 
 #### 2. Configure environment variables
 
-Choose **one** of the following options:
-
-**Option A: Copy to config folder (recommended)**
-
 The hook script automatically loads `~/.claude/.env.local`:
-
-```bash
-cp config/claude/.env.sample ~/.claude/.env.local
-# Edit the file and set your values
-```
-
-**Option B: Source from shell profile**
-
-Add to `~/.zshrc` or `~/.bashrc`:
-
-```bash
-if [ -f ~/.claude/.env.local ]; then
-  source ~/.claude/.env.local
-fi
-```
-
-Then copy the sample file:
 
 ```bash
 cp config/claude/.env.sample ~/.claude/.env.local
@@ -189,13 +184,13 @@ cp config/claude/.env.sample ~/.claude/.env.local
 
 # Cache file for project metadata (model, memory) - optional
 # Default: ~/.claude/statusline-cache.json
-# export VIBE_MONITOR_CACHE="~/.claude/statusline-cache.json"
+export VIBE_MONITOR_CACHE="~/.claude/statusline-cache.json"
 
 # Desktop App URL (auto-launches via npx if not running)
 export VIBE_MONITOR_URL="http://127.0.0.1:19280"
 
 # ESP32 USB Serial port (optional)
-export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
+# export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 # ESP32 WiFi HTTP (optional)
 # export ESP32_HTTP_URL="http://192.168.1.100"
@@ -210,11 +205,21 @@ Add both hooks and statusline configuration:
 ```json
 {
   "hooks": {
-    "SessionStart": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "UserPromptSubmit": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "PreToolUse": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "Notification": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "Stop": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
+    ],
+    "PreToolUse": [
+      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
+    ],
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
+    ]
   },
   "statusLine": {
     "type": "command",
@@ -222,6 +227,8 @@ Add both hooks and statusline configuration:
   }
 }
 ```
+
+> **Tip:** Use `python3 install.py` to install hooks automatically.
 
 #### 5. Statusline Display
 
@@ -247,7 +254,7 @@ The statusline also sends model and memory data to Vibe Monitor in the backgroun
 
 ---
 
-### Kiro Setup
+### Kiro Setup (Manual)
 
 Kiro uses `.kiro.hook` files that call the `vibe-monitor.py` script.
 
@@ -281,7 +288,7 @@ Edit `~/.kiro/.env.local`:
 export VIBE_MONITOR_URL="http://127.0.0.1:19280"
 
 # ESP32 USB Serial port (optional)
-export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
+# export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 # ESP32 WiFi HTTP (optional)
 # export ESP32_HTTP_URL="http://192.168.1.100"
@@ -293,9 +300,10 @@ export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
 
 | Hook File | Event | State | Description |
 |-----------|-------|-------|-------------|
-| `vibe-monitor-agent-spawn.kiro.hook` | `agentSpawn` | `start` | Agent activated |
 | `vibe-monitor-prompt-submit.kiro.hook` | `promptSubmit` | `thinking` | User submits prompt |
-| `vibe-monitor-pre-tool-use.kiro.hook` | `preToolUse` | `working` | Tool execution starts |
+| `vibe-monitor-file-created.kiro.hook` | `fileCreated` | `working` | File created |
+| `vibe-monitor-file-edited.kiro.hook` | `fileSaved` | `working` | File edited |
+| `vibe-monitor-file-deleted.kiro.hook` | `fileDeleted` | `working` | File deleted |
 | `vibe-monitor-agent-stop.kiro.hook` | `agentStop` | `done` | Agent turn ends |
 
 #### Available Kiro Event Types
@@ -317,13 +325,12 @@ The hook sends status updates in order (only if configured):
 
 | Action | Claude Code | Kiro | State |
 |--------|-------------|------|-------|
-| Session start | `SessionStart` | `agentSpawn` | `start` |
 | User input | `UserPromptSubmit` | `promptSubmit` | `thinking` |
-| Before tool | `PreToolUse` | `preToolUse` | `working` |
+| File operations | `PreToolUse` | `fileCreated/fileSaved/fileDeleted` | `working` |
 | Agent done | `Stop` | `agentStop` | `done` |
 | Notification | `Notification` | - | `notification` |
 
-> **Note:** `PostToolUse` / `postToolUse` events are not used. The `done` state auto-transitions to `idle` after 1 minute of inactivity.
+> **Note:** The `done` state auto-transitions to `idle` after 1 minute of inactivity.
 
 ## Characters
 
@@ -901,6 +908,7 @@ echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
 vibe-monitor/
 ├── README.md                   # This document
 ├── CLAUDE.md                   # AI development guidelines
+├── install.py                  # Installation script (Claude/Kiro)
 ├── vibe-monitor.ino            # ESP32 main firmware
 ├── sprites.h                   # Character rendering (ESP32)
 ├── img_clawd.h                 # Clawd image data (RGB565)
@@ -926,9 +934,10 @@ vibe-monitor/
 │       ├── .env.sample         # Environment variables sample
 │       └── hooks/              # Hook files
 │           ├── vibe-monitor.py # Main hook script
-│           ├── vibe-monitor-agent-spawn.kiro.hook
 │           ├── vibe-monitor-prompt-submit.kiro.hook
-│           ├── vibe-monitor-pre-tool-use.kiro.hook
+│           ├── vibe-monitor-file-created.kiro.hook
+│           ├── vibe-monitor-file-edited.kiro.hook
+│           ├── vibe-monitor-file-deleted.kiro.hook
 │           └── vibe-monitor-agent-stop.kiro.hook
 ├── desktop/                    # Desktop app
 │   ├── main.js                 # Electron main process
