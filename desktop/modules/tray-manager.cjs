@@ -88,6 +88,44 @@ class TrayManager {
     this.tray = null;
     this.windowManager = windowManager;
     this.app = app;
+    this.statsWindow = null;
+  }
+
+  openStatsWindow() {
+    // If window exists, close it first
+    if (this.statsWindow && !this.statsWindow.isDestroyed()) {
+      this.statsWindow.close();
+      this.statsWindow = null;
+    }
+
+    // Create new stats window (frameless like monitor window)
+    this.statsWindow = new BrowserWindow({
+      width: 640,
+      height: 480,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      hasShadow: true,
+      alwaysOnTop: false,
+      skipTaskbar: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    this.statsWindow.loadURL(`http://127.0.0.1:${HTTP_PORT}/stats`);
+
+    this.statsWindow.on('closed', () => {
+      this.statsWindow = null;
+    });
+
+    // Close on blur (lose focus)
+    this.statsWindow.on('blur', () => {
+      if (this.statsWindow && !this.statsWindow.isDestroyed()) {
+        this.statsWindow.close();
+      }
+    });
   }
 
   /**
@@ -326,6 +364,11 @@ class TrayManager {
       }]),
       { type: 'separator' },
       {
+        label: 'Claude Stats',
+        click: () => this.openStatsWindow()
+      },
+      { type: 'separator' },
+      {
         label: `HTTP Server: localhost:${HTTP_PORT}`,
         enabled: false
       },
@@ -366,6 +409,10 @@ class TrayManager {
   cleanup() {
     // Clear tray icon cache to free memory
     trayIconCache.clear();
+    if (this.statsWindow && !this.statsWindow.isDestroyed()) {
+      this.statsWindow.close();
+      this.statsWindow = null;
+    }
     if (this.tray) {
       this.tray.destroy();
       this.tray = null;
