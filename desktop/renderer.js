@@ -137,9 +137,12 @@ function updateDisplay() {
   const state = states[currentState] || states.idle;
   const d = domCache;
 
-  // Update window title (show project name or default)
+  // Update window title (show project name or default, truncated)
   const titleProject = currentProject && currentProject !== '-' ? currentProject : 'VibeMon';
-  d.titleText.textContent = titleProject;
+  const displayTitle = titleProject.length > PROJECT_NAME_MAX_LENGTH
+    ? titleProject.substring(0, PROJECT_NAME_TRUNCATE_AT) + '...'
+    : titleProject;
+  d.titleText.textContent = displayTitle;
 
   // Update background
   d.display.style.background = state.bgColor;

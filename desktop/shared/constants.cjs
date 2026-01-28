@@ -61,8 +61,8 @@ const BLINK_END_FRAME = 31;
 // =============================================================================
 // Text Truncation
 // =============================================================================
-const PROJECT_NAME_MAX_LENGTH = 16;
-const PROJECT_NAME_TRUNCATE_AT = 13;
+const PROJECT_NAME_MAX_LENGTH = 20;
+const PROJECT_NAME_TRUNCATE_AT = 17;
 const MODEL_NAME_MAX_LENGTH = 14;
 const MODEL_NAME_TRUNCATE_AT = 11;
 
