@@ -131,7 +131,7 @@ The `working` state displays context-aware text based on the active tool:
 | **clawd** | Orange | Default character | Claude Code |
 | **kiro** | White | Ghost character | Kiro |
 
-## IDE Integration
+## Integration
 
 ### Quick Install (Recommended)
 
