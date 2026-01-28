@@ -52,7 +52,7 @@ open simulator/index.html
 - **Animation**: `animFrame % N` approach (100ms tick)
 - **Floating**: Cosine/Sine wave offset (X: ±3px, Y: ±5px, ~3.2s cycle)
 - **Working text**: Tool-based random selection via `getWorkingText(tool)`
-- **JSON fields**: `{"state", "event", "tool", "project", "model", "memory", "character"}`
+- **JSON fields**: `{"state", "event", "tool", "project", "model", "memory", "character", "terminalId"}`
 - **Characters**: `clawd` (orange), `kiro` (white ghost)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
@@ -61,6 +61,7 @@ open simulator/index.html
 - **Loading dots speed**: Thinking state uses 3x slower animation than working state
 - **Snap to corner**: Window snaps to screen corners when dragged within 30px of edges (150ms debounce)
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status
+- **Click to focus terminal**: Click window to switch to corresponding iTerm2 tab (macOS only, uses `terminalId` from `ITERM_SESSION_ID`)
 
 ## Window Mode
 

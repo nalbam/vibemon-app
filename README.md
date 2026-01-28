@@ -704,6 +704,21 @@ Or use the system tray menu to toggle between modes.
 - **Platform icons**: Emoji on macOS, pixel art on Windows/Linux
 - **Draggable**: Move window anywhere on screen
 - **Snap to corner**: Auto-snaps to screen corners when near edges (30px threshold)
+- **Click to focus terminal**: Click window to switch to the corresponding iTerm2 tab (macOS only)
+
+### Click to Focus Terminal (macOS)
+
+When running Claude Code in multiple iTerm2 tabs, clicking a Vibe Monitor window automatically switches to the corresponding terminal tab.
+
+**How it works:**
+1. The hook script sends `ITERM_SESSION_ID` environment variable as `terminalId`
+2. Vibe Monitor stores the terminal ID for each project
+3. Clicking the window executes AppleScript to activate the iTerm2 session
+
+**Requirements:**
+- macOS only (uses AppleScript)
+- iTerm2 terminal
+- Hook script must be updated (copies `terminalId` from `ITERM_SESSION_ID`)
 
 ### System Tray Menu
 
