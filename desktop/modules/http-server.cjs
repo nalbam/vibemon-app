@@ -356,6 +356,8 @@ class HttpServer {
       return;
     }
 
+    // Check if project has an active window
+    const hasWindow = this.windowManager.hasWindow(projectId);
     const locked = this.windowManager.lockProject(projectId);
 
     // Update tray menu
@@ -363,10 +365,17 @@ class HttpServer {
       this.onStateUpdate(true);
     }
 
-    sendJson(res, 200, {
+    const response = {
       success: locked,
       lockedProject: this.windowManager.getLockedProject()
-    });
+    };
+
+    // Add warning if locking a project without active window
+    if (locked && !hasWindow) {
+      response.warning = 'No active window for this project';
+    }
+
+    sendJson(res, 200, response);
   }
 
   handlePostUnlock(res) {
