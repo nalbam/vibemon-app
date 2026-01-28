@@ -18,7 +18,7 @@ function validateState(state) {
     return { valid: true, error: null };
   }
   if (!VALID_STATES.includes(state)) {
-    return { valid: false, error: `Invalid state: ${state}` };
+    return { valid: false, error: `Invalid state: ${state}. Valid states: ${VALID_STATES.join(', ')}` };
   }
   return { valid: true, error: null };
 }
@@ -33,7 +33,7 @@ function validateCharacter(character) {
     return { valid: true, error: null };
   }
   if (!CHARACTER_NAMES.includes(character)) {
-    return { valid: false, error: `Invalid character: ${character}` };
+    return { valid: false, error: `Invalid character: ${character}. Valid characters: ${CHARACTER_NAMES.join(', ')}` };
   }
   return { valid: true, error: null };
 }

@@ -96,10 +96,10 @@ async function init() {
   if (window.electronAPI) {
     cleanupStateListener = window.electronAPI.onStateUpdate((data) => {
       const prevState = currentState;
-      if (data.state) currentState = data.state;
-      if (data.character) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
-      if (data.project) currentProject = data.project;
-      if (data.tool) currentTool = data.tool;
+      if (data.state !== undefined) currentState = data.state;
+      if (data.character !== undefined) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
+      if (data.project !== undefined) currentProject = data.project || '-';
+      if (data.tool !== undefined) currentTool = data.tool || '-';
       if (data.model !== undefined) currentModel = data.model || '-';
       if (data.memory !== undefined) currentMemory = data.memory || '-';
       lastActivityTime = Date.now();

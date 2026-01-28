@@ -127,6 +127,12 @@ ipcMain.handle('focus-terminal', async (event) => {
     return { success: false, reason: 'invalid-terminal-id' };
   }
 
+  // Validate UUID format (8-4-4-4-12 hex) to prevent command injection
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(uuid)) {
+    return { success: false, reason: 'invalid-uuid-format' };
+  }
+
   // AppleScript to activate iTerm2 and select the session
   const script = `
     tell application "iTerm2"

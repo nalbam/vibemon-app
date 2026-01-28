@@ -23,6 +23,10 @@ export const VALID_STATES = Object.keys(states);
 export const STATE_COLORS = Object.fromEntries(
   Object.entries(states).map(([k, v]) => [k, v.bgColor])
 );
+// Dark background colors (states with white text need different contrast)
+export const DARK_BG_COLORS = Object.values(states)
+  .filter(s => s.textColor === '#FFFFFF')
+  .map(s => s.bgColor);
 
 // =============================================================================
 // Character Data (from JSON)

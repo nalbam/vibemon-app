@@ -366,6 +366,14 @@ class MultiWindowManager {
     window.on('closed', () => {
       const currentProjectId = windowEntry.currentProjectId;
 
+      // Verify this entry still owns the projectId in the Map
+      // In single-mode, window may have been reused for a different project
+      const entry = this.windows.get(currentProjectId);
+      if (entry !== windowEntry) {
+        // Window was reused - skip cleanup for this projectId
+        return;
+      }
+
       // Clear snap timer if exists
       const snapTimer = this.snapTimers.get(currentProjectId);
       if (snapTimer) {

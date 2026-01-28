@@ -1,4 +1,4 @@
-import { TOOL_TEXTS, THINKING_TEXTS, PLANNING_TEXTS } from './config.js';
+import { TOOL_TEXTS, THINKING_TEXTS, PLANNING_TEXTS, DARK_BG_COLORS } from './config.js';
 
 // Get thinking text (random selection)
 export function getThinkingText() {
@@ -60,7 +60,7 @@ export function getMemoryBarStyles(memoryUsage, bgColor) {
     return { display: 'none', containerStyles: null, barStyles: null };
   }
 
-  const isDarkBg = (bgColor === '#0066CC' || bgColor === '#1a1a4e');
+  const isDarkBg = DARK_BG_COLORS.includes(bgColor);
   const containerStyles = {
     borderColor: isDarkBg ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
     background: isDarkBg ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.3)'
@@ -82,6 +82,11 @@ export function getMemoryBarStyles(memoryUsage, bgColor) {
 export function updateMemoryBar(memoryUsage, bgColor, elements = null) {
   const memoryBar = elements?.memoryBar || document.getElementById('memory-bar');
   const memoryBarContainer = elements?.memoryBarContainer || document.getElementById('memory-bar-container');
+
+  // Guard against missing DOM elements
+  if (!memoryBar || !memoryBarContainer) {
+    return;
+  }
 
   const styles = getMemoryBarStyles(memoryUsage, bgColor);
 

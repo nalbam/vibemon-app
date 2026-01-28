@@ -18,8 +18,9 @@ Preferences preferences;
 #ifdef USE_WIFI
 #include <WiFi.h>
 #include <WebServer.h>
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
+#include "credentials.h"  // Create from credentials.h.example
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
 WebServer server(80);
 #endif
 
@@ -561,12 +562,14 @@ void drawStatus() {
       tft.setCursor(20, PROJECT_Y);
 
       char displayProject[20];
+      size_t maxDisplay = sizeof(displayProject) - 1;
       if (strlen(currentProject) > 16) {
         strncpy(displayProject, currentProject, 13);
         displayProject[13] = '\0';
-        strcat(displayProject, "...");
+        strncat(displayProject, "...", maxDisplay - strlen(displayProject));
       } else {
-        strcpy(displayProject, currentProject);
+        strncpy(displayProject, currentProject, maxDisplay);
+        displayProject[maxDisplay] = '\0';
       }
       tft.println(displayProject);
     }
@@ -591,12 +594,14 @@ void drawStatus() {
       tft.setCursor(20, MODEL_Y);
 
       char displayModel[20];
+      size_t maxModel = sizeof(displayModel) - 1;
       if (strlen(currentModel) > 14) {
         strncpy(displayModel, currentModel, 11);
         displayModel[11] = '\0';
-        strcat(displayModel, "...");
+        strncat(displayModel, "...", maxModel - strlen(displayModel));
       } else {
-        strcpy(displayModel, currentModel);
+        strncpy(displayModel, currentModel, maxModel);
+        displayModel[maxModel] = '\0';
       }
       tft.println(displayModel);
     }
