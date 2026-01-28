@@ -4,10 +4,18 @@
 
 /**
  * Set CORS headers on response
+ * Only allow localhost origins for security (prevents malicious web pages from accessing the API)
  * @param {http.ServerResponse} res
+ * @param {http.IncomingMessage} req
  */
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function setCorsHeaders(res, req) {
+  const origin = req?.headers?.origin || '';
+  // Allow localhost origins only (with various port numbers)
+  const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+  if (isLocalhost) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
@@ -68,8 +76,9 @@ function parseJsonBody(req, maxSize) {
       }
     });
 
-    req.on('error', () => {
+    req.on('error', (err) => {
       if (!aborted) {
+        console.error('HTTP request error:', err.message);
         resolve({ data: null, error: 'Request error', statusCode: 500 });
       }
     });

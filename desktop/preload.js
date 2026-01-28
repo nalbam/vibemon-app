@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Return cleanup function to prevent memory leaks
     return () => ipcRenderer.removeListener('state-update', handler);
   },
-  getVersion: () => ipcRenderer.invoke('get-version')
+  getVersion: () => ipcRenderer.invoke('get-version'),
+  getPlatform: () => process.platform
 });

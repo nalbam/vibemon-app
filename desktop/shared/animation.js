@@ -1,5 +1,5 @@
 // Shared animation utilities
-import { FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y } from './config.js';
+import { FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, BLINK_START_FRAME, BLINK_END_FRAME } from './config.js';
 
 // Calculate floating X offset using cosine wave (~3.2 second cycle at 100ms interval)
 export function getFloatOffsetX(animFrame) {
@@ -23,7 +23,7 @@ export function needsAnimationRedraw(state, animFrame, blinkFrame) {
     case 'sleep':
       return true;  // Always animate these states
     case 'idle':
-      return blinkFrame === 30 || blinkFrame === 31;  // Only during blink
+      return blinkFrame === BLINK_START_FRAME || blinkFrame === BLINK_END_FRAME;  // Only during blink
     default:
       return false;
   }

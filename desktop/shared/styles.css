@@ -120,11 +120,3 @@
 .emoji-icon {
   display: inline;
 }
-
-.icon-canvas {
-  width: 8px;
-  height: 8px;
-  image-rendering: pixelated;
-  vertical-align: middle;
-  margin-right: 2px;
-}

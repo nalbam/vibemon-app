@@ -6,8 +6,10 @@
  * - State data validation
  */
 
-const { IDLE_TIMEOUT, SLEEP_TIMEOUT, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { WINDOW_CLOSE_TIMEOUT } = require('./constants.cjs');
+const {
+  IDLE_TIMEOUT, SLEEP_TIMEOUT, WINDOW_CLOSE_TIMEOUT,
+  CHARACTER_CONFIG, DEFAULT_CHARACTER
+} = require('../shared/config.cjs');
 
 class StateManager {
   constructor() {

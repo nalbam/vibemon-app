@@ -16,8 +16,9 @@ const {
   SNAP_DEBOUNCE,
   LOCK_MODES,
   ALWAYS_ON_TOP_MODES,
-  ACTIVE_STATES
-} = require('./constants.cjs');
+  ACTIVE_STATES,
+  ALWAYS_ON_TOP_GRACE_PERIOD
+} = require('../shared/config.cjs');
 
 // Platform-specific always-on-top level
 // macOS: 'floating' (required for tray menu visibility)
@@ -28,6 +29,7 @@ class MultiWindowManager {
   constructor() {
     this.windows = new Map();  // Map<projectId, { window, state }>
     this.snapTimers = new Map();  // Map<projectId, timerId>
+    this.alwaysOnTopTimers = new Map();  // Map<projectId, timerId> for grace period
     this.onWindowClosed = null;  // callback: (projectId) => void
 
     // Persistent settings
@@ -36,7 +38,8 @@ class MultiWindowManager {
         windowMode: 'multi',  // 'multi' or 'single'
         lockedProject: null,
         lockMode: 'on-thinking',  // 'first-project' or 'on-thinking'
-        alwaysOnTopMode: 'active-only'  // 'active-only', 'all', or 'disabled'
+        alwaysOnTopMode: 'active-only',  // 'active-only', 'all', or 'disabled'
+        projectList: []  // Persisted project list for lock menu
       }
     });
 
@@ -46,8 +49,8 @@ class MultiWindowManager {
     this.lockMode = this.store.get('lockMode');
     this.alwaysOnTopMode = this.store.get('alwaysOnTopMode');
 
-    // Project list (tracks all projects seen)
-    this.projectList = [];
+    // Project list (tracks all projects seen) - persisted
+    this.projectList = this.store.get('projectList') || [];
   }
 
   // ============================================================================
@@ -104,12 +107,13 @@ class MultiWindowManager {
   // ============================================================================
 
   /**
-   * Add project to the project list
+   * Add project to the project list (persisted)
    * @param {string} project
    */
   addProjectToList(project) {
     if (project && !this.projectList.includes(project)) {
       this.projectList.push(project);
+      this.store.set('projectList', this.projectList);
     }
   }
 
@@ -273,15 +277,22 @@ class MultiWindowManager {
       // If window exists for different project, switch it
       if (this.windows.size > 0) {
         const [oldProjectId, entry] = this.windows.entries().next().value;
+
+        // Clear timers for the old project
+        this.clearAlwaysOnTopTimer(oldProjectId);
+        const snapTimer = this.snapTimers.get(oldProjectId);
+        if (snapTimer) {
+          clearTimeout(snapTimer);
+          this.snapTimers.delete(oldProjectId);
+        }
+
         // Remove old entry and re-register with new projectId
         this.windows.delete(oldProjectId);
         this.windows.set(projectId, entry);
         // Update mutable projectId for event handlers using closure
         entry.currentProjectId = projectId;
-        // Update state with new project
-        entry.state = entry.state
-          ? { ...entry.state, project: projectId }
-          : { project: projectId };
+        // Reset state for new project (clear previous project's data)
+        entry.state = { project: projectId };
         return { window: entry.window, blocked: false, switchedProject: oldProjectId };
       }
     }
@@ -356,11 +367,14 @@ class MultiWindowManager {
       const currentProjectId = windowEntry.currentProjectId;
 
       // Clear snap timer if exists
-      const timerId = this.snapTimers.get(currentProjectId);
-      if (timerId) {
-        clearTimeout(timerId);
+      const snapTimer = this.snapTimers.get(currentProjectId);
+      if (snapTimer) {
+        clearTimeout(snapTimer);
         this.snapTimers.delete(currentProjectId);
       }
+
+      // Clear alwaysOnTop timer if exists
+      this.clearAlwaysOnTopTimer(currentProjectId);
 
       // Remove from windows map
       this.windows.delete(currentProjectId);
@@ -576,13 +590,18 @@ class MultiWindowManager {
 
   /**
    * Cleanup resources on app quit
-   * Clears all pending snap timers
+   * Clears all pending timers
    */
   cleanup() {
     for (const [, timerId] of this.snapTimers) {
       clearTimeout(timerId);
     }
     this.snapTimers.clear();
+
+    for (const [, timerId] of this.alwaysOnTopTimers) {
+      clearTimeout(timerId);
+    }
+    this.alwaysOnTopTimers.clear();
   }
 
   /**
@@ -683,9 +702,22 @@ class MultiWindowManager {
   }
 
   /**
+   * Clear always on top timer for a specific project
+   * @param {string} projectId
+   */
+  clearAlwaysOnTopTimer(projectId) {
+    const timer = this.alwaysOnTopTimers.get(projectId);
+    if (timer) {
+      clearTimeout(timer);
+      this.alwaysOnTopTimers.delete(projectId);
+    }
+  }
+
+  /**
    * Update always on top for a specific window based on state
    * Active states (thinking, planning, working, notification) keep always on top
-   * Inactive states (start, idle, done, sleep) disable always on top
+   * Inactive states (start, idle, done, sleep) disable always on top after grace period
+   * In 'active-only' mode, inactive states have 1 minute grace period before on top is disabled
    * Respects alwaysOnTopMode setting
    * @param {string} projectId
    * @param {string} state
@@ -696,8 +728,35 @@ class MultiWindowManager {
       return;
     }
 
-    const shouldBeOnTop = this.shouldBeAlwaysOnTop(state);
-    entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
+    const isActiveState = ACTIVE_STATES.includes(state);
+
+    // Always clear any pending timer first
+    this.clearAlwaysOnTopTimer(projectId);
+
+    if (this.alwaysOnTopMode === 'active-only') {
+      if (isActiveState) {
+        // Active state: immediately enable on top
+        entry.window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+      } else {
+        // Inactive state: keep on top for grace period, then disable
+        // Keep on top during grace period (in case it was active before)
+        entry.window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+
+        const timer = setTimeout(() => {
+          this.alwaysOnTopTimers.delete(projectId);
+          // Re-check window still exists
+          if (entry.window && !entry.window.isDestroyed()) {
+            entry.window.setAlwaysOnTop(false, ALWAYS_ON_TOP_LEVEL);
+          }
+        }, ALWAYS_ON_TOP_GRACE_PERIOD);
+
+        this.alwaysOnTopTimers.set(projectId, timer);
+      }
+    } else {
+      // 'all' or 'disabled' mode: apply immediately without grace period
+      const shouldBeOnTop = this.shouldBeAlwaysOnTop(state);
+      entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
+    }
   }
 
   /**

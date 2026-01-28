@@ -53,30 +53,47 @@ export function getMemoryGradient(percent) {
   return `linear-gradient(to right, ${startColor}, ${endColor})`;
 }
 
-// Update memory bar display
-export function updateMemoryBar(memoryUsage, bgColor) {
-  const memoryBar = document.getElementById('memory-bar');
-  const memoryBarContainer = document.getElementById('memory-bar-container');
-
+// Calculate memory bar styles (pure function, no DOM access)
+// Returns { display, containerStyles, barStyles } for the caller to apply
+export function getMemoryBarStyles(memoryUsage, bgColor) {
   if (!memoryUsage || memoryUsage === '-') {
-    memoryBarContainer.style.display = 'none';
-    return;
+    return { display: 'none', containerStyles: null, barStyles: null };
   }
-
-  memoryBarContainer.style.display = 'block';
 
   const isDarkBg = (bgColor === '#0066CC' || bgColor === '#1a1a4e');
-  if (isDarkBg) {
-    memoryBarContainer.style.borderColor = 'rgba(255, 255, 255, 0.6)';
-    memoryBarContainer.style.background = 'rgba(255, 255, 255, 0.2)';
-  } else {
-    memoryBarContainer.style.borderColor = 'rgba(0, 0, 0, 0.6)';
-    memoryBarContainer.style.background = 'rgba(0, 0, 0, 0.3)';
-  }
+  const containerStyles = {
+    borderColor: isDarkBg ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+    background: isDarkBg ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.3)'
+  };
 
   const percent = parseInt(memoryUsage.replace('%', '')) || 0;
   const clampedPercent = Math.min(100, Math.max(0, percent));
 
-  memoryBar.style.width = clampedPercent + '%';
-  memoryBar.style.background = getMemoryGradient(clampedPercent);
+  const barStyles = {
+    width: clampedPercent + '%',
+    background: getMemoryGradient(clampedPercent)
+  };
+
+  return { display: 'block', containerStyles, barStyles };
+}
+
+// Update memory bar display (applies styles to DOM elements)
+// Accepts optional DOM elements for testability; falls back to document.getElementById
+export function updateMemoryBar(memoryUsage, bgColor, elements = null) {
+  const memoryBar = elements?.memoryBar || document.getElementById('memory-bar');
+  const memoryBarContainer = elements?.memoryBarContainer || document.getElementById('memory-bar-container');
+
+  const styles = getMemoryBarStyles(memoryUsage, bgColor);
+
+  memoryBarContainer.style.display = styles.display;
+
+  if (styles.containerStyles) {
+    memoryBarContainer.style.borderColor = styles.containerStyles.borderColor;
+    memoryBarContainer.style.background = styles.containerStyles.background;
+  }
+
+  if (styles.barStyles) {
+    memoryBar.style.width = styles.barStyles.width;
+    memoryBar.style.background = styles.barStyles.background;
+  }
 }

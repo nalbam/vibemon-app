@@ -1,6 +1,6 @@
 import {
   states, CHARACTER_CONFIG, DEFAULT_CHARACTER,
-  CHAR_X_BASE, CHAR_Y_BASE, SLEEP_TIMEOUT,
+  CHAR_X_BASE, CHAR_Y_BASE,
   FRAME_INTERVAL, LOADING_DOT_COUNT, THINKING_ANIMATION_SLOWDOWN,
   BLINK_START_FRAME, BLINK_END_FRAME,
   PROJECT_NAME_MAX_LENGTH, PROJECT_NAME_TRUNCATE_AT,
@@ -12,8 +12,8 @@ import { drawInfoIcons } from './shared/icons.js';
 import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from './shared/animation.js';
 
 // Platform detection: macOS uses emoji, Windows/Linux uses pixel art
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-const useEmoji = isMac;
+// Platform info is provided via preload for security (navigator.platform is deprecated)
+let useEmoji = false;
 
 // Animation timing
 let lastFrameTime = 0;
@@ -52,6 +52,8 @@ function initDomCache() {
     toolValue: document.getElementById('tool-value'),
     modelValue: document.getElementById('model-value'),
     memoryValue: document.getElementById('memory-value'),
+    memoryBar: document.getElementById('memory-bar'),
+    memoryBarContainer: document.getElementById('memory-bar-container'),
     infoTexts: document.querySelectorAll('.info-text'),
     infoLabels: document.querySelectorAll('.info-label'),
     infoValues: document.querySelectorAll('.info-value'),
@@ -81,12 +83,19 @@ async function init() {
     }).catch(() => {});
   }
 
+  // Get platform info for emoji detection
+  if (window.electronAPI?.getPlatform) {
+    const platform = window.electronAPI.getPlatform();
+    useEmoji = platform === 'darwin';
+  }
+
   updateDisplay();
   startAnimation();
 
   // Listen for state updates from main process
   if (window.electronAPI) {
     cleanupStateListener = window.electronAPI.onStateUpdate((data) => {
+      const prevState = currentState;
       if (data.state) currentState = data.state;
       if (data.character) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;
       if (data.project) currentProject = data.project;
@@ -94,6 +103,12 @@ async function init() {
       if (data.model !== undefined) currentModel = data.model || '-';
       if (data.memory !== undefined) currentMemory = data.memory || '-';
       lastActivityTime = Date.now();
+
+      // Reset blinkFrame when transitioning to idle state for consistent blink timing
+      if (currentState === 'idle' && prevState !== 'idle') {
+        blinkFrame = 0;
+      }
+
       updateDisplay();
     });
   }
@@ -165,7 +180,10 @@ function updateDisplay() {
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)
-  updateMemoryBar(showMemory ? currentMemory : null, state.bgColor);
+  updateMemoryBar(showMemory ? currentMemory : null, state.bgColor, {
+    memoryBar: d.memoryBar,
+    memoryBarContainer: d.memoryBarContainer
+  });
 
   // Update all text colors based on state (using cached elements)
   d.infoTexts.forEach(el => el.style.color = state.textColor);
@@ -188,17 +206,8 @@ function updateLoadingDots(slow = false) {
   });
 }
 
-// Check sleep timer
-function checkSleepTimer() {
-  // idle/notification -> sleep after 5 minutes
-  if (currentState === 'idle' || currentState === 'notification') {
-    const elapsed = Date.now() - lastActivityTime;
-    if (elapsed >= SLEEP_TIMEOUT) {
-      currentState = 'sleep';
-      updateDisplay();
-    }
-  }
-}
+// Note: Sleep timer is managed by main process (state-manager.cjs)
+// to avoid race conditions between renderer and main process state changes
 
 // Animation loop using requestAnimationFrame for smoother rendering
 function animationLoop(timestamp) {
@@ -254,7 +263,6 @@ function animationLoop(timestamp) {
     }
   }
 
-  checkSleepTimer();
   requestAnimationFrame(animationLoop);
 }
 
@@ -273,4 +281,5 @@ function cleanup() {
 
 // Initialize on load
 window.onload = init;
+window.onbeforeunload = cleanup;
 window.onunload = cleanup;

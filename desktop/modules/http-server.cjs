@@ -3,7 +3,7 @@
  */
 
 const http = require('http');
-const { HTTP_PORT, MAX_PAYLOAD_SIZE, MAX_WINDOWS } = require('./constants.cjs');
+const { HTTP_PORT, MAX_PAYLOAD_SIZE, MAX_WINDOWS } = require('../shared/config.cjs');
 const { setCorsHeaders, sendJson, sendError, parseJsonBody } = require('./http-utils.cjs');
 const { validateStatusPayload } = require('./validators.cjs');
 
@@ -14,6 +14,7 @@ class HttpServer {
     this.windowManager = windowManager;
     this.app = app;
     this.onStateUpdate = null;  // Callback for menu/icon updates
+    this.onError = null;        // Callback for server errors
   }
 
   start() {
@@ -23,6 +24,10 @@ class HttpServer {
       console.error('HTTP Server error:', err.message);
       if (err.code === 'EADDRINUSE') {
         console.error(`Port ${HTTP_PORT} is already in use`);
+      }
+      // Notify error callback if registered
+      if (this.onError) {
+        this.onError(err);
       }
     });
 
@@ -40,7 +45,7 @@ class HttpServer {
   }
 
   async handleRequest(req, res) {
-    setCorsHeaders(res);
+    setCorsHeaders(res, req);
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200);

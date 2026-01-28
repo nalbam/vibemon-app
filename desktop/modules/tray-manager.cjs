@@ -4,8 +4,10 @@
 
 const { Tray, Menu, nativeImage, BrowserWindow } = require('electron');
 const { createCanvas } = require('canvas');
-const { STATE_COLORS, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { HTTP_PORT, LOCK_MODES, ALWAYS_ON_TOP_MODES } = require('./constants.cjs');
+const {
+  STATE_COLORS, CHARACTER_CONFIG, DEFAULT_CHARACTER,
+  HTTP_PORT, LOCK_MODES, ALWAYS_ON_TOP_MODES
+} = require('../shared/config.cjs');
 
 const COLOR_EYE = '#000000';
 
@@ -310,6 +312,18 @@ class TrayManager {
     } else {
       // Fallback: popup without specific window
       contextMenu.popup();
+    }
+  }
+
+  /**
+   * Cleanup resources on app quit
+   */
+  cleanup() {
+    // Clear tray icon cache to free memory
+    trayIconCache.clear();
+    if (this.tray) {
+      this.tray.destroy();
+      this.tray = null;
     }
   }
 }

@@ -8,7 +8,7 @@
  * - HttpServer: HTTP API server
  */
 
-const { app, ipcMain, BrowserWindow, Menu } = require('electron');
+const { app, ipcMain, BrowserWindow, Menu, dialog } = require('electron');
 const { exec } = require('child_process');
 
 // Modules
@@ -46,7 +46,9 @@ app.on('second-instance', () => {
 // Set up state manager callbacks
 stateManager.onStateTimeout = (projectId, newState) => {
   if (windowManager.hasWindow(projectId)) {
-    const stateData = { state: newState };
+    // Merge with existing state to preserve project, model, memory, etc.
+    const existingState = windowManager.getState(projectId) || {};
+    const stateData = { ...existingState, state: newState };
     windowManager.updateState(projectId, stateData);
     windowManager.sendToWindow(projectId, 'state-update', stateData);
     stateManager.setupStateTimeout(projectId, newState);
@@ -171,6 +173,14 @@ app.whenReady().then(() => {
       trayManager.updateMenu();
     }
   };
+  httpServer.onError = (err) => {
+    if (err.code === 'EADDRINUSE') {
+      dialog.showErrorBox(
+        'Vibe Monitor - Port Conflict',
+        `Port 19280 is already in use.\nAnother instance may be running.\n\nThe app will continue but HTTP API won't work.`
+      );
+    }
+  };
   httpServer.start();
 
   app.on('activate', () => {
@@ -192,6 +202,9 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   stateManager.cleanup();
   windowManager.cleanup();
+  if (trayManager) {
+    trayManager.cleanup();
+  }
   if (httpServer) {
     httpServer.stop();
   }
