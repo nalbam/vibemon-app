@@ -5,7 +5,7 @@ Installs hooks and configuration for Claude Code or Kiro IDE.
 
 Usage:
   # Online install (recommended)
-  curl -fsSL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/install.py | python3
+  curl -fsSL https://nalbam.github.io/vibe-monitor/install.py | python3
 
   # Local install (from cloned repo)
   python3 install.py

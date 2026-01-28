@@ -5,7 +5,7 @@ Vibe Monitor receives status updates from AI coding assistants through their hoo
 ## Quick Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/install.py | python3
+curl -fsSL https://nalbam.github.io/vibe-monitor/install.py | python3
 ```
 
 The script will:
