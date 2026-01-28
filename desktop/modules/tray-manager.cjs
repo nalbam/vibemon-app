@@ -153,6 +153,7 @@ class TrayManager {
                 const newState = { ...state, state: s };
                 this.windowManager.updateState(projectId, newState);
                 this.windowManager.sendToWindow(projectId, 'state-update', newState);
+                this.windowManager.updateAlwaysOnTopByState(projectId, s);
                 this.updateMenu();
                 this.updateIcon();
               }
@@ -178,6 +179,11 @@ class TrayManager {
     });
 
     items.push({ type: 'separator' });
+    items.push({
+      label: 'Show All',
+      enabled: projectIds.length > 0,
+      click: () => this.windowManager.showAllWindows()
+    });
     items.push({
       label: 'Close All',
       enabled: projectIds.length > 0,

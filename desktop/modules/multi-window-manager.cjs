@@ -627,6 +627,21 @@ class MultiWindowManager {
   }
 
   /**
+   * Show all windows
+   * @returns {number} Number of windows shown
+   */
+  showAllWindows() {
+    let count = 0;
+    for (const [projectId, entry] of this.windows) {
+      if (entry.window && !entry.window.isDestroyed()) {
+        entry.window.showInactive();
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Hide window for project
    * @param {string} projectId
    * @returns {boolean}
