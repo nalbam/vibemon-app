@@ -30,69 +30,38 @@ See at a glance what your AI coding assistant is doing — thinking, writing cod
 | Platform | Description | Best For |
 |----------|-------------|----------|
 | **Desktop App** | Electron app with system tray | Daily use, always-visible monitoring |
-| **Web Simulator** | Browser-based preview | Testing, development, no installation |
-| **ESP32 Hardware** | Dedicated LCD display device (experimental) | Desk companion, hardware enthusiasts |
-
-> **Note:** ESP32 hardware support is experimental and not fully tested.
+| **Web Simulator** | Browser-based preview | Testing, no installation |
+| **ESP32 Hardware** | Dedicated LCD display (experimental) | Hardware enthusiasts |
 
 ## Preview
 
 ![Vibe Monitor Demo](screenshots/demo.gif)
 
-```
-┌────────────────────┐
-│                    │
-│    ┌──────────┐    │
-│    │██████████│    │
-│  ██│█ ■    ■ █│██  │  ← Claude character
-│    │██████████│    │     (128x128 pixels)
-│    └─┬─┬──┬─┬─┘    │
-│      │█│  │█│      │
-├────────────────────┤
-│     Working        │  ← Status text
-│     ● ● ● ○        │  ← Loading animation
-├────────────────────┤
-│ 📂 my-project      │  ← Project name
-│ 🛠️ Bash            │  ← Current tool
-│ 🤖 Opus 4.5        │  ← Model
-│ 🧠 45%             │  ← Memory usage
-│ ████████░░░░░░░░░░ │  ← Memory bar (gradient)
-└────────────────────┘
-```
-
 ## Prerequisites
 
-The hook scripts require Python 3 (included in macOS and most Linux distributions).
-
-| Tool | Required For | macOS | Ubuntu/Debian | Alpine |
-|------|--------------|-------|---------------|--------|
-| **Python 3** | Hook scripts (required) | Built-in | Built-in | `apk add python3` |
-| **Node.js** | Desktop App only | `brew install node` | `apt install nodejs npm` | `apk add nodejs npm` |
-
-### Quick Check
-
-```bash
-# Verify Python 3 is installed
-python3 --version
-```
-
-> **Note:** `stty` (for ESP32 serial) is included in all Unix systems.
+| Tool | Required For | Install |
+|------|--------------|---------|
+| **Python 3** | Hook scripts | Built-in on macOS/Linux |
+| **Node.js** | Desktop App | `brew install node` / `apt install nodejs npm` |
 
 ## Quick Start
 
 ### Desktop App
 
 ```bash
-cd desktop
-npm install
-npm start
+npx vibe-monitor@latest
 ```
 
-The app runs in the system tray and listens on `http://127.0.0.1:19280`.
+Or install globally:
+
+```bash
+npm install -g vibe-monitor
+vibe-monitor
+```
 
 ### Web Simulator
 
-No installation required - just open in browser:
+No installation required:
 
 **Online**: https://nalbam.github.io/vibe-monitor/simulator/
 
@@ -101,893 +70,137 @@ No installation required - just open in browser:
 open simulator/index.html
 ```
 
-### ESP32 Hardware (Experimental)
-
-See [ESP32 Setup](#esp32-setup-experimental) section below.
-
 ## Integration
 
-Vibe Monitor receives status updates from AI coding assistants through their hook systems.
-
-### Supported Tools
-
-| Tool | Hook System |
-|------|-------------|
-| **Claude Code** | Shell hooks via `~/.claude/settings.json` |
-| **Kiro** | Agent hooks via `~/.kiro/hooks/` |
-
-### How It Works
-
-```
-AI Coding Assistant → Hooks → Vibe Monitor
-         │                         │
-         └── Events ─────────────→ Display
-             (state, tool,         (Desktop App,
-              project, etc.)        ESP32, or both)
-```
-
----
-
 ### Quick Install (Recommended)
-
-Run the installation script directly from GitHub:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/install.py | python3
 ```
 
-Or if you have the repository cloned:
+The script configures hooks for Claude Code or Kiro automatically.
 
-```bash
-python3 install.py
-```
+### Manual Setup
 
-The script will:
-1. Ask which tool to configure (Claude Code, Kiro, or both)
-2. Download and copy hook scripts and configuration files
-3. Optionally create `.env.local` from sample
-4. Merge hooks into `settings.json` (Claude Code only)
+See [Integration Guide](docs/integration.md) for detailed manual setup instructions.
 
----
+## States
 
-### Claude Code Setup (Manual)
+| State | Color | Description |
+|-------|-------|-------------|
+| `start` | Cyan | Session begins |
+| `idle` | Green | Waiting for input |
+| `thinking` | Purple | Processing prompt |
+| `working` | Blue | Tool executing |
+| `notification` | Yellow | User input needed |
+| `done` | Green | Task completed |
+| `sleep` | Navy | 5min inactivity |
 
-Claude Code uses **hooks** and **statusline** to send data to Vibe Monitor.
-
-| Source | Data Provided | JSON Fields |
-|--------|---------------|-------------|
-| **Hook** | state, event, tool, project | `.hook_event_name`, `.tool_name`, `.cwd` |
-| **Statusline** | model, memory | `.model.display_name`, `.context_window.used_percentage` |
-
-#### 1. Copy scripts
-
-```bash
-# Create hooks directory
-mkdir -p ~/.claude/hooks
-
-# Copy hook script (provides state, tool, project)
-cp config/claude/hooks/vibe-monitor.py ~/.claude/hooks/
-chmod +x ~/.claude/hooks/vibe-monitor.py
-
-# Copy statusline script (provides model, memory)
-cp config/claude/statusline.py ~/.claude/statusline.py
-chmod +x ~/.claude/statusline.py
-```
-
-#### 2. Configure environment variables
-
-The hook script automatically loads `~/.claude/.env.local`:
-
-```bash
-cp config/claude/.env.example ~/.claude/.env.local
-```
-
-#### 3. Edit `~/.claude/.env.local`
-
-```bash
-# Debug mode (optional, 1: enabled, 0: disabled)
-# export DEBUG=1
-
-# Cache file for project metadata (model, memory) - optional
-# Default: ~/.claude/statusline-cache.json
-export VIBE_MONITOR_CACHE="~/.claude/statusline-cache.json"
-
-# Desktop App URL (auto-launches via npx if not running)
-export VIBE_MONITOR_URL="http://127.0.0.1:19280"
-
-# ESP32 USB Serial port (optional)
-# export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
-
-# ESP32 WiFi HTTP (optional)
-# export ESP32_HTTP_URL="http://192.168.1.100"
-```
-
-> **Note:** Character is auto-detected (Claude Code → `clawd`)
-
-#### 4. Register in `~/.claude/settings.json`
-
-Add both hooks and statusline configuration:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
-    ],
-    "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
-    ],
-    "PreToolUse": [
-      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
-    ],
-    "Notification": [
-      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }] }
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "python3 ~/.claude/statusline.py"
-  }
-}
-```
-
-> **Tip:** Use `python3 install.py` to install hooks automatically.
-
-#### 5. Statusline Display
-
-Claude Code statusline shows project, model, and memory usage:
-
-```
-📂 vibe-monitor │ 🤖 Opus 4.5 │ 🧠 ━━━━━━━━╌╌ 80%
-```
-
-The statusline also sends model and memory data to Vibe Monitor in the background.
-
-#### Claude Code Hook Events
-
-| Event | Vibe Monitor State | Description |
-|-------|-------------------|-------------|
-| `SessionStart` | `start` | Session begins |
-| `UserPromptSubmit` | `thinking` | User submits prompt, AI starts thinking |
-| `PreToolUse` | `working` | Tool execution starts |
-| `Notification` | `notification` | User input needed |
-| `Stop` | `done` | Agent turn ends |
-
-> **Note:** `PostToolUse` event is not processed.
-
----
-
-### Kiro Setup (Manual)
-
-Kiro uses `.kiro.hook` files that call the `vibe-monitor.py` script.
-
-#### 1. Copy scripts
-
-```bash
-# Create hooks directory
-mkdir -p ~/.kiro/hooks
-
-# Copy hook script (main logic)
-cp config/kiro/hooks/vibe-monitor.py ~/.kiro/hooks/
-chmod +x ~/.kiro/hooks/vibe-monitor.py
-
-# Copy hook files (event triggers)
-cp config/kiro/hooks/*.kiro.hook ~/.kiro/hooks/
-```
-
-#### 2. Configure environment (Optional)
-
-```bash
-cp config/kiro/.env.example ~/.kiro/.env.local
-```
-
-Edit `~/.kiro/.env.local`:
-
-```bash
-# Debug mode (optional, 1: enabled, 0: disabled)
-# export DEBUG=1
-
-# Desktop App URL (auto-launches via npx if not running)
-export VIBE_MONITOR_URL="http://127.0.0.1:19280"
-
-# ESP32 USB Serial port (optional)
-# export ESP32_SERIAL_PORT="/dev/cu.usbmodem1101"
-
-# ESP32 WiFi HTTP (optional)
-# export ESP32_HTTP_URL="http://192.168.1.100"
-```
-
-> **Note:** Character is auto-set to `kiro` in the hook script.
-
-#### Kiro Hook Events
-
-| Hook File | Event | State | Description |
-|-----------|-------|-------|-------------|
-| `vibe-monitor-prompt-submit.kiro.hook` | `promptSubmit` | `thinking` | User submits prompt |
-| `vibe-monitor-file-created.kiro.hook` | `fileCreated` | `working` | File created |
-| `vibe-monitor-file-edited.kiro.hook` | `fileSaved` | `working` | File edited |
-| `vibe-monitor-file-deleted.kiro.hook` | `fileDeleted` | `working` | File deleted |
-| `vibe-monitor-agent-stop.kiro.hook` | `agentStop` | `done` | Agent turn ends |
-
-#### Available Kiro Event Types
-
-`agentSpawn`, `promptSubmit`, `preToolUse`, `postToolUse`, `agentStop`, `fileCreated`, `fileSaved`, `fileDeleted`
-
----
-
-### Hook Priority
-
-The hook sends status updates in order (only if configured):
-1. **Desktop App** - if `VIBE_MONITOR_URL` is set (auto-launches via `npx vibe-monitor`)
-2. **ESP32 USB Serial** - if `ESP32_SERIAL_PORT` is set
-3. **ESP32 HTTP** - if `ESP32_HTTP_URL` is set
-
----
-
-### Event Mapping Comparison
-
-| Action | Claude Code | Kiro | State |
-|--------|-------------|------|-------|
-| User input | `UserPromptSubmit` | `promptSubmit` | `thinking` |
-| File operations | `PreToolUse` | `fileCreated/fileSaved/fileDeleted` | `working` |
-| Agent done | `Stop` | `agentStop` | `done` |
-| Notification | `Notification` | - | `notification` |
-
-> **Note:** The `done` state auto-transitions to `idle` after 1 minute of inactivity.
+See [Features](docs/features.md) for animations, working state text, and more.
 
 ## Characters
 
-| Character | Color | Description | Auto-selected for |
-|-----------|-------|-------------|-------------------|
-| `clawd` | Orange | Default character with arms and legs | Claude Code |
-| `kiro` | White | Ghost character with wavy tail | Kiro |
-
-Character is **auto-detected** based on the IDE hook events. You can also manually change it via the system tray menu.
-
-## State Display
-
-| State | Background | Eyes | Text | Trigger |
-|-------|------------|------|------|---------|
-| `start` | Cyan | ■ ■ + ✦ | Hello! | Session begins |
-| `idle` | Green | ■ ■ | Ready | Waiting for input |
-| `thinking` | Purple | ▀ ▀ + 💭 | Thinking | User submits prompt |
-| `planning` | Teal | ▀ ▀ + 💭 | Planning | Plan mode active |
-| `working` | Blue | 🕶️ (sunglasses) | (tool-based) | Tool executing |
-| `notification` | Yellow | ● ● + ? | Input? | User input needed |
-| `done` | Green | > < | Done! | Tool completed |
-| `sleep` | Navy | ─ ─ + Z | Zzz... | 5min inactivity |
-
-### Working State Text
-
-The `working` state displays context-aware text based on the active tool:
-
-| Tool | Possible Text |
-|------|---------------|
-| Bash | Running, Executing, Processing |
-| Read | Reading, Scanning, Checking |
-| Edit | Editing, Modifying, Fixing |
-| Write | Writing, Creating, Saving |
-| Grep | Searching, Finding, Looking |
-| Glob | Scanning, Browsing, Finding |
-| Task | Thinking, Working, Planning |
-| WebFetch | Fetching, Loading, Getting |
-| WebSearch | Searching, Googling, Looking |
-| Default | Working, Busy, Coding |
-
-### Animations
-
-- **Floating**: All states have gentle floating motion (±3px horizontal, ±5px vertical, ~3.2s cycle)
-- **Blink**: Idle state blinks every 3 seconds
-- **Loading dots**: Thinking/working states show animated progress dots (thinking is 3x slower)
-- **Matrix rain**: Working state shows movie-style falling green code effect
-  - Flickering white/green head
-  - Gradient tail (white → bright → mid → dim → dark)
-  - Variable speed streams (1-6, mixing slow and fast)
-  - 70% stream density
-- **Sunglasses**: Working state character wears Matrix-style dark green sunglasses
-- **Sparkle**: Session start shows rotating sparkle effect
-- **Thought bubble**: Thinking state shows animated thought bubble
-- **Zzz**: Sleep state shows blinking Z animation
-
-### State Timeout
-
-All platforms (Desktop, Simulator, ESP32) automatically transition between states:
-
-| From State | Timeout | To State |
-|------------|---------|----------|
-| `start`, `done` | 1 minute | `idle` |
-| `idle`, `notification` | 5 minutes | `sleep` |
-
-Any new status update resets the timeout timer and wakes the display from sleep.
-
-**Desktop only:** After 10 minutes in sleep state, the window automatically closes. It will reopen when new status updates arrive.
-
-### Special Behaviors
-
-- **Memory hidden on start**: Memory usage is not displayed during the `start` state for a cleaner welcome screen
-- **Project change resets data**: When switching to a different project, model and memory values are automatically cleared
-
-## Project Lock
-
-Lock the monitor to a specific project to prevent display updates from other projects.
-
-> **Note:** Project lock is only available in **single-window mode**. Switch to single mode first using the tray menu or `/window-mode` API.
-
-### Features
-
-- **Lock modes**: Two auto-lock strategies available (default: `on-thinking`)
-- **Project list**: All incoming projects are tracked (Desktop: unlimited, ESP32: max 10)
-- **Tray menu**: Easily switch or unlock via "Project Lock" submenu
-- **API control**: Lock/unlock via HTTP API or ESP32 serial commands
-- **State reset**: Lock change transitions state to `idle`
-
-### Lock Modes
-
-| Mode | Description |
-|------|-------------|
-| `first-project` | First incoming project is automatically locked |
-| `on-thinking` | Lock when entering thinking state (default) |
-
-### Tray Menu (Desktop)
-
-```
-Project: vibe-monitor 🔒
-─────────────
-Project Lock →
-  ├─ Lock Mode →
-  │   ├─ ○ First project auto-lock
-  │   └─ ● Lock on thinking state
-  ├─ ─────────────
-  ├─ 🔒 vibe-monitor     (currently locked)
-  ├─ ○ another-project
-  └─ ─────────────
-     Unlock
-```
-
-### CLI (vibe-lock skill)
-
-```bash
-# Lock current project
-curl -s -X POST http://127.0.0.1:19280/lock \
-  -H "Content-Type: application/json" \
-  -d "{\"project\":\"$(basename $(pwd))\"}"
-
-# Unlock
-curl -s -X POST http://127.0.0.1:19280/unlock
-```
-
-### CLI (Python script)
-
-The hook script also supports direct CLI commands:
-
-```bash
-# Lock current project
-python3 ~/.claude/hooks/vibe-monitor.py --lock
-
-# Lock specific project
-python3 ~/.claude/hooks/vibe-monitor.py --lock my-project
-
-# Unlock
-python3 ~/.claude/hooks/vibe-monitor.py --unlock
-
-# Get current status
-python3 ~/.claude/hooks/vibe-monitor.py --status
-
-# Get current lock mode
-python3 ~/.claude/hooks/vibe-monitor.py --lock-mode
-
-# Set lock mode
-python3 ~/.claude/hooks/vibe-monitor.py --lock-mode on-thinking
-python3 ~/.claude/hooks/vibe-monitor.py --lock-mode first-project
-```
+| Character | Color | Auto-selected for |
+|-----------|-------|-------------------|
+| `clawd` | Orange | Claude Code |
+| `kiro` | White | Kiro |
 
 ## HTTP API
 
-Both Desktop App (port 19280) and ESP32 WiFi mode (port 80) support the same API.
-
-> **Note:** Desktop App has a 10KB payload size limit for security.
+Default port: `19280`
 
 ### POST /status
 
-Update monitor status.
+Update monitor status:
 
 ```bash
 curl -X POST http://127.0.0.1:19280/status \
   -H "Content-Type: application/json" \
-  -d '{"state":"working","tool":"Bash","project":"my-project","model":"opus","memory":"45%"}'
-```
-
-**Request Body:**
-```json
-{
-  "state": "working",
-  "event": "PreToolUse",
-  "tool": "Bash",
-  "project": "my-project",
-  "model": "opus",
-  "memory": "45%",
-  "character": "clawd"
-}
-```
-
-**Response:**
-```json
-{"success": true, "project": "my-project", "state": "working", "windowCount": 1}
+  -d '{"state":"working","tool":"Bash","project":"my-project"}'
 ```
 
 ### GET /status
 
-Get all windows' status.
+Get all windows' status:
 
 ```bash
 curl http://127.0.0.1:19280/status
 ```
 
-**Response:**
-```json
-{
-  "windowCount": 2,
-  "projects": {
-    "my-project": {"state": "working", "tool": "Bash", "model": "opus", "memory": "45%"},
-    "other-project": {"state": "idle"}
-  }
-}
-```
+### POST /quit
 
-> **Note:** ESP32 returns a single project status with `projectCount` instead of the full projects object.
-
-### GET /windows
-
-List all active windows with their states and positions.
-
-```bash
-curl http://127.0.0.1:19280/windows
-```
-
-**Response:**
-```json
-{
-  "windowCount": 2,
-  "windows": [
-    {"project": "my-project", "state": "working", "bounds": {"x": 1748, "y": 23, "width": 172, "height": 348}},
-    {"project": "other-project", "state": "idle", "bounds": {"x": 1566, "y": 23, "width": 172, "height": 348}}
-  ]
-}
-```
-
-### POST /close
-
-Close a specific project window.
-
-```bash
-curl -X POST http://127.0.0.1:19280/close \
-  -H "Content-Type: application/json" \
-  -d '{"project":"my-project"}'
-```
-
-**Response:**
-```json
-{"success": true, "project": "my-project", "windowCount": 1}
-```
-
-### POST /lock
-
-Lock to a specific project (single-window mode only).
-
-```bash
-# Lock specific project
-curl -X POST http://127.0.0.1:19280/lock \
-  -H "Content-Type: application/json" \
-  -d '{"project":"my-project"}'
-```
-
-**Response:**
-```json
-{"success": true, "lockedProject": "my-project"}
-```
-
-### POST /unlock
-
-Unlock project (single-window mode only).
-
-```bash
-curl -X POST http://127.0.0.1:19280/unlock
-```
-
-**Response:**
-```json
-{"success": true, "lockedProject": null}
-```
-
-### GET /lock-mode
-
-Get current lock mode.
-
-```bash
-curl http://127.0.0.1:19280/lock-mode
-```
-
-**Response:**
-```json
-{
-  "mode": "on-thinking",
-  "modes": {"first-project": "First Project", "on-thinking": "On Thinking"},
-  "lockedProject": null,
-  "windowMode": "single"
-}
-```
-
-### POST /lock-mode
-
-Set lock mode.
-
-```bash
-curl -X POST http://127.0.0.1:19280/lock-mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"first-project"}'
-```
-
-**Response:**
-```json
-{"success": true, "mode": "first-project", "lockedProject": null}
-```
-
-### GET /health
-
-Health check endpoint.
-
-```bash
-curl http://127.0.0.1:19280/health
-```
-
-### GET /window-mode (Desktop only)
-
-Get current window mode.
-
-```bash
-curl http://127.0.0.1:19280/window-mode
-```
-
-**Response:**
-```json
-{"mode": "multi", "windowCount": 2, "lockedProject": null}
-```
-
-### POST /window-mode (Desktop only)
-
-Set window mode.
-
-```bash
-curl -X POST http://127.0.0.1:19280/window-mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"single"}'
-```
-
-**Response:**
-```json
-{"success": true, "mode": "single", "windowCount": 1, "lockedProject": null}
-```
-
-### POST /show (Desktop only)
-
-Show window and position to top-right corner.
-
-```bash
-curl -X POST http://127.0.0.1:19280/show
-```
-
-### POST /quit (Desktop only)
-
-Quit the application.
+Stop the application:
 
 ```bash
 curl -X POST http://127.0.0.1:19280/quit
 ```
 
-### GET /debug (Desktop only)
-
-Get display and window debug information.
-
-```bash
-curl http://127.0.0.1:19280/debug
-```
-
-### POST /reboot (ESP32 WiFi only)
-
-Reboot the ESP32 device.
-
-```bash
-curl -X POST http://192.168.1.100/reboot
-```
+See [API Reference](docs/api.md) for all endpoints.
 
 ## Window Mode
 
-The Desktop App supports two window modes:
+| Mode | Description |
+|------|-------------|
+| `multi` | One window per project (max 5) - **Default** |
+| `single` | One window with project lock support |
 
-| Mode | Description | Features |
-|------|-------------|----------|
-| `multi` | Multiple windows | One window per project, max 5 windows |
-| `single` | Single window | One window with project lock support |
-
-### Multi-Window Mode (Default)
-
-- Each project gets its own window
-- Windows arranged right-to-left from screen corner (alphabetically by project name)
-- Max 5 windows (or screen limit)
-- Auto-rearranges when window closes
-- 10px gap between windows
-
-### Single-Window Mode
-
-- Only one window at a time
-- Project lock feature available (see [Project Lock](#project-lock))
-- When switching projects, the same window is reused
-
-### Switching Modes
+Switch via system tray menu or API:
 
 ```bash
-# Get current mode
-curl http://127.0.0.1:19280/window-mode
-
-# Switch to single window mode
 curl -X POST http://127.0.0.1:19280/window-mode \
   -H "Content-Type: application/json" \
   -d '{"mode":"single"}'
-
-# Switch to multi window mode
-curl -X POST http://127.0.0.1:19280/window-mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"multi"}'
 ```
 
-Or use the system tray menu to toggle between modes.
+## Project Lock
 
-## Desktop App
-
-### Features
-
-- **Frameless window**: Clean floating design
-- **Always on Top**: Stays visible above other windows
-- **System Tray**: Quick access from menubar/taskbar
-- **Platform icons**: Emoji on macOS, pixel art on Windows/Linux
-- **Draggable**: Move window anywhere on screen
-- **Snap to corner**: Auto-snaps to screen corners when near edges (30px threshold)
-- **Click to focus terminal**: Click window to switch to the corresponding iTerm2 tab (macOS only)
-
-### Click to Focus Terminal (macOS)
-
-When running Claude Code in multiple iTerm2 tabs, clicking a Vibe Monitor window automatically switches to the corresponding terminal tab.
-
-**How it works:**
-1. The hook script sends `ITERM_SESSION_ID` environment variable as `terminalId`
-2. Vibe Monitor stores the terminal ID for each project
-3. Clicking the window executes AppleScript to activate the iTerm2 session
-
-**Requirements:**
-- macOS only (uses AppleScript)
-- iTerm2 terminal
-- Hook script must be updated (copies `terminalId` from `ITERM_SESSION_ID`)
-
-### System Tray Menu
-
-- View current state
-- Manually change state
-- Toggle Always on Top
-- Show/Hide window
-- Quit application
-
-### Build
+Lock the monitor to a specific project (single-window mode only):
 
 ```bash
-cd desktop
-
-# macOS
-npm run build:mac
-
-# Windows
-npm run build:win
-
-# Linux
-npm run build:linux
-
-# All platforms
-npm run build:all
-```
-
-See [desktop/README.md](desktop/README.md) for WSL setup and troubleshooting.
-
-## ESP32 Setup (Experimental)
-
-> **Warning:** ESP32 hardware support is experimental and not fully tested.
-
-### Hardware
-
-- **Board**: ESP32-C6-LCD-1.47 (172x320, ST7789V2)
-- **Connection**: USB-C (Serial) or WiFi
-
-### Arduino IDE Setup
-
-1. **Add ESP32 Board Manager**
-   - File → Preferences → Additional Board Manager URLs:
-   - `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-
-2. **Install ESP32 Board**
-   - Tools → Board → Boards Manager → Search "esp32" → Install
-
-3. **Install Libraries**
-   - Tools → Manage Libraries:
-   - `TFT_eSPI` by Bodmer
-   - `ArduinoJson` by Benoit Blanchon
-
-4. **Configure TFT_eSPI**
-   - Copy `User_Setup.h` to Arduino library folder:
-   - `cp User_Setup.h ~/Documents/Arduino/libraries/TFT_eSPI/User_Setup.h`
-
-5. **Upload**
-   - Tools → Board → ESP32C6 Dev Module
-   - Tools → Port → /dev/cu.usbmodem* (or appropriate port)
-   - Click Upload
-
-### WiFi Mode (Optional)
-
-Edit `vibe-monitor.ino`:
-
-```cpp
-#define USE_WIFI
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
-```
-
-### Serial Port Check
-
-```bash
-# macOS
-ls /dev/cu.*
-
-# Linux
-ls /dev/ttyUSB* /dev/ttyACM*
-```
-
-### Testing
-
-```bash
-# Test working state
-echo '{"state":"working","tool":"Bash","project":"test","model":"opus","memory":"50%"}' > /dev/cu.usbmodem1101
-
-# Test idle state
-echo '{"state":"idle","project":"test","model":"opus","memory":"45%"}' > /dev/cu.usbmodem1101
-```
-
-### Serial Commands
-
-ESP32 supports JSON commands via serial:
-
-```bash
-# Lock current project
-echo '{"command":"lock"}' > /dev/cu.usbmodem1101
-
-# Lock specific project
-echo '{"command":"lock","project":"my-project"}' > /dev/cu.usbmodem1101
+# Lock
+python3 ~/.claude/hooks/vibe-monitor.py --lock
 
 # Unlock
-echo '{"command":"unlock"}' > /dev/cu.usbmodem1101
-
-# Get status
-echo '{"command":"status"}' > /dev/cu.usbmodem1101
-# Response: {"state":"working","project":"my-project","locked":"my-project","lockMode":"on-thinking","projectCount":2}
-
-# Get lock mode
-echo '{"command":"lock-mode"}' > /dev/cu.usbmodem1101
-# Response: {"lockMode":"on-thinking"}
-
-# Set lock mode
-echo '{"command":"lock-mode","mode":"first-project"}' > /dev/cu.usbmodem1101
-# Response: {"lockMode":"first-project","locked":null}
-
-# Reboot device
-echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
+python3 ~/.claude/hooks/vibe-monitor.py --unlock
 ```
+
+See [Features](docs/features.md) for lock modes and CLI commands.
+
+## Desktop App Features
+
+- **Frameless window** - Clean floating design
+- **Always on Top** - Stays visible above other windows
+- **System Tray** - Quick access from menubar
+- **Multi-window** - One window per project (up to 5)
+- **Snap to corner** - Auto-snaps near screen edges
+- **Click to focus** - Switch to iTerm2 tab (macOS)
+
+## ESP32 (Experimental)
+
+See [ESP32 Setup](docs/esp32.md) for hardware setup instructions.
 
 ## Troubleshooting
 
-### Desktop App
-
 | Issue | Solution |
 |-------|----------|
-| Window not appearing | Check system tray for app icon, or run `curl -X POST http://127.0.0.1:19280/show` |
-| Port already in use | Another instance may be running. Check with `lsof -i :19280` |
+| Window not appearing | Check system tray, or run `curl -X POST http://127.0.0.1:19280/show` |
+| Port already in use | Check with `lsof -i :19280` |
+| Hook not working | Verify Python 3: `python3 --version` |
 
-### ESP32
+## Documentation
 
-| Issue | Solution |
-|-------|----------|
-| Display not working | Verify `User_Setup.h` is copied to TFT_eSPI library folder |
-| Serial connection failed | Check port permissions: `sudo chmod 666 /dev/ttyUSB0` |
-| JSON parsing error | Ensure JSON ends with LF (`\n`) |
-
-## File Structure
-
-```
-vibe-monitor/
-├── README.md                   # This document
-├── CLAUDE.md                   # AI development guidelines
-├── install.py                  # Installation script (Claude/Kiro)
-├── vibe-monitor.ino            # ESP32 main firmware
-├── sprites.h                   # Character rendering (ESP32)
-├── img_clawd.h                 # Clawd image data (RGB565)
-├── img_kiro.h                  # Kiro image data (RGB565)
-├── User_Setup.h                # TFT display configuration
-├── screenshots/                # Demo images and videos
-│   └── demo.gif                # Demo animation
-├── tools/                      # Development utilities
-│   └── png_to_rgb565.py        # PNG to RGB565 converter
-├── config/                     # IDE configuration files
-│   ├── claude/                 # Claude Code settings
-│   │   ├── .env.example        # Environment variables sample
-│   │   ├── settings.json       # Hook configuration example
-│   │   ├── statusline.py       # Statusline script
-│   │   ├── hooks/              # Hook scripts
-│   │   │   └── vibe-monitor.py # Main hook script
-│   │   └── skills/             # Claude Code skills
-│   │       ├── vibemon-lock/   # Project lock skill
-│   │       │   └── SKILL.md
-│   │       └── vibemon-mode/   # Lock mode skill
-│   │           └── SKILL.md
-│   └── kiro/                   # Kiro IDE settings
-│       ├── .env.example        # Environment variables sample
-│       └── hooks/              # Hook files
-│           ├── vibe-monitor.py # Main hook script
-│           ├── vibe-monitor-prompt-submit.kiro.hook
-│           ├── vibe-monitor-file-created.kiro.hook
-│           ├── vibe-monitor-file-edited.kiro.hook
-│           ├── vibe-monitor-file-deleted.kiro.hook
-│           └── vibe-monitor-agent-stop.kiro.hook
-├── desktop/                    # Desktop app
-│   ├── main.js                 # Electron main process
-│   ├── index.html              # Renderer
-│   ├── preload.js              # IPC bridge
-│   ├── renderer.js             # UI logic
-│   ├── styles.css              # Styles
-│   ├── package.json            # Dependencies
-│   ├── README.md               # Desktop-specific docs
-│   ├── start.sh                # Startup script
-│   ├── bin/cli.js              # CLI entry point (npx)
-│   ├── modules/                # Modular Electron code
-│   │   ├── constants.cjs       # HTTP port, window settings
-│   │   ├── http-server.cjs     # HTTP API server
-│   │   ├── http-utils.cjs      # HTTP utilities
-│   │   ├── multi-window-manager.cjs  # Multi-window management
-│   │   ├── state-manager.cjs   # State/timer management
-│   │   ├── tray-manager.cjs    # System tray icon/menu
-│   │   └── validators.cjs      # Input validation
-│   ├── assets/                 # App icons and resources
-│   │   ├── characters/         # Character images
-│   │   │   ├── clawd-128.png   # Clawd character
-│   │   │   └── kiro-128.png    # Kiro character
-│   │   └── generators/         # Icon generation tools
-│   │       ├── generate-icons.js
-│   │       └── icon-generator.html
-│   └── shared/                 # Shared code (Desktop/Simulator)
-│       ├── config.js           # State/character configuration
-│       ├── character.js        # Character rendering logic
-│       ├── animation.js        # Animation utilities
-│       ├── effects.js          # Visual effects
-│       ├── icons.js            # Icon rendering
-│       ├── utils.js            # Utility functions
-│       └── styles.css          # Shared styles
-└── simulator/                  # Web simulator
-    ├── index.html              # Browser UI
-    ├── app.js                  # Simulator logic
-    └── styles.css              # Simulator styles
-```
+- [Integration Guide](docs/integration.md) - Claude Code & Kiro setup
+- [Features](docs/features.md) - States, animations, window modes
+- [API Reference](docs/api.md) - All HTTP endpoints
+- [ESP32 Setup](docs/esp32.md) - Hardware setup
 
 ## Version History
 
-- **v1.3**: Multi-window mode (default), window mode API, enhanced lock modes
-- **v1.2**: Project lock feature, lock modes, modular desktop architecture, npx support
-- **v1.1**: Desktop app with system tray, memory bar gradient, window snap to corners
-- **v1.0**: Pixel art character (128x128), web simulator
-- **v0.1**: Circular status display
+- **v1.3**: Multi-window mode, window mode API, enhanced lock modes
+- **v1.2**: Project lock, modular architecture, npx support
+- **v1.1**: Desktop app, system tray, memory bar gradient
+- **v1.0**: Pixel art character, web simulator
+
+## License
+
+MIT
