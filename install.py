@@ -234,11 +234,11 @@ def install_claude(source: FileSource) -> bool:
         write_file(skill_dir / "SKILL.md", content, f"skills/{skill}/SKILL.md")
 
     # Handle .env.local
-    env_content = source.get_file("config/claude/.env.sample")
+    env_content = source.get_file("config/claude/.env.example")
     env_local = claude_home / ".env.local"
     if not env_local.exists():
         print()
-        if ask_yes_no("Create .env.local from .env.sample?"):
+        if ask_yes_no("Create .env.local from .env.example?"):
             write_file(env_local, env_content, ".env.local")
     else:
         print()
@@ -316,11 +316,11 @@ def install_kiro(source: FileSource) -> bool:
     write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py")
 
     # Handle .env.local
-    env_content = source.get_file("config/kiro/.env.sample")
+    env_content = source.get_file("config/kiro/.env.example")
     env_local = kiro_home / ".env.local"
     if not env_local.exists():
         print()
-        if ask_yes_no("Create .env.local from .env.sample?"):
+        if ask_yes_no("Create .env.local from .env.example?"):
             write_file(env_local, env_content, ".env.local")
     else:
         print()

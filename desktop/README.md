@@ -159,7 +159,7 @@ curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claud
 curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/statusline.py \
   -o ~/.claude/statusline.py
 
-curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/.env.sample \
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/claude/.env.example \
   -o ~/.claude/.env.local
 ```
 
@@ -217,7 +217,7 @@ for hook in prompt-submit file-created file-edited file-deleted agent-stop; do
     -o ~/.kiro/hooks/vibe-monitor-${hook}.kiro.hook
 done
 
-curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/.env.sample \
+curl -sL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/config/kiro/.env.example \
   -o ~/.kiro/.env.local
 ```
 

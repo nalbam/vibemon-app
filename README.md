@@ -179,7 +179,7 @@ chmod +x ~/.claude/statusline.py
 The hook script automatically loads `~/.claude/.env.local`:
 
 ```bash
-cp config/claude/.env.sample ~/.claude/.env.local
+cp config/claude/.env.example ~/.claude/.env.local
 ```
 
 #### 3. Edit `~/.claude/.env.local`
@@ -281,7 +281,7 @@ cp config/kiro/hooks/*.kiro.hook ~/.kiro/hooks/
 #### 2. Configure environment (Optional)
 
 ```bash
-cp config/kiro/.env.sample ~/.kiro/.env.local
+cp config/kiro/.env.example ~/.kiro/.env.local
 ```
 
 Edit `~/.kiro/.env.local`:
@@ -926,7 +926,7 @@ vibe-monitor/
 │   └── png_to_rgb565.py        # PNG to RGB565 converter
 ├── config/                     # IDE configuration files
 │   ├── claude/                 # Claude Code settings
-│   │   ├── .env.sample         # Environment variables sample
+│   │   ├── .env.example        # Environment variables sample
 │   │   ├── settings.json       # Hook configuration example
 │   │   ├── statusline.py       # Statusline script
 │   │   ├── hooks/              # Hook scripts
@@ -937,7 +937,7 @@ vibe-monitor/
 │   │       └── vibemon-mode/   # Lock mode skill
 │   │           └── SKILL.md
 │   └── kiro/                   # Kiro IDE settings
-│       ├── .env.sample         # Environment variables sample
+│       ├── .env.example        # Environment variables sample
 │       └── hooks/              # Hook files
 │           ├── vibe-monitor.py # Main hook script
 │           ├── vibe-monitor-prompt-submit.kiro.hook
