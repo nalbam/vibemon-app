@@ -724,8 +724,8 @@ class MultiWindowManager {
   /**
    * Update always on top for a specific window based on state
    * Active states (thinking, planning, working, notification) keep always on top
-   * Inactive states (start, idle, done, sleep) disable always on top after grace period
-   * In 'active-only' mode, inactive states have 1 minute grace period before on top is disabled
+   * Inactive states (start, idle, done) have grace period before on top is disabled
+   * Sleep state immediately disables on top (no grace period needed)
    * Respects alwaysOnTopMode setting
    * @param {string} projectId
    * @param {string} state
@@ -737,6 +737,7 @@ class MultiWindowManager {
     }
 
     const isActiveState = ACTIVE_STATES.includes(state);
+    const isSleepState = state === 'sleep';
 
     // Always clear any pending timer first
     this.clearAlwaysOnTopTimer(projectId);
@@ -745,9 +746,11 @@ class MultiWindowManager {
       if (isActiveState) {
         // Active state: immediately enable on top
         entry.window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+      } else if (isSleepState) {
+        // Sleep state: immediately disable on top (no grace period)
+        entry.window.setAlwaysOnTop(false, ALWAYS_ON_TOP_LEVEL);
       } else {
-        // Inactive state: keep on top for grace period, then disable
-        // Keep on top during grace period (in case it was active before)
+        // Other inactive states (start, idle, done): grace period before disable
         entry.window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
 
         const timer = setTimeout(() => {
