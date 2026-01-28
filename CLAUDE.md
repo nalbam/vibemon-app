@@ -66,6 +66,7 @@ open simulator/index.html
 - **Snap to corner**: Window snaps to screen corners when dragged within 30px of edges (150ms debounce)
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status
 - **Click to focus terminal**: Click window to switch to corresponding iTerm2 tab (macOS only, uses `terminalId` from `ITERM_SESSION_ID`)
+- **State-based always on top**: Active states (thinking, planning, working, notification) keep window on top; inactive states (start, idle, done, sleep) disable always on top to reduce screen obstruction
 
 ## Window Mode
 
@@ -74,9 +75,9 @@ Two modes available (`multi` or `single`):
 - **Single mode**: One window, reused for each project; supports project lock
 
 ### Multi-Window Mode
-- Windows arranged right-to-left from screen corner
+- Windows arranged by state and name: active states (right) → inactive states (left), alphabetically within each group
 - Max 5 windows (or screen limit)
-- Auto-rearranges when window closes
+- Auto-rearranges when state changes or window closes
 - 10px gap between windows
 
 ### API Endpoints

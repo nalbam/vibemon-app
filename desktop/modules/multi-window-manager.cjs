@@ -14,7 +14,8 @@ const {
   MAX_WINDOWS,
   SNAP_THRESHOLD,
   SNAP_DEBOUNCE,
-  LOCK_MODES
+  LOCK_MODES,
+  ACTIVE_STATES
 } = require('./constants.cjs');
 
 // Platform-specific always-on-top level
@@ -331,9 +332,11 @@ class MultiWindowManager {
 
     // Show window without stealing focus once ready
     window.once('ready-to-show', () => {
-      if (this.isAlwaysOnTop) {
-        window.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
-      }
+      // Set always on top based on current state (active states only)
+      const currentState = windowEntry.state ? windowEntry.state.state : null;
+      const shouldBeOnTop = currentState && ACTIVE_STATES.includes(currentState);
+      window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
+
       window.showInactive();
 
       // Send initial state if available
@@ -341,7 +344,7 @@ class MultiWindowManager {
         window.webContents.send('state-update', windowEntry.state);
       }
 
-      // Arrange all windows alphabetically
+      // Arrange all windows by state and name
       this.arrangeWindowsByName();
     });
 
@@ -379,22 +382,33 @@ class MultiWindowManager {
   }
 
   /**
-   * Arrange all windows by project name alphabetically
-   * A-Z from left to right (Z = rightmost)
+   * Arrange all windows by state and project name
+   * Right side: active states (thinking, planning, working, notification)
+   * Left side: inactive states (start, idle, done, sleep)
+   * Within each group: sorted by project name (Z first = rightmost)
    */
   arrangeWindowsByName() {
-    // Collect all windows with projectId
+    // Collect all windows with projectId and state
     const windowsList = [];
     for (const [projectId, entry] of this.windows) {
       if (entry.window && !entry.window.isDestroyed()) {
-        windowsList.push({ projectId, entry });
+        const state = entry.state ? entry.state.state : 'idle';
+        const isActive = ACTIVE_STATES.includes(state);
+        windowsList.push({ projectId, entry, isActive });
       }
     }
 
-    // Sort reverse alphabetically by projectId (Z first = rightmost)
-    windowsList.sort((a, b) => b.projectId.localeCompare(a.projectId));
+    // Sort: active first (rightmost), then by name descending (Z first)
+    windowsList.sort((a, b) => {
+      // Active states come first (rightmost)
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      // Within same group, sort by name descending (Z first = rightmost)
+      return b.projectId.localeCompare(a.projectId);
+    });
 
-    // Assign positions (index 0 = rightmost = first alphabetically)
+    // Assign positions (index 0 = rightmost)
     let index = 0;
     for (const { entry } of windowsList) {
       const position = this.calculatePosition(index);
@@ -626,6 +640,23 @@ class MultiWindowManager {
         entry.window.setAlwaysOnTop(value, ALWAYS_ON_TOP_LEVEL);
       }
     }
+  }
+
+  /**
+   * Update always on top for a specific window based on state
+   * Active states (thinking, planning, working, notification) keep always on top
+   * Inactive states (start, idle, done, sleep) disable always on top
+   * @param {string} projectId
+   * @param {string} state
+   */
+  updateAlwaysOnTopByState(projectId, state) {
+    const entry = this.windows.get(projectId);
+    if (!entry || !entry.window || entry.window.isDestroyed()) {
+      return;
+    }
+
+    const shouldBeOnTop = ACTIVE_STATES.includes(state);
+    entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
   }
 
   /**

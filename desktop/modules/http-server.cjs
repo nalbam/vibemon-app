@@ -162,6 +162,12 @@ class HttpServer {
     // Update window state via windowManager
     this.windowManager.updateState(projectId, stateData);
 
+    // Update always on top based on state (active states stay on top)
+    this.windowManager.updateAlwaysOnTopByState(projectId, stateData.state);
+
+    // Rearrange windows by state and name (active states on right)
+    this.windowManager.rearrangeWindows();
+
     // Set up state timeout for this project
     this.stateManager.setupStateTimeout(projectId, stateData.state);
 

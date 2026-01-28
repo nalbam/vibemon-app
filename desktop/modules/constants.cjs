@@ -23,6 +23,10 @@ const LOCK_MODES = {
   'on-thinking': 'On Thinking'
 };
 
+// Active states that keep window always on top
+// Inactive states (start, idle, done, sleep) will disable always on top
+const ACTIVE_STATES = ['thinking', 'planning', 'working', 'notification'];
+
 module.exports = {
   HTTP_PORT,
   MAX_PAYLOAD_SIZE,
@@ -33,5 +37,6 @@ module.exports = {
   WINDOW_GAP,
   MAX_WINDOWS,
   WINDOW_CLOSE_TIMEOUT,
-  LOCK_MODES
+  LOCK_MODES,
+  ACTIVE_STATES
 };
