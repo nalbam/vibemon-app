@@ -134,8 +134,14 @@ def build_payload(state, tool, project):
     model = metadata.get("model", "")
     memory = metadata.get("memory", "")
 
-    # iTerm2 session ID (macOS only)
-    terminal_id = os.environ.get("ITERM_SESSION_ID", "")
+    # Terminal session ID (iTerm2 or Ghostty)
+    terminal_id = ""
+    if os.environ.get("ITERM_SESSION_ID"):
+        # iTerm2 session ID format: w0t4p0:UUID
+        terminal_id = "iterm2:" + os.environ.get("ITERM_SESSION_ID", "")
+    elif os.environ.get("GHOSTTY_PID"):
+        # Ghostty process ID
+        terminal_id = "ghostty:" + os.environ.get("GHOSTTY_PID", "")
 
     return json.dumps({
         "state": state,

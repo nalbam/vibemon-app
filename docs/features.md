@@ -148,11 +148,15 @@ Change via system tray menu: Always on Top → Select mode
 
 ### Click to Focus Terminal (macOS)
 
-When running Claude Code in multiple iTerm2 tabs, clicking a Vibe Monitor window automatically switches to the corresponding terminal tab.
+When running Claude Code in multiple terminal tabs, clicking a Vibe Monitor window automatically switches to the corresponding terminal tab.
+
+**Supported Terminals:**
+- iTerm2 (full tab switching support)
+- Ghostty (application activation)
 
 **Requirements:**
 - macOS only (uses AppleScript)
-- iTerm2 terminal
+- iTerm2 or Ghostty terminal
 
 ### System Tray Menu
 

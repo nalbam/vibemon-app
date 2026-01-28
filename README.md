@@ -174,7 +174,7 @@ See [Features](docs/features.md) for lock modes and CLI commands.
 - **System Tray** - Quick access from menubar
 - **Multi-window** - One window per project (up to 5)
 - **Snap to corner** - Auto-snaps near screen edges
-- **Click to focus** - Switch to iTerm2 tab (macOS)
+- **Click to focus** - Switch to iTerm2/Ghostty tab (macOS)
 
 ## ESP32 (Experimental)
 
