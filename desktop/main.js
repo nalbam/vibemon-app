@@ -131,7 +131,7 @@ ipcMain.handle('focus-terminal', async (event) => {
   }
 
   const terminalType = parts[0];
-  
+
   if (terminalType === 'iterm2') {
     // Extract UUID from terminal ID (format: iterm2:w0t4p0:UUID)
     const uuid = parts.length === 3 ? parts[2] : parts[1];
@@ -201,7 +201,7 @@ ipcMain.handle('focus-terminal', async (event) => {
     `;
 
     return new Promise((resolve) => {
-      exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout) => {
+      exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, _stdout) => {
         if (error) {
           resolve({ success: false, reason: 'applescript-error', error: error.message });
         } else {
