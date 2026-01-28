@@ -105,7 +105,7 @@ ipcMain.on('show-context-menu', (event) => {
   }
 });
 
-// Focus terminal (iTerm2 on macOS)
+// Focus terminal (iTerm2 or Ghostty on macOS)
 ipcMain.handle('focus-terminal', async (event) => {
   // Only supported on macOS
   if (process.platform !== 'darwin') {
@@ -124,46 +124,85 @@ ipcMain.handle('focus-terminal', async (event) => {
     return { success: false, reason: 'no-terminal-id' };
   }
 
-  // Extract UUID from terminal ID (format: w0t4p0:UUID)
-  const uuid = terminalId.includes(':') ? terminalId.split(':')[1] : terminalId;
-  if (!uuid) {
-    return { success: false, reason: 'invalid-terminal-id' };
+  // Parse terminal type and ID (format: "iterm2:w0t4p0:UUID" or "ghostty:PID")
+  const parts = terminalId.split(':');
+  if (parts.length < 2) {
+    return { success: false, reason: 'invalid-terminal-id-format' };
   }
 
-  // Validate UUID format (8-4-4-4-12 hex) to prevent command injection
-  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID_REGEX.test(uuid)) {
-    return { success: false, reason: 'invalid-uuid-format' };
-  }
+  const terminalType = parts[0];
 
-  // AppleScript to activate iTerm2 and select the session
-  const script = `
-    tell application "iTerm2"
-      activate
-      repeat with aWindow in windows
-        repeat with aTab in tabs of aWindow
-          repeat with aSession in sessions of aTab
-            if unique ID of aSession is "${uuid}" then
-              select aTab
-              return "ok"
-            end if
+  if (terminalType === 'iterm2') {
+    // Extract UUID from terminal ID (format: iterm2:w0t4p0:UUID)
+    const uuid = parts.length === 3 ? parts[2] : parts[1];
+    if (!uuid) {
+      return { success: false, reason: 'invalid-terminal-id' };
+    }
+
+    // Validate UUID format (8-4-4-4-12 hex) to prevent command injection
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(uuid)) {
+      return { success: false, reason: 'invalid-uuid-format' };
+    }
+
+    // AppleScript to activate iTerm2 and select the session
+    const script = `
+      tell application "iTerm2"
+        activate
+        repeat with aWindow in windows
+          repeat with aTab in tabs of aWindow
+            repeat with aSession in sessions of aTab
+              if unique ID of aSession is "${uuid}" then
+                select aTab
+                return "ok"
+              end if
+            end repeat
           end repeat
         end repeat
-      end repeat
-      return "not-found"
-    end tell
-  `;
+        return "not-found"
+      end tell
+    `;
 
-  return new Promise((resolve) => {
-    exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout) => {
-      if (error) {
-        resolve({ success: false, reason: 'applescript-error', error: error.message });
-      } else {
-        const result = stdout.trim();
-        resolve({ success: result === 'ok', reason: result });
-      }
+    return new Promise((resolve) => {
+      exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, stdout) => {
+        if (error) {
+          resolve({ success: false, reason: 'applescript-error', error: error.message });
+        } else {
+          const result = stdout.trim();
+          resolve({ success: result === 'ok', reason: result });
+        }
+      });
     });
-  });
+  } else if (terminalType === 'ghostty') {
+    // Extract PID from terminal ID (format: ghostty:PID)
+    const pid = parts[1];
+    if (!pid || !/^\d+$/.test(pid)) {
+      return { success: false, reason: 'invalid-ghostty-pid' };
+    }
+
+    // For Ghostty, we can only activate the application
+    // Ghostty doesn't expose session/PID information via AppleScript
+    // so we can't programmatically switch to a specific tab like iTerm2
+    const script = `
+      tell application "Ghostty"
+        activate
+      end tell
+    `;
+
+    return new Promise((resolve) => {
+      exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (error, _stdout) => {
+        if (error) {
+          resolve({ success: false, reason: 'applescript-error', error: error.message });
+        } else {
+          // Successfully activated Ghostty app
+          // Note: User will need to manually navigate to the correct tab
+          resolve({ success: true, reason: 'activated', note: 'app-activated-only' });
+        }
+      });
+    });
+  } else {
+    return { success: false, reason: 'unsupported-terminal-type' };
+  }
 });
 
 // App lifecycle

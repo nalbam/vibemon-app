@@ -123,7 +123,7 @@ async function init() {
     }
   });
 
-  // Click to focus terminal (iTerm2 on macOS)
+  // Click to focus terminal (iTerm2/Ghostty on macOS)
   document.addEventListener('click', (e) => {
     // Ignore right-click
     if (e.button !== 0) return;
