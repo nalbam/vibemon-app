@@ -17,6 +17,23 @@
   },
   "author": "nalbam",
   "license": "MIT",
+  "keywords": [
+    "vibe-monitor",
+    "claude-code",
+    "kiro",
+    "ai-assistant",
+    "status-monitor",
+    "electron",
+    "pixel-art"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nalbam/vibe-monitor.git"
+  },
+  "homepage": "https://github.com/nalbam/vibe-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/nalbam/vibe-monitor/issues"
+  },
   "dependencies": {
     "canvas": "^3.2.1",
     "electron": "^33.0.0",
@@ -26,6 +43,7 @@
     "electron-builder": "^25.0.0"
   },
   "files": [
+    "README.md",
     "bin/",
     "main.js",
     "preload.js",
