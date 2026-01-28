@@ -130,7 +130,13 @@ AI Coding Assistant → Hooks → Vibe Monitor
 
 ### Quick Install (Recommended)
 
-Use the installation script for automatic setup:
+Run the installation script directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/install.py | python3
+```
+
+Or if you have the repository cloned:
 
 ```bash
 python3 install.py
@@ -138,7 +144,7 @@ python3 install.py
 
 The script will:
 1. Ask which tool to configure (Claude Code, Kiro, or both)
-2. Copy hook scripts and configuration files
+2. Download and copy hook scripts and configuration files
 3. Optionally create `.env.local` from sample
 4. Merge hooks into `settings.json` (Claude Code only)
 

@@ -2,13 +2,46 @@
 """
 Vibe Monitor Installation Script
 Installs hooks and configuration for Claude Code or Kiro IDE.
+
+Usage:
+  # Online install (recommended)
+  curl -fsSL https://raw.githubusercontent.com/nalbam/vibe-monitor/main/install.py | python3
+
+  # Local install (from cloned repo)
+  python3 install.py
 """
 
 import difflib
 import json
 import shutil
 import sys
+import tempfile
 from pathlib import Path
+from urllib.request import urlopen
+from urllib.error import URLError
+
+# GitHub raw content base URL
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/nalbam/vibe-monitor/main"
+
+# Files to download for each platform
+CLAUDE_FILES = [
+    "config/claude/statusline.py",
+    "config/claude/hooks/vibe-monitor.py",
+    "config/claude/.env.sample",
+    "config/claude/settings.json",
+    "config/claude/skills/vibemon-lock/SKILL.md",
+    "config/claude/skills/vibemon-mode/SKILL.md",
+]
+
+KIRO_FILES = [
+    "config/kiro/hooks/vibe-monitor.py",
+    "config/kiro/hooks/vibe-monitor-prompt-submit.kiro.hook",
+    "config/kiro/hooks/vibe-monitor-file-created.kiro.hook",
+    "config/kiro/hooks/vibe-monitor-file-edited.kiro.hook",
+    "config/kiro/hooks/vibe-monitor-file-deleted.kiro.hook",
+    "config/kiro/hooks/vibe-monitor-agent-stop.kiro.hook",
+    "config/kiro/.env.sample",
+]
 
 
 def colored(text: str, color: str) -> str:
@@ -38,16 +71,13 @@ def ask_yes_no(question: str, default: bool = True) -> bool:
         print("Please answer 'y' or 'n'")
 
 
-def copy_file(src: Path, dst: Path, description: str) -> bool:
-    """Copy a file and print status."""
+def download_file(url: str) -> str:
+    """Download a file from URL and return its content."""
     try:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
-        print(f"  {colored('✓', 'green')} {description}")
-        return True
-    except Exception as e:
-        print(f"  {colored('✗', 'red')} {description}: {e}")
-        return False
+        with urlopen(url, timeout=30) as response:
+            return response.read().decode("utf-8")
+    except URLError as e:
+        raise RuntimeError(f"Failed to download {url}: {e}")
 
 
 def show_diff(old_content: str, new_content: str, filename: str) -> bool:
@@ -66,7 +96,7 @@ def show_diff(old_content: str, new_content: str, filename: str) -> bool:
         return False
 
     print(f"\n  {colored('Diff:', 'yellow')}")
-    for line in diff[:50]:  # Limit to 50 lines
+    for line in diff[:50]:
         line = line.rstrip("\n")
         if line.startswith("+") and not line.startswith("+++"):
             print(f"    {colored(line, 'green')}")
@@ -83,48 +113,46 @@ def show_diff(old_content: str, new_content: str, filename: str) -> bool:
     return True
 
 
-def copy_file_with_diff(src: Path, dst: Path, description: str) -> bool:
-    """Copy a file, showing diff and asking for confirmation if it already exists."""
+def write_file(dst: Path, content: str, description: str) -> bool:
+    """Write content to a file."""
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(content)
+        print(f"  {colored('✓', 'green')} {description}")
+        return True
+    except Exception as e:
+        print(f"  {colored('✗', 'red')} {description}: {e}")
+        return False
+
+
+def write_file_with_diff(dst: Path, content: str, description: str) -> bool:
+    """Write content to a file, showing diff if it already exists."""
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
 
         if dst.exists():
             old_content = dst.read_text()
-            new_content = src.read_text()
 
-            if old_content == new_content:
+            if old_content == content:
                 print(f"  {colored('✓', 'green')} {description} (no changes)")
                 return True
 
             print(f"\n  {colored('!', 'yellow')} {description} already exists")
-            has_diff = show_diff(old_content, new_content, dst.name)
+            has_diff = show_diff(old_content, content, dst.name)
 
             if has_diff:
                 if ask_yes_no(f"  Overwrite {description}?"):
-                    shutil.copy2(src, dst)
+                    dst.write_text(content)
                     print(f"  {colored('✓', 'green')} {description} (updated)")
                     return True
                 else:
                     print(f"  {colored('!', 'yellow')} {description} (skipped)")
                     return False
         else:
-            shutil.copy2(src, dst)
+            dst.write_text(content)
             print(f"  {colored('✓', 'green')} {description}")
             return True
 
-    except Exception as e:
-        print(f"  {colored('✗', 'red')} {description}: {e}")
-        return False
-
-
-def copy_directory(src: Path, dst: Path, description: str) -> bool:
-    """Copy a directory recursively and print status."""
-    try:
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst)
-        print(f"  {colored('✓', 'green')} {description}")
-        return True
     except Exception as e:
         print(f"  {colored('✗', 'red')} {description}: {e}")
         return False
@@ -134,12 +162,10 @@ def get_hook_commands(hook_entries: list) -> set:
     """Extract all command strings from hook entries."""
     commands = set()
     for entry in hook_entries:
-        # New format: { "matcher": "", "hooks": [{ "type": "command", "command": "..." }] }
         if "hooks" in entry:
             for hook in entry.get("hooks", []):
                 if "command" in hook:
                     commands.add(hook["command"])
-        # Legacy format: { "command": "..." }
         elif "command" in entry:
             commands.add(entry["command"])
     return commands
@@ -155,17 +181,13 @@ def merge_hooks(existing: dict, new_hooks: dict) -> dict:
         else:
             existing_entries = existing[event]
             existing_cmds = get_hook_commands(existing_entries)
-
-            # Start with existing entries
             result[event] = existing_entries.copy()
 
-            # Add new entries if their commands don't already exist
             for new_entry in new_entries:
                 new_cmds = get_hook_commands([new_entry])
                 if not new_cmds.intersection(existing_cmds):
                     result[event].append(new_entry)
 
-    # Keep any existing events not in new_hooks
     for event in existing:
         if event not in result:
             result[event] = existing[event]
@@ -173,65 +195,65 @@ def merge_hooks(existing: dict, new_hooks: dict) -> dict:
     return result
 
 
-def install_claude(script_dir: Path) -> bool:
+class FileSource:
+    """Abstract file source for local or remote files."""
+
+    def __init__(self, local_dir: Path = None):
+        self.local_dir = local_dir
+        self.is_online = local_dir is None or not (local_dir / "config").exists()
+
+    def get_file(self, path: str) -> str:
+        """Get file content from local or remote source."""
+        if self.is_online:
+            url = f"{GITHUB_RAW_BASE}/{path}"
+            return download_file(url)
+        else:
+            return (self.local_dir / path).read_text()
+
+
+def install_claude(source: FileSource) -> bool:
     """Install Vibe Monitor for Claude Code."""
     print(f"\n{colored('Installing Vibe Monitor for Claude Code...', 'cyan')}\n")
 
     claude_home = Path.home() / ".claude"
-    config_dir = script_dir / "config" / "claude"
-
-    # Create directories
     claude_home.mkdir(parents=True, exist_ok=True)
     (claude_home / "hooks").mkdir(parents=True, exist_ok=True)
     (claude_home / "skills").mkdir(parents=True, exist_ok=True)
 
-    # Copy files
     print("Copying files:")
-    copy_file_with_diff(
-        config_dir / "statusline.py",
-        claude_home / "statusline.py",
-        "statusline.py",
-    )
-    copy_file_with_diff(
-        config_dir / "hooks" / "vibe-monitor.py",
-        claude_home / "hooks" / "vibe-monitor.py",
-        "hooks/vibe-monitor.py",
-    )
-    copy_file(
-        config_dir / ".env.sample",
-        claude_home / ".env.sample",
-        ".env.sample",
-    )
 
-    # Copy skills directories
-    copy_directory(
-        config_dir / "skills" / "vibemon-lock",
-        claude_home / "skills" / "vibemon-lock",
-        "skills/vibemon-lock/",
-    )
-    copy_directory(
-        config_dir / "skills" / "vibemon-mode",
-        claude_home / "skills" / "vibemon-mode",
-        "skills/vibemon-mode/",
-    )
+    # statusline.py
+    content = source.get_file("config/claude/statusline.py")
+    write_file_with_diff(claude_home / "statusline.py", content, "statusline.py")
+
+    # hooks/vibe-monitor.py
+    content = source.get_file("config/claude/hooks/vibe-monitor.py")
+    write_file_with_diff(claude_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py")
+
+    # .env.sample
+    env_content = source.get_file("config/claude/.env.sample")
+    write_file(claude_home / ".env.sample", env_content, ".env.sample")
+
+    # skills
+    for skill in ["vibemon-lock", "vibemon-mode"]:
+        content = source.get_file(f"config/claude/skills/{skill}/SKILL.md")
+        skill_dir = claude_home / "skills" / skill
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        write_file(skill_dir / "SKILL.md", content, f"skills/{skill}/SKILL.md")
 
     # Handle .env.local
     env_local = claude_home / ".env.local"
     if not env_local.exists():
         print()
         if ask_yes_no("Copy .env.sample to .env.local?"):
-            copy_file(
-                config_dir / ".env.sample",
-                env_local,
-                ".env.local (from .env.sample)",
-            )
+            write_file(env_local, env_content, ".env.local (from .env.sample)")
     else:
         print(f"\n  {colored('!', 'yellow')} .env.local already exists, skipping")
 
     # Handle settings.json
     print("\nConfiguring settings.json:")
     settings_file = claude_home / "settings.json"
-    new_settings = json.loads((config_dir / "settings.json").read_text())
+    new_settings = json.loads(source.get_file("config/claude/settings.json"))
 
     if settings_file.exists():
         try:
@@ -239,7 +261,6 @@ def install_claude(script_dir: Path) -> bool:
         except json.JSONDecodeError:
             existing_settings = {}
 
-        # Merge hooks
         if "hooks" in existing_settings:
             existing_settings["hooks"] = merge_hooks(
                 existing_settings["hooks"], new_settings["hooks"]
@@ -247,7 +268,6 @@ def install_claude(script_dir: Path) -> bool:
         else:
             existing_settings["hooks"] = new_settings["hooks"]
 
-        # Handle statusLine
         if "statusLine" in existing_settings:
             existing_cmd = existing_settings["statusLine"].get("command", "")
             new_cmd = new_settings["statusLine"].get("command", "")
@@ -265,11 +285,9 @@ def install_claude(script_dir: Path) -> bool:
             existing_settings["statusLine"] = new_settings["statusLine"]
             print(f"  {colored('✓', 'green')} statusLine added")
 
-        # Write merged settings
         settings_file.write_text(json.dumps(existing_settings, indent=2) + "\n")
         print(f"  {colored('✓', 'green')} hooks merged into settings.json")
     else:
-        # Create new settings.json
         settings_file.write_text(json.dumps(new_settings, indent=2) + "\n")
         print(f"  {colored('✓', 'green')} settings.json created")
 
@@ -277,48 +295,42 @@ def install_claude(script_dir: Path) -> bool:
     return True
 
 
-def install_kiro(script_dir: Path) -> bool:
+def install_kiro(source: FileSource) -> bool:
     """Install Vibe Monitor for Kiro IDE."""
     print(f"\n{colored('Installing Vibe Monitor for Kiro IDE...', 'cyan')}\n")
 
     kiro_home = Path.home() / ".kiro"
-    config_dir = script_dir / "config" / "kiro"
-
-    # Create directories
     kiro_home.mkdir(parents=True, exist_ok=True)
     (kiro_home / "hooks").mkdir(parents=True, exist_ok=True)
 
-    # Copy hook files
     print("Copying files:")
-    hooks_dir = config_dir / "hooks"
-    for hook_file in hooks_dir.glob("*.kiro.hook"):
-        copy_file(
-            hook_file,
-            kiro_home / "hooks" / hook_file.name,
-            f"hooks/{hook_file.name}",
-        )
 
-    copy_file_with_diff(
-        hooks_dir / "vibe-monitor.py",
-        kiro_home / "hooks" / "vibe-monitor.py",
-        "hooks/vibe-monitor.py",
-    )
-    copy_file(
-        config_dir / ".env.sample",
-        kiro_home / ".env.sample",
-        ".env.sample",
-    )
+    # Hook files
+    hook_files = [
+        "vibe-monitor-prompt-submit.kiro.hook",
+        "vibe-monitor-file-created.kiro.hook",
+        "vibe-monitor-file-edited.kiro.hook",
+        "vibe-monitor-file-deleted.kiro.hook",
+        "vibe-monitor-agent-stop.kiro.hook",
+    ]
+    for hook_file in hook_files:
+        content = source.get_file(f"config/kiro/hooks/{hook_file}")
+        write_file(kiro_home / "hooks" / hook_file, content, f"hooks/{hook_file}")
+
+    # vibe-monitor.py
+    content = source.get_file("config/kiro/hooks/vibe-monitor.py")
+    write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py")
+
+    # .env.sample
+    env_content = source.get_file("config/kiro/.env.sample")
+    write_file(kiro_home / ".env.sample", env_content, ".env.sample")
 
     # Handle .env.local
     env_local = kiro_home / ".env.local"
     if not env_local.exists():
         print()
         if ask_yes_no("Copy .env.sample to .env.local?"):
-            copy_file(
-                config_dir / ".env.sample",
-                env_local,
-                ".env.local (from .env.sample)",
-            )
+            write_file(env_local, env_content, ".env.local (from .env.sample)")
     else:
         print(f"\n  {colored('!', 'yellow')} .env.local already exists, skipping")
 
@@ -328,22 +340,16 @@ def install_kiro(script_dir: Path) -> bool:
 
 def main():
     """Main entry point."""
-    script_dir = Path(__file__).parent.resolve()
+    # Determine if running locally or online
+    script_path = Path(__file__).parent.resolve() if "__file__" in dir() else None
+    source = FileSource(script_path)
+
+    mode = "online" if source.is_online else "local"
 
     print(f"\n{colored('╔════════════════════════════════════════╗', 'cyan')}")
     print(f"{colored('║', 'cyan')}   Vibe Monitor Installation Script    {colored('║', 'cyan')}")
     print(f"{colored('╚════════════════════════════════════════╝', 'cyan')}")
-
-    # Check if config directories exist
-    if not (script_dir / "config" / "claude").exists():
-        print(f"\n{colored('Error:', 'red')} config/claude directory not found")
-        print("Please run this script from the vibe-monitor repository root")
-        sys.exit(1)
-
-    if not (script_dir / "config" / "kiro").exists():
-        print(f"\n{colored('Error:', 'red')} config/kiro directory not found")
-        print("Please run this script from the vibe-monitor repository root")
-        sys.exit(1)
+    print(f"  Mode: {colored(mode, 'yellow')}")
 
     # Select platform
     print("\nSelect platform to install:")
@@ -355,14 +361,14 @@ def main():
     while True:
         choice = input("\nYour choice [1/2/3/q]: ").strip().lower()
         if choice in ("1", "claude"):
-            install_claude(script_dir)
+            install_claude(source)
             break
         elif choice in ("2", "kiro"):
-            install_kiro(script_dir)
+            install_kiro(source)
             break
         elif choice in ("3", "both"):
-            install_claude(script_dir)
-            install_kiro(script_dir)
+            install_claude(source)
+            install_kiro(source)
             break
         elif choice in ("q", "quit", "exit"):
             print("\nInstallation cancelled.")
