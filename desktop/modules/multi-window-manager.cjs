@@ -15,6 +15,7 @@ const {
   SNAP_THRESHOLD,
   SNAP_DEBOUNCE,
   LOCK_MODES,
+  ALWAYS_ON_TOP_MODES,
   ACTIVE_STATES
 } = require('./constants.cjs');
 
@@ -26,7 +27,6 @@ const ALWAYS_ON_TOP_LEVEL = process.platform === 'darwin' ? 'floating' : 'screen
 class MultiWindowManager {
   constructor() {
     this.windows = new Map();  // Map<projectId, { window, state }>
-    this.isAlwaysOnTop = true;
     this.snapTimers = new Map();  // Map<projectId, timerId>
     this.onWindowClosed = null;  // callback: (projectId) => void
 
@@ -35,7 +35,8 @@ class MultiWindowManager {
       defaults: {
         windowMode: 'multi',  // 'multi' or 'single'
         lockedProject: null,
-        lockMode: 'on-thinking'  // 'first-project' or 'on-thinking'
+        lockMode: 'on-thinking',  // 'first-project' or 'on-thinking'
+        alwaysOnTopMode: 'active-only'  // 'active-only', 'all', or 'disabled'
       }
     });
 
@@ -43,6 +44,7 @@ class MultiWindowManager {
     this.windowMode = this.store.get('windowMode');
     this.lockedProject = this.store.get('lockedProject');
     this.lockMode = this.store.get('lockMode');
+    this.alwaysOnTopMode = this.store.get('alwaysOnTopMode');
 
     // Project list (tracks all projects seen)
     this.projectList = [];
@@ -303,7 +305,7 @@ class MultiWindowManager {
       y: position.y,
       frame: false,
       transparent: true,
-      alwaysOnTop: this.isAlwaysOnTop,
+      alwaysOnTop: this.alwaysOnTopMode !== 'disabled',
       resizable: false,
       skipTaskbar: false,
       hasShadow: true,
@@ -332,10 +334,9 @@ class MultiWindowManager {
 
     // Show window without stealing focus once ready
     window.once('ready-to-show', () => {
-      // Set always on top based on current state (active states only)
-      // Respects global isAlwaysOnTop setting
+      // Set always on top based on mode and current state
       const currentState = windowEntry.state ? windowEntry.state.state : null;
-      const shouldBeOnTop = this.isAlwaysOnTop && currentState && ACTIVE_STATES.includes(currentState);
+      const shouldBeOnTop = this.shouldBeAlwaysOnTop(currentState);
       window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
 
       window.showInactive();
@@ -631,14 +632,54 @@ class MultiWindowManager {
   }
 
   /**
-   * Set always on top for all windows
-   * @param {boolean} value
+   * Determine if a window should be always on top based on mode and state
+   * @param {string|null} state - Current window state
+   * @returns {boolean}
    */
-  setAlwaysOnTop(value) {
-    this.isAlwaysOnTop = value;
+  shouldBeAlwaysOnTop(state) {
+    switch (this.alwaysOnTopMode) {
+      case 'all':
+        return true;
+      case 'active-only':
+        return state && ACTIVE_STATES.includes(state);
+      case 'disabled':
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Get always on top mode
+   * @returns {'active-only'|'all'|'disabled'}
+   */
+  getAlwaysOnTopMode() {
+    return this.alwaysOnTopMode;
+  }
+
+  /**
+   * Get all available always on top modes
+   * @returns {Object}
+   */
+  getAlwaysOnTopModes() {
+    return ALWAYS_ON_TOP_MODES;
+  }
+
+  /**
+   * Set always on top mode and update all windows
+   * @param {'active-only'|'all'|'disabled'} mode
+   */
+  setAlwaysOnTopMode(mode) {
+    if (!ALWAYS_ON_TOP_MODES[mode]) return;
+
+    this.alwaysOnTopMode = mode;
+    this.store.set('alwaysOnTopMode', mode);
+
+    // Update all windows based on new mode
     for (const [, entry] of this.windows) {
       if (entry.window && !entry.window.isDestroyed()) {
-        entry.window.setAlwaysOnTop(value, ALWAYS_ON_TOP_LEVEL);
+        const state = entry.state ? entry.state.state : null;
+        const shouldBeOnTop = this.shouldBeAlwaysOnTop(state);
+        entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
       }
     }
   }
@@ -647,7 +688,7 @@ class MultiWindowManager {
    * Update always on top for a specific window based on state
    * Active states (thinking, planning, working, notification) keep always on top
    * Inactive states (start, idle, done, sleep) disable always on top
-   * Respects global isAlwaysOnTop setting (if disabled, all windows stay off top)
+   * Respects alwaysOnTopMode setting
    * @param {string} projectId
    * @param {string} state
    */
@@ -657,26 +698,17 @@ class MultiWindowManager {
       return;
     }
 
-    // Respect global setting: if globally disabled, never put on top
-    const shouldBeOnTop = this.isAlwaysOnTop && ACTIVE_STATES.includes(state);
+    const shouldBeOnTop = this.shouldBeAlwaysOnTop(state);
     entry.window.setAlwaysOnTop(shouldBeOnTop, ALWAYS_ON_TOP_LEVEL);
   }
 
   /**
-   * Toggle always on top for all windows
-   * @returns {boolean} - New value
-   */
-  toggleAlwaysOnTop() {
-    this.setAlwaysOnTop(!this.isAlwaysOnTop);
-    return this.isAlwaysOnTop;
-  }
-
-  /**
-   * Get always on top setting
+   * Get always on top setting (legacy compatibility)
    * @returns {boolean}
+   * @deprecated Use getAlwaysOnTopMode() instead
    */
   getIsAlwaysOnTop() {
-    return this.isAlwaysOnTop;
+    return this.alwaysOnTopMode !== 'disabled';
   }
 
   /**
@@ -792,7 +824,7 @@ class MultiWindowManager {
       windows: windowsInfo,
       windowCount: this.windows.size,
       maxWindows: MAX_WINDOWS,
-      isAlwaysOnTop: this.isAlwaysOnTop,
+      alwaysOnTopMode: this.alwaysOnTopMode,
       platform: process.platform
     };
   }

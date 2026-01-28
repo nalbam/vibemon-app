@@ -5,7 +5,7 @@
 const { Tray, Menu, nativeImage, BrowserWindow } = require('electron');
 const { createCanvas } = require('canvas');
 const { STATE_COLORS, CHARACTER_CONFIG, DEFAULT_CHARACTER } = require('../shared/config.cjs');
-const { HTTP_PORT, LOCK_MODES } = require('./constants.cjs');
+const { HTTP_PORT, LOCK_MODES, ALWAYS_ON_TOP_MODES } = require('./constants.cjs');
 
 const COLOR_EYE = '#000000';
 
@@ -212,6 +212,20 @@ class TrayManager {
     return items;
   }
 
+  buildAlwaysOnTopSubmenu() {
+    const currentMode = this.windowManager.getAlwaysOnTopMode();
+
+    return Object.entries(ALWAYS_ON_TOP_MODES).map(([mode, label]) => ({
+      label: label,
+      type: 'radio',
+      checked: currentMode === mode,
+      click: () => {
+        this.windowManager.setAlwaysOnTopMode(mode);
+        this.updateMenu();
+      }
+    }));
+  }
+
   buildMenuTemplate() {
     const projectIds = this.windowManager.getProjectIds();
     const windowCount = projectIds.length;
@@ -240,11 +254,7 @@ class TrayManager {
       { type: 'separator' },
       {
         label: 'Always on Top',
-        type: 'checkbox',
-        checked: this.windowManager.getIsAlwaysOnTop(),
-        click: () => {
-          this.windowManager.toggleAlwaysOnTop();
-        }
+        submenu: this.buildAlwaysOnTopSubmenu()
       },
       {
         label: 'Rearrange',

@@ -51,6 +51,10 @@ stateManager.onStateTimeout = (projectId, newState) => {
     windowManager.sendToWindow(projectId, 'state-update', stateData);
     stateManager.setupStateTimeout(projectId, newState);
 
+    // Update always on top based on new state and rearrange windows
+    windowManager.updateAlwaysOnTopByState(projectId, newState);
+    windowManager.rearrangeWindows();
+
     if (trayManager) {
       trayManager.updateIcon();
       trayManager.updateMenu();
