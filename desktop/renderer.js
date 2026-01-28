@@ -95,6 +95,9 @@ async function init() {
   // Listen for state updates from main process
   if (window.electronAPI) {
     cleanupStateListener = window.electronAPI.onStateUpdate((data) => {
+      // Validate incoming data
+      if (!data || typeof data !== 'object') return;
+
       const prevState = currentState;
       if (data.state !== undefined) currentState = data.state;
       if (data.character !== undefined) currentCharacter = CHARACTER_CONFIG[data.character] ? data.character : DEFAULT_CHARACTER;

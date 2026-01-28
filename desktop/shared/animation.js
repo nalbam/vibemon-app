@@ -1,15 +1,18 @@
 // Shared animation utilities
-import { FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y, BLINK_START_FRAME, BLINK_END_FRAME } from './config.js';
+import {
+  FLOAT_AMPLITUDE_X, FLOAT_AMPLITUDE_Y,
+  FLOAT_CYCLE_FRAMES, BLINK_START_FRAME, BLINK_END_FRAME
+} from './config.js';
 
 // Calculate floating X offset using cosine wave (~3.2 second cycle at 100ms interval)
 export function getFloatOffsetX(animFrame) {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
+  const angle = (animFrame % FLOAT_CYCLE_FRAMES) * (2.0 * Math.PI / FLOAT_CYCLE_FRAMES);
   return Math.cos(angle) * FLOAT_AMPLITUDE_X;
 }
 
 // Calculate floating Y offset using sine wave
 export function getFloatOffsetY(animFrame) {
-  const angle = (animFrame % 32) * (2.0 * Math.PI / 32.0);
+  const angle = (animFrame % FLOAT_CYCLE_FRAMES) * (2.0 * Math.PI / FLOAT_CYCLE_FRAMES);
   return Math.sin(angle) * FLOAT_AMPLITUDE_Y;
 }
 

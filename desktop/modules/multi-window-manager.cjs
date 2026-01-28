@@ -529,7 +529,7 @@ class MultiWindowManager {
    * @returns {boolean}
    */
   isWindowValid(entry) {
-    return this.isWindowValid(entry);
+    return entry && entry.window && !entry.window.isDestroyed();
   }
 
   /**

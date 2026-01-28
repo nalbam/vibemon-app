@@ -2,16 +2,63 @@
  * Shared configuration for Vibe Monitor (ES6)
  * JSON data loading and derived values
  *
- * Constants are in constants.js - re-exported here for convenience
+ * All constants loaded from data/constants.json (single source of truth)
  */
 
 // JSON import (ES6) - Single source of truth
 import states from './data/states.json' with { type: 'json' };
 import characters from './data/characters.json' with { type: 'json' };
 import texts from './data/texts.json' with { type: 'json' };
+import constants from './data/constants.json' with { type: 'json' };
 
-// Re-export all constants for backward compatibility
-export * from './constants.js';
+// =============================================================================
+// Constants (from JSON)
+// =============================================================================
+export const {
+  HTTP_PORT,
+  MAX_PAYLOAD_SIZE,
+  WINDOW_WIDTH,
+  WINDOW_HEIGHT,
+  SNAP_THRESHOLD,
+  SNAP_DEBOUNCE,
+  WINDOW_GAP,
+  MAX_WINDOWS,
+  MAX_PROJECT_LIST,
+  IDLE_TIMEOUT,
+  SLEEP_TIMEOUT,
+  WINDOW_CLOSE_TIMEOUT,
+  ALWAYS_ON_TOP_GRACE_PERIOD,
+  TRAY_ICON_SIZE,
+  DEFAULT_CHARACTER,
+  CHAR_SIZE,
+  SCALE,
+  COLOR_EYE,
+  COLOR_WHITE,
+  FLOAT_AMPLITUDE_X,
+  FLOAT_AMPLITUDE_Y,
+  CHAR_X_BASE,
+  CHAR_Y_BASE,
+  FRAME_INTERVAL,
+  FLOAT_CYCLE_FRAMES,
+  LOADING_DOT_COUNT,
+  THINKING_ANIMATION_SLOWDOWN,
+  BLINK_START_FRAME,
+  BLINK_END_FRAME,
+  PROJECT_NAME_MAX_LENGTH,
+  PROJECT_NAME_TRUNCATE_AT,
+  MODEL_NAME_MAX_LENGTH,
+  MODEL_NAME_TRUNCATE_AT,
+  MATRIX_STREAM_DENSITY,
+  MATRIX_SPEED_MIN,
+  MATRIX_SPEED_MAX,
+  MATRIX_COLUMN_WIDTH,
+  MATRIX_FLICKER_PERIOD,
+  MATRIX_TAIL_LENGTH_FAST,
+  MATRIX_TAIL_LENGTH_SLOW,
+  LOCK_MODES,
+  ALWAYS_ON_TOP_MODES,
+  ACTIVE_STATES
+} = constants;
 
 // =============================================================================
 // State Data (from JSON)

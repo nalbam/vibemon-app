@@ -1,0 +1,64 @@
+{
+  "HTTP_PORT": 19280,
+  "MAX_PAYLOAD_SIZE": 10240,
+
+  "WINDOW_WIDTH": 172,
+  "WINDOW_HEIGHT": 348,
+  "SNAP_THRESHOLD": 30,
+  "SNAP_DEBOUNCE": 150,
+  "WINDOW_GAP": 10,
+  "MAX_WINDOWS": 5,
+  "MAX_PROJECT_LIST": 10,
+
+  "IDLE_TIMEOUT": 60000,
+  "SLEEP_TIMEOUT": 300000,
+  "WINDOW_CLOSE_TIMEOUT": 600000,
+  "ALWAYS_ON_TOP_GRACE_PERIOD": 10000,
+
+  "TRAY_ICON_SIZE": 22,
+
+  "DEFAULT_CHARACTER": "clawd",
+  "CHAR_SIZE": 128,
+  "SCALE": 2,
+
+  "COLOR_EYE": "#000000",
+  "COLOR_WHITE": "#FFFFFF",
+
+  "FLOAT_AMPLITUDE_X": 3,
+  "FLOAT_AMPLITUDE_Y": 5,
+  "CHAR_X_BASE": 22,
+  "CHAR_Y_BASE": 20,
+
+  "FRAME_INTERVAL": 100,
+  "FLOAT_CYCLE_FRAMES": 32,
+  "LOADING_DOT_COUNT": 4,
+  "THINKING_ANIMATION_SLOWDOWN": 3,
+  "BLINK_START_FRAME": 30,
+  "BLINK_END_FRAME": 31,
+
+  "PROJECT_NAME_MAX_LENGTH": 20,
+  "PROJECT_NAME_TRUNCATE_AT": 17,
+  "MODEL_NAME_MAX_LENGTH": 14,
+  "MODEL_NAME_TRUNCATE_AT": 11,
+
+  "MATRIX_STREAM_DENSITY": 0.7,
+  "MATRIX_SPEED_MIN": 1,
+  "MATRIX_SPEED_MAX": 6,
+  "MATRIX_COLUMN_WIDTH": 4,
+  "MATRIX_FLICKER_PERIOD": 3,
+  "MATRIX_TAIL_LENGTH_FAST": 8,
+  "MATRIX_TAIL_LENGTH_SLOW": 6,
+
+  "LOCK_MODES": {
+    "first-project": "First Project",
+    "on-thinking": "On Thinking"
+  },
+
+  "ALWAYS_ON_TOP_MODES": {
+    "active-only": "Active Only",
+    "all": "All Windows",
+    "disabled": "Disabled"
+  },
+
+  "ACTIVE_STATES": ["thinking", "planning", "working", "notification"]
+}
