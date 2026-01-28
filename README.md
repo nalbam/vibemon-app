@@ -91,6 +91,7 @@ See [Integration Guide](docs/integration.md) for detailed manual setup instructi
 | `start` | Cyan | Session begins |
 | `idle` | Green | Waiting for input |
 | `thinking` | Purple | Processing prompt |
+| `planning` | Teal | Plan mode active |
 | `working` | Blue | Tool executing |
 | `notification` | Yellow | User input needed |
 | `done` | Green | Task completed |
