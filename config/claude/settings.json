@@ -1,10 +1,30 @@
 {
   "hooks": {
-    "SessionStart": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "UserPromptSubmit": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "PreToolUse": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "Notification": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }],
-    "Stop": [{ "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ]
   },
   "statusLine": {
     "type": "command",
