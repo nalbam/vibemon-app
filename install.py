@@ -244,17 +244,6 @@ def install_claude(source: FileSource) -> bool:
         skill_dir.mkdir(parents=True, exist_ok=True)
         write_file(skill_dir / "SKILL.md", content, f"skills/{skill}/SKILL.md")
 
-    # Handle .env.local
-    env_content = source.get_file("config/claude/.env.example")
-    env_local = claude_home / ".env.local"
-    if not env_local.exists():
-        print()
-        if ask_yes_no("Create .env.local from .env.example?"):
-            write_file(env_local, env_content, ".env.local")
-    else:
-        print()
-        write_file_with_diff(env_local, env_content, ".env.local")
-
     # Handle settings.json
     print("\nConfiguring settings.json:")
     settings_file = claude_home / "settings.json"
@@ -295,6 +284,17 @@ def install_claude(source: FileSource) -> bool:
     else:
         settings_file.write_text(json.dumps(new_settings, indent=2) + "\n")
         print(f"  {colored('✓', 'green')} settings.json created")
+
+    # Handle .env.local
+    env_content = source.get_file("config/claude/.env.example")
+    env_local = claude_home / ".env.local"
+    if not env_local.exists():
+        print()
+        if ask_yes_no("Create .env.local from .env.example?"):
+            write_file(env_local, env_content, ".env.local")
+    else:
+        print()
+        write_file_with_diff(env_local, env_content, ".env.local")
 
     print(f"\n{colored('Claude Code installation complete!', 'green')}")
     return True
