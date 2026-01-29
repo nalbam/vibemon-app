@@ -33,6 +33,15 @@ void drawKiroImage(TFT_eSPI &tft, int x, int y) {
   tft.pushImage(x, y, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, IMG_KIRO, COLOR_TRANSPARENT_MARKER);
 }
 
+// Sprite versions for double buffering
+void drawClawdImageToSprite(TFT_eSprite &sprite) {
+  sprite.pushImage(0, 0, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, IMG_CLAWD, COLOR_TRANSPARENT_MARKER);
+}
+
+void drawKiroImageToSprite(TFT_eSprite &sprite) {
+  sprite.pushImage(0, 0, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, IMG_KIRO, COLOR_TRANSPARENT_MARKER);
+}
+
 // Character geometry structure
 typedef struct {
   const char* name;
@@ -173,21 +182,21 @@ void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
 void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
 
 // Thinking state texts (random selection)
-const char* THINKING_TEXTS[] = {"Thinking", "Hmm...", "Let me see"};
+const char* THINKING_TEXTS[] = {"Thinking", "Hmm...", "Pondering"};
 
 // Planning state texts (random selection)
-const char* PLANNING_TEXTS[] = {"Planning", "Designing", "Drafting"};
+const char* PLANNING_TEXTS[] = {"Planning", "Design", "Drafting"};
 
-// Tool-based status texts for working state
-const char* BASH_TEXTS[] = {"Running", "Executing", "Processing"};
+// Tool-based status texts for working state (max 8 chars)
+const char* BASH_TEXTS[] = {"Running", "Exec", "Process"};
 const char* READ_TEXTS[] = {"Reading", "Scanning", "Checking"};
-const char* EDIT_TEXTS[] = {"Editing", "Modifying", "Fixing"};
+const char* EDIT_TEXTS[] = {"Editing", "Modify", "Fixing"};
 const char* WRITE_TEXTS[] = {"Writing", "Creating", "Saving"};
-const char* GREP_TEXTS[] = {"Searching", "Finding", "Looking"};
-const char* GLOB_TEXTS[] = {"Scanning", "Browsing", "Finding"};
+const char* GREP_TEXTS[] = {"Search", "Finding", "Looking"};
+const char* GLOB_TEXTS[] = {"Scanning", "Browse", "Finding"};
 const char* TASK_TEXTS[] = {"Thinking", "Working", "Planning"};
 const char* WEBFETCH_TEXTS[] = {"Fetching", "Loading", "Getting"};
-const char* WEBSEARCH_TEXTS[] = {"Searching", "Googling", "Looking"};
+const char* WEBSEARCH_TEXTS[] = {"Search", "Googling", "Looking"};
 const char* DEFAULT_TEXTS[] = {"Working", "Busy", "Coding"};
 
 /*
@@ -208,7 +217,33 @@ const char* DEFAULT_TEXTS[] = {"Working", "Busy", "Coding"};
  *        +------+--+------+
  */
 
-// Draw the Claude character at specified position (128x128)
+// Forward declarations for sprite versions
+void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH);
+void drawEyesToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character);
+
+// Draw the Claude character to sprite buffer (128x128) - NO FLICKERING
+void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
+  // Clear sprite with background color
+  sprite.fillSprite(bgColor);
+
+  // Draw matrix background for working state (behind character)
+  if (eyeType == EYE_FOCUSED) {
+    drawMatrixBackgroundToSprite(sprite, animFrame, CHAR_WIDTH / SCALE,
+                                 character->bodyX, character->bodyY, character->bodyW, character->bodyH);
+  }
+
+  // Draw body using images
+  if (character == &CHAR_CLAWD) {
+    drawClawdImageToSprite(sprite);
+  } else if (character == &CHAR_KIRO) {
+    drawKiroImageToSprite(sprite);
+  }
+
+  // Draw eyes based on type
+  drawEyesToSprite(sprite, eyeType, character);
+}
+
+// Legacy: Draw the Claude character at specified position (128x128) - direct to screen
 void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Clear background area
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
@@ -897,6 +932,202 @@ void drawBrainIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
   // Top bumps
   tft.fillRect(x + 2, y, 1, 1, 0x0000);
   tft.fillRect(x + 5, y, 1, 1, 0x0000);
+}
+
+// =============================================================================
+// Sprite versions of drawing functions (for double buffering - no flickering)
+// =============================================================================
+
+// Draw matrix stream to sprite
+void drawMatrixStreamMovieToSprite(TFT_eSprite &sprite, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
+  if (height < 4) return;
+  int pos = (frame * speed + offset) % height;
+
+  // Head: bright white/green (flicker effect)
+  bool flicker = ((frame + seed) % 3) == 0;
+  uint16_t headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
+  sprite.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
+
+  // Tail with gradient
+  if (pos >= 2) sprite.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos >= 4) sprite.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos >= 6) sprite.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (tailLen >= 8 && pos >= 8) sprite.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+  if (tailLen >= 8 && pos >= 10) sprite.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
+}
+
+// Draw matrix background to sprite
+void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
+  for (int i = 0; i < size / 4; i++) {
+    int seed = i * 23 + 7;
+    if (pseudoRandom(seed + 100) > 0.7) continue;
+    int colX = i * 4 * SCALE;
+    int offset = (int)(pseudoRandom(seed) * size);
+    int speed = 1 + (int)(pseudoRandom(seed + 1) * 6);
+    int tailLen = speed > 3 ? 8 : 6;
+    drawMatrixStreamMovieToSprite(sprite, colX, 0, frame, offset, size, speed, tailLen, seed);
+  }
+}
+
+// Draw sleep eyes to sprite
+void drawSleepEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  int lensW, lensH, lensY, leftLensX, rightLensX;
+  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
+
+  sprite.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  sprite.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
+
+  int closedEyeY = lensY + lensH / 2;
+  int closedEyeH = 2 * SCALE;
+  sprite.fillRect(leftLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+  sprite.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+}
+
+// Draw happy eyes to sprite
+void drawHappyEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  int lensW, lensH, lensY, leftLensX, rightLensX;
+  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
+
+  sprite.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  sprite.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
+
+  int centerY = lensY + lensH / 2;
+  int leftCenterX = leftLensX + lensW / 2;
+  int rightCenterX = rightLensX + lensW / 2;
+
+  // Draw > for left eye
+  sprite.fillRect(leftCenterX - (2 * SCALE), centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  sprite.fillRect(leftCenterX, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  sprite.fillRect(leftCenterX - (2 * SCALE), centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+
+  // Draw < for right eye
+  sprite.fillRect(rightCenterX + SCALE, centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  sprite.fillRect(rightCenterX - SCALE, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  sprite.fillRect(rightCenterX + SCALE, centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+}
+
+// Draw sunglasses to sprite
+void drawSunglassesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
+  int lensW, lensH, lensY, leftLensX, rightLensX;
+  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
+
+  // Left lens
+  sprite.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  sprite.fillRect(leftLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+
+  // Right lens
+  sprite.fillRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  sprite.fillRect(rightLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+
+  // Frame
+  sprite.fillRect(leftLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(rightLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(leftLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(rightLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(leftLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(leftLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(rightLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  sprite.fillRect(rightLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+
+  // Bridge
+  int bridgeY = lensY + lensH / 2;
+  sprite.fillRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, SCALE, COLOR_SUNGLASSES_FRAME);
+}
+
+// Draw sparkle to sprite
+void drawSparkleToSprite(TFT_eSprite &sprite, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
+  int frame = animFrame % 4;
+  sprite.fillRect(x + (2 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+
+  if (frame == 0 || frame == 2) {
+    sprite.fillRect(x + (2 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x, y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+  } else {
+    sprite.fillRect(x, y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x + (4 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x, y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    sprite.fillRect(x + (4 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+  }
+}
+
+// Draw question mark to sprite
+void drawQuestionMarkToSprite(TFT_eSprite &sprite, int x, int y) {
+  uint16_t color = TFT_BLACK;
+  sprite.fillRect(x + (1 * SCALE), y, 4 * SCALE, 2 * SCALE, color);
+  sprite.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  sprite.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  sprite.fillRect(x + (2 * SCALE), y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  sprite.fillRect(x + (2 * SCALE), y + (10 * SCALE), 2 * SCALE, 2 * SCALE, color);
+}
+
+// Draw Zzz to sprite
+void drawZzzToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  if ((frame % 20) < 10) {
+    sprite.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);
+    sprite.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color);
+    sprite.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color);
+    sprite.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color);
+    sprite.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color);
+    sprite.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color);
+  }
+}
+
+// Draw thought bubble to sprite
+void drawThoughtBubbleToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  sprite.fillRect(x, y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  sprite.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
+
+  if ((frame % 12) < 6) {
+    sprite.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
+    sprite.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);
+    sprite.fillRect(x + (3 * SCALE), y + (3 * SCALE), 6 * SCALE, 1 * SCALE, color);
+  } else {
+    sprite.fillRect(x + (4 * SCALE), y - (1 * SCALE), 4 * SCALE, 2 * SCALE, color);
+    sprite.fillRect(x + (3 * SCALE), y + (1 * SCALE), 6 * SCALE, 2 * SCALE, color);
+  }
+}
+
+// Draw eyes to sprite based on eye type
+void drawEyesToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
+  int leftEyeX = character->eyeLeftX * SCALE;
+  int rightEyeX = character->eyeRightX * SCALE;
+  int eyeY = character->eyeY * SCALE;
+  int ew = character->eyeW * SCALE;
+  int eh = character->eyeH * SCALE;
+  bool isKiro = (character == &CHAR_KIRO);
+
+  uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
+  int effectX = rightEyeX + ew + (2 * SCALE);
+  int effectY = eyeY - (18 * SCALE);
+
+  switch (eyeType) {
+    case EYE_FOCUSED:
+      drawSunglassesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
+      break;
+    case EYE_ALERT:
+      drawQuestionMarkToSprite(sprite, effectX, effectY);
+      break;
+    case EYE_SPARKLE:
+      drawSparkleToSprite(sprite, effectX, effectY + (2 * SCALE), effectColor);
+      break;
+    case EYE_THINKING:
+      drawThoughtBubbleToSprite(sprite, effectX, effectY, animFrame, effectColor);
+      break;
+    case EYE_SLEEP:
+      drawSleepEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      drawZzzToSprite(sprite, effectX, effectY, animFrame, effectColor);
+      break;
+    case EYE_BLINK:
+      drawSleepEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    case EYE_HAPPY:
+      drawHappyEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    default:
+      break;
+  }
 }
 
 #endif // SPRITES_H

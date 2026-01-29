@@ -27,6 +27,10 @@ WebServer server(80);
 
 // tft instance is defined in TFT_Compat.h
 
+// Sprite buffer for double buffering (prevents flickering)
+TFT_eSprite charSprite(&tft);
+bool spriteInitialized = false;
+
 // Screen size
 #define SCREEN_WIDTH  172
 #define SCREEN_HEIGHT 320
@@ -226,7 +230,18 @@ void setup() {
   // TFT init
   tft.init();
   tft.setRotation(0);  // Portrait mode
+  tft.setSwapBytes(true);  // Swap bytes for pushImage (ESP32 little-endian)
   tft.fillScreen(TFT_BLACK);
+
+  // Initialize sprite buffer for character (128x128)
+  charSprite.setColorDepth(16);
+  charSprite.setSwapBytes(true);  // Swap bytes for sprite pushImage
+  if (charSprite.createSprite(CHAR_WIDTH, CHAR_HEIGHT)) {
+    spriteInitialized = true;
+    Serial.println("{\"sprite\":\"initialized\",\"size\":\"128x128\"}");
+  } else {
+    Serial.println("{\"sprite\":\"failed\",\"error\":\"memory\"}");
+  }
 
   // Start screen
   drawStartScreen();
@@ -487,9 +502,14 @@ void drawStartScreen() {
   uint16_t bgColor = TFT_BLACK;
   tft.fillScreen(bgColor);
 
-  // Draw character in idle state (128x128)
+  // Draw character in idle state (128x128) using sprite buffer
   const CharacterGeometry* character = getCharacter(currentCharacter);
-  drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, bgColor, character);
+  if (spriteInitialized) {
+    drawCharacterToSprite(charSprite, EYE_NORMAL, bgColor, character);
+    charSprite.pushSprite(CHAR_X_BASE, CHAR_Y_BASE);
+  } else {
+    drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, bgColor, character);
+  }
 
   // Title
   tft.setTextColor(COLOR_TEXT_WHITE);
@@ -529,9 +549,15 @@ void drawStatus() {
   lastCharX = charX;
   lastCharY = charY;
 
-  // Draw character (128x128)
+  // Draw character using sprite buffer (no flickering)
   if (dirtyCharacter || needsRedraw) {
-    drawCharacter(tft, charX, charY, eyeType, bgColor, character);
+    if (spriteInitialized) {
+      drawCharacterToSprite(charSprite, eyeType, bgColor, character);
+      charSprite.pushSprite(charX, charY);
+    } else {
+      // Fallback to direct drawing
+      drawCharacter(tft, charX, charY, eyeType, bgColor, character);
+    }
   }
 
   // Status text (color based on background)
@@ -560,7 +586,7 @@ void drawStatus() {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawFolderIcon(tft, 10, PROJECT_Y, textColor);
-      tft.setCursor(20, PROJECT_Y);
+      tft.setCursor(24, PROJECT_Y);
 
       char displayProject[20];
       size_t maxDisplay = sizeof(displayProject) - 1;
@@ -583,7 +609,7 @@ void drawStatus() {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawToolIcon(tft, 10, TOOL_Y, textColor);
-      tft.setCursor(20, TOOL_Y);
+      tft.setCursor(24, TOOL_Y);
       tft.println(currentTool);
     }
 
@@ -592,7 +618,7 @@ void drawStatus() {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawRobotIcon(tft, 10, MODEL_Y, textColor);
-      tft.setCursor(20, MODEL_Y);
+      tft.setCursor(24, MODEL_Y);
 
       char displayModel[20];
       size_t maxModel = sizeof(displayModel) - 1;
@@ -612,7 +638,7 @@ void drawStatus() {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawBrainIcon(tft, 10, MEMORY_Y, textColor);
-      tft.setCursor(20, MEMORY_Y);
+      tft.setCursor(24, MEMORY_Y);
       tft.println(currentMemory);
 
       // Memory bar (below percentage)
@@ -627,6 +653,30 @@ void drawStatus() {
   dirtyInfo = false;
 }
 
+// Clear only the non-overlapping edges when position changes (no flickering)
+void clearPreviousEdges(int oldX, int oldY, int newX, int newY, int w, int h, uint16_t bgColor) {
+  int dx = newX - oldX;
+  int dy = newY - oldY;
+
+  // Clear left or right edge
+  if (dx > 0) {
+    // Moved right: clear left edge of old position
+    tft.fillRect(oldX, oldY, dx, h, bgColor);
+  } else if (dx < 0) {
+    // Moved left: clear right edge of old position
+    tft.fillRect(oldX + w + dx, oldY, -dx, h, bgColor);
+  }
+
+  // Clear top or bottom edge
+  if (dy > 0) {
+    // Moved down: clear top edge of old position
+    tft.fillRect(oldX, oldY, w, dy, bgColor);
+  } else if (dy < 0) {
+    // Moved up: clear bottom edge of old position
+    tft.fillRect(oldX, oldY + h + dy, w, -dy, bgColor);
+  }
+}
+
 void updateAnimation() {
   uint16_t bgColor = getBackgroundColorEnum(currentState);
   EyeType eyeType = getEyeTypeEnum(currentState);
@@ -636,42 +686,49 @@ void updateAnimation() {
   int newCharX = CHAR_X_BASE + getFloatOffsetX();
   int newCharY = CHAR_Y_BASE + getFloatOffsetY();
 
-  // Only redraw character if position changed (dirty rect optimization)
+  // Check if position changed
   bool positionChanged = (newCharX != lastCharX || newCharY != lastCharY);
-  if (positionChanged) {
-    // Clear previous character area
-    tft.fillRect(lastCharX, lastCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
-    // Draw character at new position
-    drawCharacter(tft, newCharX, newCharY, eyeType, bgColor, character);
+
+  // Determine if we need to redraw character based on state and animation frame
+  bool needsCharRedraw = positionChanged;
+  if (!needsCharRedraw) {
+    if (currentState == STATE_THINKING || currentState == STATE_PLANNING) {
+      needsCharRedraw = (animFrame % 12 == 0);  // Thought bubble animation
+    } else if (currentState == STATE_WORKING) {
+      needsCharRedraw = (animFrame % 2 == 0);   // Matrix rain animation
+    } else if (currentState == STATE_START) {
+      needsCharRedraw = (animFrame % 4 == 0);   // Sparkle animation
+    } else if (currentState == STATE_SLEEP) {
+      needsCharRedraw = (animFrame % 20 == 0);  // Zzz animation
+    }
+  }
+
+  // Redraw character using sprite buffer (no flickering)
+  if (needsCharRedraw) {
+    if (spriteInitialized) {
+      // Clear only non-overlapping edges (prevents flickering)
+      if (positionChanged) {
+        clearPreviousEdges(lastCharX, lastCharY, newCharX, newCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
+      }
+      // Draw to sprite and push to screen in one operation
+      drawCharacterToSprite(charSprite, eyeType, bgColor, character);
+      charSprite.pushSprite(newCharX, newCharY);
+    } else {
+      // Fallback to direct drawing
+      if (positionChanged) {
+        clearPreviousEdges(lastCharX, lastCharY, newCharX, newCharY, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
+      }
+      drawCharacter(tft, newCharX, newCharY, eyeType, bgColor, character);
+    }
     lastCharX = newCharX;
     lastCharY = newCharY;
   }
 
-  // State-specific animations (only redraw when animation frame changes)
+  // Update loading dots for thinking/planning/working states
   if (currentState == STATE_THINKING || currentState == STATE_PLANNING) {
-    // Update loading dots (slow)
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);
-    // Thought bubble changes every 12 frames - only redraw then
-    if (!positionChanged && (animFrame % 12 == 0)) {
-      drawCharacter(tft, newCharX, newCharY, EYE_THINKING, bgColor, character);
-    }
   } else if (currentState == STATE_WORKING) {
-    // Update loading dots and matrix effect
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);
-    // Matrix rain needs frequent updates, but limit to every 2 frames
-    if (!positionChanged && (animFrame % 2 == 0)) {
-      drawCharacter(tft, newCharX, newCharY, EYE_FOCUSED, bgColor, character);
-    }
-  } else if (currentState == STATE_START) {
-    // Sparkle changes every 4 frames - only redraw then
-    if (!positionChanged && (animFrame % 4 == 0)) {
-      drawCharacter(tft, newCharX, newCharY, EYE_SPARKLE, bgColor, character);
-    }
-  } else if (currentState == STATE_SLEEP) {
-    // Zzz changes every 20 frames - only redraw then
-    if (!positionChanged && (animFrame % 20 == 0)) {
-      drawCharacter(tft, newCharX, newCharY, EYE_SLEEP, bgColor, character);
-    }
   }
 }
 
@@ -683,17 +740,29 @@ void drawBlinkAnimation() {
   int charX = lastCharX;  // Use current floating position
   int charY = lastCharY;
 
-  // Close eyes (redraw body area with closed eyes)
-  tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-               character->bodyW * SCALE, 30 * SCALE, character->color);
-  drawBlinkEyes(tft, charX, charY, 0, character);  // Closed
+  if (spriteInitialized) {
+    // Close eyes using sprite
+    drawCharacterToSprite(charSprite, EYE_BLINK, bgColor, character);
+    charSprite.pushSprite(charX, charY);
 
-  delay(100);
+    delay(100);
 
-  // Open eyes
-  tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-               character->bodyW * SCALE, 30 * SCALE, character->color);
-  drawBlinkEyes(tft, charX, charY, 1, character);  // Open
+    // Open eyes using sprite
+    drawCharacterToSprite(charSprite, EYE_NORMAL, bgColor, character);
+    charSprite.pushSprite(charX, charY);
+  } else {
+    // Fallback: Close eyes (redraw body area with closed eyes)
+    tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+                 character->bodyW * SCALE, 30 * SCALE, character->color);
+    drawBlinkEyes(tft, charX, charY, 0, character);  // Closed
+
+    delay(100);
+
+    // Open eyes
+    tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+                 character->bodyW * SCALE, 30 * SCALE, character->color);
+    drawBlinkEyes(tft, charX, charY, 1, character);  // Open
+  }
 }
 
 #ifdef USE_WIFI

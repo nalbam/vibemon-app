@@ -59,4 +59,7 @@ static LGFX tft;
 // Alias for compatibility
 using TFT_eSPI = LGFX;
 
+// Sprite class for double buffering (prevents flickering)
+using TFT_eSprite = lgfx::LGFX_Sprite;
+
 #endif // TFT_COMPAT_H

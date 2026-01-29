@@ -53,7 +53,7 @@ public:
       cfg.dummy_read_bits = 1;
       cfg.readable = true;
       cfg.invert = true;      // ST7789 typically needs inversion
-      cfg.rgb_order = true;   // RGB order (sprites.h uses RGB565)
+      cfg.rgb_order = false;  // BGR order (ST7789 native)
       cfg.dlen_16bit = false;
       cfg.bus_shared = false;
 
