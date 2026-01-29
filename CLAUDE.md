@@ -43,7 +43,7 @@ open simulator/index.html
 
 ### Key Files
 - **ESP32**: `vibe-monitor.ino` (main), `sprites.h` (rendering)
-- **Desktop**: `main.js` (server/tray), `multi-window-manager.cjs` (window management), `index.html` (renderer)
+- **Desktop**: `main.js` (entry point), `modules/` (http-server, multi-window-manager, tray-manager, state-manager), `renderer.js` + `index.html` (renderer)
 - **Shared**: `desktop/shared/` folder (config, character, animation, effects)
 - **Config Data**: `desktop/shared/data/` folder (JSON files - single source of truth)
   - `constants.json`: Window dimensions, animation settings, limits
