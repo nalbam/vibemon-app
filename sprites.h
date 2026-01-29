@@ -20,26 +20,49 @@
 #define COLOR_TRANSPARENT 0x0000  // Transparent (same as background)
 #define COLOR_EFFECT_ALT  0xFD20  // #FFA500 Orange for white character effects
 
-// Transparent color marker for pushImage
-#define COLOR_TRANSPARENT_MARKER 0xFFFF
+// Transparent color marker for pushImage (magenta 0xF81F is common convention)
+#define COLOR_TRANSPARENT_MARKER 0xF81F
 
-// Draw character image from RGB565 array (128x128) using pushImage
-// Uses hardware-accelerated block transfer with transparent color support
+// Helper function to draw PROGMEM image with transparency to TFT
+void drawImageToTFT(TFT_eSPI &tft, int offsetX, int offsetY, const uint16_t* img, int width, int height, uint16_t transparentColor) {
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      uint16_t pixel = pgm_read_word(&img[y * width + x]);
+      if (pixel != transparentColor) {
+        tft.drawPixel(offsetX + x, offsetY + y, pixel);
+      }
+    }
+  }
+}
+
+// Draw character image from RGB565 array (128x128) with transparency
 void drawClawdImage(TFT_eSPI &tft, int x, int y) {
-  tft.pushImage(x, y, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, IMG_CLAWD, COLOR_TRANSPARENT_MARKER);
+  drawImageToTFT(tft, x, y, IMG_CLAWD, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
 void drawKiroImage(TFT_eSPI &tft, int x, int y) {
-  tft.pushImage(x, y, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, IMG_KIRO, COLOR_TRANSPARENT_MARKER);
+  drawImageToTFT(tft, x, y, IMG_KIRO, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, COLOR_TRANSPARENT_MARKER);
+}
+
+// Helper function to draw PROGMEM image with transparency to sprite
+void drawImageWithTransparency(TFT_eSprite &sprite, const uint16_t* img, int width, int height, uint16_t transparentColor) {
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      uint16_t pixel = pgm_read_word(&img[y * width + x]);
+      if (pixel != transparentColor) {
+        sprite.drawPixel(x, y, pixel);
+      }
+    }
+  }
 }
 
 // Sprite versions for double buffering
 void drawClawdImageToSprite(TFT_eSprite &sprite) {
-  sprite.pushImage(0, 0, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, IMG_CLAWD, COLOR_TRANSPARENT_MARKER);
+  drawImageWithTransparency(sprite, IMG_CLAWD, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
 void drawKiroImageToSprite(TFT_eSprite &sprite) {
-  sprite.pushImage(0, 0, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, IMG_KIRO, COLOR_TRANSPARENT_MARKER);
+  drawImageWithTransparency(sprite, IMG_KIRO, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
 // Character geometry structure

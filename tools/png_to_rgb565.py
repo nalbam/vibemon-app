@@ -41,7 +41,7 @@ def convert_png_to_rgb565(input_path, name, target_size=128):
     lines.append(f"const uint16_t IMG_{name.upper()}[{width * height}] PROGMEM = {{")
 
     pixel_values = []
-    transparent_color = 0x0000  # Black as transparent marker
+    transparent_color = 0xF81F  # Magenta as transparent marker
 
     for y in range(height):
         row_values = []
@@ -49,8 +49,8 @@ def convert_png_to_rgb565(input_path, name, target_size=128):
             r, g, b, a = img.getpixel((x, y))
 
             if a < 128:  # Transparent pixel
-                # Use special marker value (will be replaced with background)
-                rgb565 = 0xFFFF  # White as transparent marker (will be handled in drawing)
+                # Use magenta as transparent marker (common convention for sprite transparency)
+                rgb565 = transparent_color
             else:
                 rgb565 = rgb_to_rgb565(r, g, b)
 
