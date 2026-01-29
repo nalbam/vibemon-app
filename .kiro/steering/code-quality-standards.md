@@ -687,7 +687,7 @@ if (this.windows.size >= MAX_WINDOWS) {
 }
 
 // ✅ 프로젝트 목록 크기 제한 (LRU)
-const MAX_PROJECT_LIST = 20;
+const MAX_PROJECT_LIST = 10;
 
 addProjectToList(project) {
   // LRU 방식으로 관리

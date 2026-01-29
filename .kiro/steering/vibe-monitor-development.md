@@ -157,11 +157,11 @@ main.js                      # 오케스트레이터 - 모듈 연결 및 IPC 핸
 - `first-project`: 첫 번째 프로젝트 자동 잠금
 - `on-thinking`: thinking 상태 진입 시 잠금 (기본값)
 - 잠긴 프로젝트는 다른 프로젝트 업데이트 차단
-- 프로젝트 목록은 LRU 방식으로 최대 20개 유지
+- 프로젝트 목록은 LRU 방식으로 최대 10개 유지
 
 **윈도우 위치 관리:**
 - 스냅 기능: 화면 가장자리 30px 이내에서 자동 정렬
-- 디바운스: 드래그 종료 후 300ms 후 스냅 적용
+- 디바운스: 드래그 종료 후 150ms 후 스냅 적용
 - 모든 워크스페이스에서 표시 가능 (setVisibleOnAllWorkspaces)
 
 ## 코딩 표준
@@ -241,10 +241,10 @@ const offsetY = Math.sin(angle) * FLOAT_AMPLITUDE_Y;  // ±5px
 const shouldShow = (animFrame % 20) < 10;
 
 // Matrix rain (working 상태)
-// - 스트림 밀도: 0.4 (40% 확률로 표시)
-// - 속도: 1-4 픽셀/프레임 (랜덤)
-// - 꼬리 길이: 빠른 속도 12px, 느린 속도 8px
-// - 깜빡임: 8프레임마다 헤드 색상 변경
+// - 스트림 밀도: 0.7 (70% 확률로 표시)
+// - 속도: 1-6 픽셀/프레임 (랜덤)
+// - 꼬리 길이: 빠른 속도 8px, 느린 속도 6px
+// - 깜빡임: 3프레임마다 헤드 색상 변경
 ```
 
 **Eye Type별 효과:**
@@ -436,7 +436,7 @@ DEBUG=1 python3 ~/.claude/hooks/vibe-monitor.py
   entry.currentProjectId = newProjectId;
   ```
 - **타이머 정리**: 윈도우 닫힐 때 모든 타이머 정리
-- **LRU 프로젝트 목록**: 최대 20개로 제한
+- **LRU 프로젝트 목록**: 최대 10개로 제한
 
 ### 3. 통신 최적화
 - **HTTP 타임아웃**: 연결 1초, 전체 5초
@@ -444,7 +444,7 @@ DEBUG=1 python3 ~/.claude/hooks/vibe-monitor.py
 - **에러 처리**: 실패 시 조용히 무시 (사용자 경험 방해 안함)
 - **Rate Limiting**: IP당 100 req/min 제한
 - **Payload 검증**: 10KB 제한으로 메모리 보호
-- **디바운스**: 윈도우 이동 시 300ms 디바운스로 스냅 적용
+- **디바운스**: 윈도우 이동 시 150ms 디바운스로 스냅 적용
 
 ### 4. 시스템 리소스 관리
 - **단일 인스턴스**: `app.requestSingleInstanceLock()`으로 중복 실행 방지
