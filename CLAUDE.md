@@ -43,7 +43,7 @@ open simulator/index.html
 
 ### Key Files
 - **ESP32**: `vibe-monitor.ino` (main), `sprites.h` (rendering)
-- **Desktop**: `main.js` (entry point), `modules/` (http-server, multi-window-manager, tray-manager, state-manager), `renderer.js` + `index.html` (renderer)
+- **Desktop**: `main.js` (entry point), `modules/*.cjs` (http-server, multi-window-manager, tray-manager, state-manager, validators, http-utils), `renderer.js` + `index.html` (renderer)
 - **Shared**: `desktop/shared/` folder (config, character, animation, effects)
 - **Config Data**: `desktop/shared/data/` folder (JSON files - single source of truth)
   - `constants.json`: Window dimensions, animation settings, limits
@@ -68,6 +68,8 @@ open simulator/index.html
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status
 - **Click to focus terminal**: Click window to switch to corresponding iTerm2 or Ghostty tab (macOS only, uses `terminalId` from `ITERM_SESSION_ID` or `GHOSTTY_PID`)
 - **State-based always on top**: Active states (thinking, planning, working, notification) keep window on top; inactive states (start, idle, done, sleep) disable always on top to reduce screen obstruction
+- **Always on Top Modes**: `active-only` (default), `all`, `disabled` - configurable via system tray menu
+- **Always on Top Grace Period**: 10 seconds before disabling always on top when state becomes inactive (except sleep which is immediate)
 
 ## Window Mode
 

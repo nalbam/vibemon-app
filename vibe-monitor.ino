@@ -56,6 +56,11 @@ bool spriteInitialized = false;
 // Note: AppState enum is defined in sprites.h
 AppState currentState = STATE_START;
 AppState previousState = STATE_START;
+
+// Blink animation state machine (non-blocking)
+enum BlinkPhase { BLINK_NONE, BLINK_CLOSED };
+BlinkPhase blinkPhase = BLINK_NONE;
+unsigned long blinkPhaseStart = 0;
 char currentCharacter[16] = "clawd";  // "clawd" or "kiro"
 char currentProject[32] = "";
 char currentTool[32] = "";
@@ -284,11 +289,8 @@ void loop() {
     updateAnimation();
   }
 
-  // Idle blink (every 3.2 seconds, matches Desktop/Simulator frame-based timing)
-  if (currentState == STATE_IDLE && millis() - lastBlink > 3200) {
-    lastBlink = millis();
-    drawBlinkAnimation();
-  }
+  // Idle blink (non-blocking state machine)
+  updateBlink();
 
   // Check sleep timer (only from start, idle or done)
   checkSleepTimer();
@@ -484,18 +486,19 @@ void processInput(const char* input) {
   }
 }
 
-// Calculate floating X offset using cosine wave
+// Precomputed lookup tables for floating animation (10-20x faster than sin/cos)
+// Values: cos(i * 2π/32) * 3 and sin(i * 2π/32) * 5, rounded to nearest integer
+const int8_t FLOAT_TABLE_X[32] = {3, 3, 3, 2, 2, 2, 1, 1, 0, -1, -1, -2, -2, -2, -3, -3, -3, -3, -3, -2, -2, -2, -1, -1, 0, 1, 1, 2, 2, 2, 3, 3};
+const int8_t FLOAT_TABLE_Y[32] = {0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 4, 4, 3, 2, 1, 0, -1, -2, -3, -4, -4, -5, -5, -5, -5, -5, -4, -4, -3, -2, -1};
+
+// Calculate floating X offset using lookup table
 int getFloatOffsetX() {
-  // Use cosine wave for smooth horizontal floating (period ~3.2 seconds at 100ms intervals)
-  float angle = (animFrame % 32) * (2.0 * PI / 32.0);
-  return (int)(cos(angle) * FLOAT_AMPLITUDE_X);
+  return FLOAT_TABLE_X[animFrame % 32];
 }
 
-// Calculate floating Y offset using sine wave
+// Calculate floating Y offset using lookup table
 int getFloatOffsetY() {
-  // Use sine wave for smooth vertical floating (period ~3.2 seconds at 100ms intervals)
-  float angle = (animFrame % 32) * (2.0 * PI / 32.0);
-  return (int)(sin(angle) * FLOAT_AMPLITUDE_Y);
+  return FLOAT_TABLE_Y[animFrame % 32];
 }
 
 void drawStartScreen() {
@@ -727,36 +730,54 @@ void updateAnimation() {
   }
 }
 
-void drawBlinkAnimation() {
-  if (currentState != STATE_IDLE) return;
+// Non-blocking blink animation using state machine
+void updateBlink() {
+  // Only blink in idle state
+  if (currentState != STATE_IDLE) {
+    blinkPhase = BLINK_NONE;
+    return;
+  }
 
+  unsigned long now = millis();
   uint16_t bgColor = getBackgroundColorEnum(currentState);
   const CharacterGeometry* character = getCharacterByName(currentCharacter);
-  int charX = lastCharX;  // Use current floating position
+  int charX = lastCharX;
   int charY = lastCharY;
 
-  if (spriteInitialized) {
-    // Close eyes using sprite
-    drawCharacterToSprite(charSprite, EYE_BLINK, bgColor, character);
-    charSprite.pushSprite(charX, charY);
+  switch (blinkPhase) {
+    case BLINK_NONE:
+      // Check if it's time to blink (every 3.2 seconds)
+      if (now - lastBlink > 3200) {
+        // Start blink: draw closed eyes
+        if (spriteInitialized) {
+          drawCharacterToSprite(charSprite, EYE_BLINK, bgColor, character);
+          charSprite.pushSprite(charX, charY);
+        } else {
+          tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+                       character->bodyW * SCALE, 30 * SCALE, character->color);
+          drawBlinkEyes(tft, charX, charY, 0, character);
+        }
+        blinkPhase = BLINK_CLOSED;
+        blinkPhaseStart = now;
+      }
+      break;
 
-    delay(100);
-
-    // Open eyes using sprite
-    drawCharacterToSprite(charSprite, EYE_NORMAL, bgColor, character);
-    charSprite.pushSprite(charX, charY);
-  } else {
-    // Fallback: Close eyes (redraw body area with closed eyes)
-    tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-                 character->bodyW * SCALE, 30 * SCALE, character->color);
-    drawBlinkEyes(tft, charX, charY, 0, character);  // Closed
-
-    delay(100);
-
-    // Open eyes
-    tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-                 character->bodyW * SCALE, 30 * SCALE, character->color);
-    drawBlinkEyes(tft, charX, charY, 1, character);  // Open
+    case BLINK_CLOSED:
+      // Check if blink duration (100ms) has elapsed
+      if (now - blinkPhaseStart >= 100) {
+        // End blink: draw open eyes
+        if (spriteInitialized) {
+          drawCharacterToSprite(charSprite, EYE_NORMAL, bgColor, character);
+          charSprite.pushSprite(charX, charY);
+        } else {
+          tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
+                       character->bodyW * SCALE, 30 * SCALE, character->color);
+          drawBlinkEyes(tft, charX, charY, 1, character);
+        }
+        blinkPhase = BLINK_NONE;
+        lastBlink = now;
+      }
+      break;
   }
 }
 
@@ -807,27 +828,21 @@ void handleStatus() {
 }
 
 void handleStatusGet() {
-  String response = "{\"state\":\"";
-  response += getStateString(currentState);
-  response += "\",\"project\":\"";
-  response += currentProject;
-  response += "\",\"locked\":";
+  char response[256];
   if (strlen(lockedProject) > 0) {
-    response += "\"";
-    response += lockedProject;
-    response += "\"";
+    snprintf(response, sizeof(response),
+      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":\"%s\",\"lockMode\":\"%s\",\"projectCount\":%d}",
+      getStateString(currentState), currentProject, lockedProject, getLockModeString(), projectCount);
   } else {
-    response += "null";
+    snprintf(response, sizeof(response),
+      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":null,\"lockMode\":\"%s\",\"projectCount\":%d}",
+      getStateString(currentState), currentProject, getLockModeString(), projectCount);
   }
-  response += ",\"lockMode\":\"";
-  response += getLockModeString();
-  response += "\",\"projectCount\":";
-  response += projectCount;
-  response += "}";
   server.send(200, "application/json", response);
 }
 
 void handleLock() {
+  char response[128];
   if (server.hasArg("plain")) {
     StaticJsonDocument<128> doc;
     DeserializationError error = deserializeJson(doc, server.arg("plain"));
@@ -835,9 +850,7 @@ void handleLock() {
       const char* projectToLock = doc["project"] | currentProject;
       if (strlen(projectToLock) > 0) {
         lockProject(projectToLock);
-        String response = "{\"success\":true,\"locked\":\"";
-        response += lockedProject;
-        response += "\"}";
+        snprintf(response, sizeof(response), "{\"success\":true,\"locked\":\"%s\"}", lockedProject);
         server.send(200, "application/json", response);
         return;
       }
@@ -846,9 +859,7 @@ void handleLock() {
   // No body or no project - lock current project
   if (strlen(currentProject) > 0) {
     lockProject(currentProject);
-    String response = "{\"success\":true,\"locked\":\"";
-    response += lockedProject;
-    response += "\"}";
+    snprintf(response, sizeof(response), "{\"success\":true,\"locked\":\"%s\"}", lockedProject);
     server.send(200, "application/json", response);
   } else {
     server.send(400, "application/json", "{\"error\":\"No project to lock\"}");
@@ -861,9 +872,10 @@ void handleUnlock() {
 }
 
 void handleLockModeGet() {
-  String response = "{\"lockMode\":\"";
-  response += getLockModeString();
-  response += "\",\"modes\":{\"first-project\":\"First project auto-lock\",\"on-thinking\":\"Lock on thinking state\"}}";
+  char response[192];
+  snprintf(response, sizeof(response),
+    "{\"lockMode\":\"%s\",\"modes\":{\"first-project\":\"First project auto-lock\",\"on-thinking\":\"Lock on thinking state\"}}",
+    getLockModeString());
   server.send(200, "application/json", response);
 }
 
@@ -877,9 +889,8 @@ void handleLockModePost() {
         int newMode = parseLockMode(modeStr);
         if (newMode >= 0) {
           setLockMode(newMode);
-          String response = "{\"success\":true,\"lockMode\":\"";
-          response += getLockModeString();
-          response += "\"}";
+          char response[64];
+          snprintf(response, sizeof(response), "{\"success\":true,\"lockMode\":\"%s\"}", getLockModeString());
           server.send(200, "application/json", response);
           return;
         }
