@@ -514,13 +514,8 @@ void drawStartScreen() {
   // Title
   tft.setTextColor(COLOR_TEXT_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(20, STATUS_TEXT_Y);
-  tft.println("Claude");
-
-  tft.setTextSize(1);
-  tft.setTextColor(COLOR_TEXT_DIM);
-  tft.setCursor(30, STATUS_TEXT_Y + 30);
-  tft.println("Monitor");
+  tft.setCursor(30, STATUS_TEXT_Y);
+  tft.println("VibeMon");
 
   tft.setCursor(30, PROJECT_Y);
   tft.println("Waiting for");
