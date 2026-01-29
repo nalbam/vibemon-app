@@ -60,14 +60,14 @@ def get_state(event_type):
     """Map event type to state."""
     state_map = {
         "agentSpawn": "start",
-        "agentStop": "done",
+        "promptSubmit": "thinking",
+        "userPromptSubmit": "thinking",
         "fileCreated": "working",
         "fileDeleted": "working",
         "fileEdited": "working",
         "preToolUse": "working",
-        "promptSubmit": "thinking",
+        "agentStop": "done",
         "stop": "done",
-        "userPromptSubmit": "thinking",
     }
     return state_map.get(event_type, "working")
 

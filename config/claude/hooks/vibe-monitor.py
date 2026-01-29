@@ -101,8 +101,8 @@ def get_state(event_name, permission_mode="default"):
         "SessionStart": "start",
         "UserPromptSubmit": "thinking",
         "PreToolUse": "working",
-        "Stop": "done",
         "Notification": "notification",
+        "Stop": "done",
     }
     state = state_map.get(event_name, "working")
 
@@ -138,7 +138,7 @@ def build_payload(state, tool, project):
     terminal_id = ""
     iterm_session = os.environ.get("ITERM_SESSION_ID")
     ghostty_pid = os.environ.get("GHOSTTY_PID")
-    
+
     if iterm_session:
         # iTerm2 session ID format: w0t4p0:UUID
         terminal_id = "iterm2:" + iterm_session
