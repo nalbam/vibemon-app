@@ -100,11 +100,8 @@ def parse_json_field(data, field, default=""):
 
 def get_cache_path():
     """Get the cache file path."""
-    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / "statusline-cache.json"))
-    # Expand ~ to home directory
-    if cache_path.startswith("~"):
-        cache_path = str(Path.home()) + cache_path[1:]
-    return cache_path
+    cache_path = os.environ.get("VIBE_MONITOR_CACHE", "~/.claude/statusline-cache.json")
+    return os.path.expanduser(cache_path)
 
 def get_project_name(cwd, transcript_path):
     """Extract project name from cwd or transcript path."""

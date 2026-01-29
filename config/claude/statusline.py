@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 Claude Code Statusline Hook
-Displays minimal status line: project, model, memory
+Displays status line and sends context usage to VibeMon
 """
 
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -64,6 +65,94 @@ def parse_json_field(data, field, default=""):
         return default
 
 # ============================================================================
+# Git Functions
+# ============================================================================
+
+# Branch emoji mapping based on branch name prefix
+BRANCH_EMOJIS = {
+    "main": "🌿",
+    "master": "🌿",
+    "develop": "🌱",
+    "development": "🌱",
+    "dev": "🌱",
+    "feature": "✨",
+    "feat": "✨",
+    "fix": "🐛",
+    "bugfix": "🐛",
+    "hotfix": "🔥",
+    "release": "📦",
+    "chore": "🧹",
+    "refactor": "♻️",
+    "docs": "📝",
+    "doc": "📝",
+    "test": "🧪",
+    "experiment": "🧪",
+    "exp": "🧪",
+}
+
+def get_branch_emoji(branch):
+    """Get emoji for branch based on name or prefix."""
+    if not branch:
+        return "🌿"
+
+    branch_lower = branch.lower()
+
+    # Check exact match first (main, master, develop, etc.)
+    if branch_lower in BRANCH_EMOJIS:
+        return BRANCH_EMOJIS[branch_lower]
+
+    # Check prefix match (feature/xxx, fix/xxx, etc.)
+    prefix = branch_lower.split("/")[0] if "/" in branch_lower else ""
+    if prefix in BRANCH_EMOJIS:
+        return BRANCH_EMOJIS[prefix]
+
+    # Default emoji
+    return "🌿"
+
+def get_git_info(directory):
+    """Get git branch and status information."""
+    if not directory:
+        return ""
+
+    try:
+        # Check if directory is a git repo
+        result = subprocess.run(
+            ["git", "-C", directory, "rev-parse", "--git-dir"],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode != 0:
+            return ""
+
+        # Get current branch
+        result = subprocess.run(
+            ["git", "-C", directory, "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        branch = result.stdout.strip()
+        if not branch:
+            return ""
+
+        # Check for uncommitted changes
+        result = subprocess.run(
+            ["git", "-C", directory, "diff-index", "--quiet", "HEAD", "--"],
+            capture_output=True,
+            timeout=2
+        )
+        has_changes = result.returncode != 0
+
+        if has_changes:
+            return f" git:({branch} *)"
+        else:
+            return f" git:({branch})"
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ""
+
+# ============================================================================
 # Context Window Functions
 # ============================================================================
 
@@ -99,11 +188,8 @@ def get_context_usage(input_data):
 
 def get_cache_path():
     """Get the cache file path."""
-    cache_path = os.environ.get("VIBE_MONITOR_CACHE", str(Path.home() / ".claude" / "statusline-cache.json"))
-    # Expand ~ to home directory
-    if cache_path.startswith("~"):
-        cache_path = str(Path.home()) + cache_path[1:]
-    return cache_path
+    cache_path = os.environ.get("VIBE_MONITOR_CACHE", "~/.claude/statusline-cache.json")
+    return os.path.expanduser(cache_path)
 
 def save_to_cache(project, model, memory):
     """Save project metadata to cache file."""
@@ -172,11 +258,67 @@ def save_to_cache(project, model, memory):
 # ============================================================================
 
 C_RESET = "\033[0m"
+C_BOLD = "\033[1m"
+C_DIM = "\033[2m"
+C_CYAN = "\033[36m"
 C_GREEN = "\033[32m"
 C_YELLOW = "\033[33m"
 C_RED = "\033[31m"
 C_MAGENTA = "\033[35m"
 C_BLUE = "\033[34m"
+C_ORANGE = "\033[38;5;208m"
+
+# ============================================================================
+# Formatting Functions
+# ============================================================================
+
+def format_number(num):
+    """Format number with K/M suffix."""
+    if not num or num == "null" or num == 0:
+        return "0"
+
+    try:
+        num = float(num)
+        int_num = int(num)
+
+        if int_num >= 1000000:
+            return f"{num / 1000000:.1f}M"
+        elif int_num >= 1000:
+            return f"{num / 1000:.1f}K"
+        else:
+            return str(int_num)
+    except (ValueError, TypeError):
+        return "0"
+
+def format_duration(ms):
+    """Format duration in milliseconds to human readable format."""
+    if not ms or ms == "null" or ms == 0:
+        return "0s"
+
+    try:
+        total_seconds = int(ms) // 1000
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+
+        if hours > 0:
+            return f"{hours}h{minutes}m"
+        elif minutes > 0:
+            return f"{minutes}m{seconds}s"
+        else:
+            return f"{seconds}s"
+    except (ValueError, TypeError):
+        return "0s"
+
+def format_cost(cost):
+    """Format cost in USD."""
+    if not cost or cost == "null":
+        return "$0.00"
+
+    try:
+        return f"${float(cost):.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
 
 # ============================================================================
 # Progress Bar Functions
@@ -185,7 +327,7 @@ C_BLUE = "\033[34m"
 def build_progress_bar(percent_str, width=10):
     """Build a colored progress bar."""
     # Remove % sign if present
-    percent_str = percent_str.rstrip("%")
+    percent_str = str(percent_str).rstrip("%")
 
     # Handle empty or invalid input
     if not percent_str or not percent_str.isdigit():
@@ -203,16 +345,19 @@ def build_progress_bar(percent_str, width=10):
     else:
         color = C_GREEN
 
-    # Build the bar
-    bar = "━" * filled + "╌" * empty
+    # Build the bar - filled in color, empty in dim
+    filled_bar = "━" * filled
+    empty_bar = "╌" * empty
 
-    return f"{color}{bar}{C_RESET} {percent}%"
+    return f"{color}{filled_bar}{C_RESET}{C_DIM}{empty_bar}{C_RESET} {percent}%"
 
 # ============================================================================
 # Statusline Output
 # ============================================================================
 
-def build_statusline(model, dir_name, context_usage):
+def build_statusline(model, dir_name, git_info, context_usage,
+                     input_tokens, output_tokens, cost, duration,
+                     lines_added, lines_removed):
     """Build the status line string."""
     SEP = " │ "
     parts = []
@@ -220,9 +365,41 @@ def build_statusline(model, dir_name, context_usage):
     # Directory (📂 icon)
     parts.append(f"{C_BLUE}📂 {dir_name}{C_RESET}")
 
+    # Git info (emoji based on branch type)
+    if git_info:
+        # Extract branch and status from " git:(branch *)" format
+        branch_info = git_info.replace(" git:(", "").rstrip(")")
+        # Get branch name without status indicator for emoji lookup
+        branch_name = branch_info.rstrip(" *")
+        emoji = get_branch_emoji(branch_name)
+        parts.append(f"{C_GREEN}{emoji} {branch_info}{C_RESET}")
+
     # Model (🤖 icon) - remove "Claude " prefix
     short_model = model.replace("Claude ", "") if model.startswith("Claude ") else model
     parts.append(f"{C_MAGENTA}🤖 {short_model}{C_RESET}")
+
+    # Token usage (📥 in / 📤 out)
+    if input_tokens and str(input_tokens) != "0":
+        in_fmt = format_number(input_tokens)
+        out_fmt = format_number(output_tokens)
+        parts.append(f"{C_CYAN}📥 {in_fmt} 📤 {out_fmt}{C_RESET}")
+
+    # Cost (💰 icon)
+    if cost and str(cost) != "0" and cost != "null":
+        cost_fmt = format_cost(cost)
+        parts.append(f"{C_YELLOW}💰 {cost_fmt}{C_RESET}")
+
+    # Duration (⏱️ icon)
+    if duration and str(duration) != "0" and duration != "null":
+        duration_fmt = format_duration(duration)
+        parts.append(f"{C_DIM}⏱️ {duration_fmt}{C_RESET}")
+
+    # Lines changed (+/-)
+    if lines_added and str(lines_added) != "0":
+        lines_part = f"{C_GREEN}+{lines_added}{C_RESET}"
+        if lines_removed and str(lines_removed) != "0":
+            lines_part += f" {C_RED}-{lines_removed}{C_RESET}"
+        parts.append(lines_part)
 
     # Context usage with progress bar (🧠 icon)
     if context_usage:
@@ -246,8 +423,19 @@ def main():
 
     dir_name = os.path.basename(current_dir) if current_dir else ""
 
-    # Get context usage
+    # Get additional info
+    git_info = get_git_info(current_dir)
     context_usage = get_context_usage(input_data)
+
+    # Parse token usage
+    input_tokens = parse_json_field(input_data, "context_window.total_input_tokens", 0)
+    output_tokens = parse_json_field(input_data, "context_window.total_output_tokens", 0)
+
+    # Parse cost info
+    cost = parse_json_field(input_data, "cost.total_cost_usd", 0)
+    duration = parse_json_field(input_data, "cost.total_duration_ms", 0)
+    lines_added = parse_json_field(input_data, "cost.total_lines_added", 0)
+    lines_removed = parse_json_field(input_data, "cost.total_lines_removed", 0)
 
     # Save project metadata to cache (vibe-monitor.py will read this)
     # Fork to background to avoid blocking
@@ -261,7 +449,11 @@ def main():
         os._exit(0)
 
     # Output statusline
-    print(build_statusline(model_display, dir_name, context_usage), end="")
+    print(build_statusline(
+        model_display, dir_name, git_info, context_usage,
+        input_tokens, output_tokens, cost, duration,
+        lines_added, lines_removed
+    ), end="")
 
 if __name__ == "__main__":
     main()
