@@ -60,6 +60,7 @@ def get_state(event_type):
     """Map event type to state."""
     state_map = {
         "agentStop": "done",
+        "preToolUse": "working",
         "fileCreated": "working",
         "fileDeleted": "working",
         "fileEdited": "working",

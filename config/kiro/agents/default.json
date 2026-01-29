@@ -1,0 +1,26 @@
+{
+  "name": "default",
+  "description": "Default agent with Vibe Monitor hooks",
+  "hooks": [
+    {
+      "type": "agentSpawn",
+      "command": "python3",
+      "args": ["~/.kiro/hooks/vibe-monitor.py", "agentSpawn"]
+    },
+    {
+      "type": "userPromptSubmit",
+      "command": "python3",
+      "args": ["~/.kiro/hooks/vibe-monitor.py", "promptSubmit"]
+    },
+    {
+      "type": "preToolUse",
+      "command": "python3",
+      "args": ["~/.kiro/hooks/vibe-monitor.py", "preToolUse"]
+    },
+    {
+      "type": "stop",
+      "command": "python3",
+      "args": ["~/.kiro/hooks/vibe-monitor.py", "agentStop"]
+    }
+  ]
+}
