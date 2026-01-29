@@ -517,10 +517,10 @@ void drawStartScreen() {
   tft.setCursor(30, STATUS_TEXT_Y);
   tft.println("VibeMon");
 
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_TEXT_DIM);
   tft.setCursor(30, PROJECT_Y);
-  tft.println("Waiting for");
-  tft.setCursor(30, PROJECT_Y + 15);
-  tft.println("connection...");
+  tft.println("Waiting...");
 
   // Brand
   tft.setCursor(40, BRAND_Y);
