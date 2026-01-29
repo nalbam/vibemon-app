@@ -21,6 +21,7 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | `memory` | - | `N%` where N is 0-100 |
 | `state` | - | One of valid states |
 | `character` | - | `clawd` or `kiro` |
+| `terminalId` | - | String (terminal session ID) |
 
 ---
 
@@ -252,7 +253,7 @@ curl http://127.0.0.1:19280/stats/data
 {
   "sessions": [...],
   "totalTokens": 12345,
-  "lastUpdated": "2025-01-29T12:00:00Z"
+  "lastUpdated": "2026-01-29T12:00:00Z"
 }
 ```
 
