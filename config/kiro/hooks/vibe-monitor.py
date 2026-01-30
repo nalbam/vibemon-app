@@ -25,24 +25,31 @@ def load_env():
         with open(env_file) as f:
             for line in f:
                 line = line.strip()
-                # Skip comments and empty lines
                 if not line or line.startswith("#"):
                     continue
-                # Remove 'export ' prefix if present
                 if line.startswith("export "):
                     line = line[7:]
                 if "=" in line:
                     key, _, value = line.partition("=")
-                    # Remove quotes if present
                     value = value.strip().strip('"').strip("'")
-                    # Expand ~ to home directory
                     if value.startswith("~"):
                         value = str(Path.home()) + value[1:]
                     os.environ.setdefault(key.strip(), value)
 
 load_env()
 
+# ============================================================================
+# Configuration
+# ============================================================================
+
 DEBUG = os.environ.get("DEBUG", "0") == "1"
+
+# Error messages
+ERR_NO_TARGET = '{"error":"No monitor target available. Set VIBEMON_DESKTOP_URL, VIBEMON_ESP32_URL, or VIBEMON_SERIAL_PORT"}'
+ERR_NO_ESP32 = '{"error":"No ESP32 target available. Set VIBEMON_ESP32_URL or VIBEMON_SERIAL_PORT"}'
+ERR_INVALID_MODE = '{"error":"Invalid mode: %s. Valid modes: first-project, on-thinking"}'
+
+VALID_LOCK_MODES = ["first-project", "on-thinking"]
 
 # ============================================================================
 # Utility Functions
@@ -53,12 +60,16 @@ def debug_log(msg):
     if DEBUG:
         print(f"[DEBUG] {msg}", file=sys.stderr)
 
-def resolve_serial_port(port_pattern):
-    """Resolve serial port pattern with wildcard support.
+def get_config():
+    """Get configuration from environment variables."""
+    return {
+        "desktop_url": os.environ.get("VIBEMON_DESKTOP_URL"),
+        "esp32_url": os.environ.get("VIBEMON_ESP32_URL"),
+        "serial_port": os.environ.get("VIBEMON_SERIAL_PORT"),
+    }
 
-    If port_pattern contains '*', use glob to find the first matching device.
-    Returns the resolved port path or None if not found.
-    """
+def resolve_serial_port(port_pattern):
+    """Resolve serial port pattern with wildcard support."""
     if not port_pattern:
         return None
 
@@ -103,7 +114,7 @@ def build_payload(state, project, event=None):
     return json.dumps(payload)
 
 # ============================================================================
-# Send Functions
+# Low-Level Send Functions
 # ============================================================================
 
 def send_serial(port, data):
@@ -112,11 +123,8 @@ def send_serial(port, data):
         return False
 
     try:
-        # Set baud rate using stty
-        if sys.platform == "darwin":
-            subprocess.run(["stty", "-f", port, "115200"], check=False, capture_output=True)
-        else:
-            subprocess.run(["stty", "-F", port, "115200"], check=False, capture_output=True)
+        flag = "-f" if sys.platform == "darwin" else "-F"
+        subprocess.run(["stty", flag, port, "115200"], check=False, capture_output=True)
 
         with open(port, "w") as f:
             f.write(data + "\n")
@@ -124,45 +132,247 @@ def send_serial(port, data):
     except (IOError, OSError):
         return False
 
-def send_http(url, data):
-    """Send data via HTTP POST."""
+def send_http_post(url, endpoint, data=None):
+    """Send HTTP POST request."""
     try:
-        req = Request(
-            f"{url}/status",
-            data=data.encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        full_url = f"{url}{endpoint}"
+        if data:
+            req = Request(
+                full_url,
+                data=data.encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+        else:
+            req = Request(full_url, method="POST")
+
         with urlopen(req, timeout=5) as response:
-            return response.status == 200
+            return True, response.read().decode("utf-8")
     except (URLError, TimeoutError, OSError):
+        return False, None
+
+def send_http_get(url, endpoint):
+    """Send HTTP GET request."""
+    try:
+        with urlopen(f"{url}{endpoint}", timeout=5) as response:
+            return True, response.read().decode("utf-8")
+    except (URLError, TimeoutError, OSError):
+        return False, None
+
+# ============================================================================
+# Target Resolution
+# ============================================================================
+
+def try_http_targets(endpoint, data=None, method="POST", include_desktop=True):
+    """Try HTTP targets (Desktop → ESP32) in order.
+
+    Returns: (success, result_text)
+    """
+    config = get_config()
+
+    # Try Desktop App
+    if include_desktop and config["desktop_url"]:
+        debug_log(f"Trying Desktop App: {config['desktop_url']}")
+        if method == "POST":
+            success, result = send_http_post(config["desktop_url"], endpoint, data)
+        else:
+            success, result = send_http_get(config["desktop_url"], endpoint)
+        if success:
+            return True, result
+
+    # Try ESP32 HTTP
+    if config["esp32_url"]:
+        debug_log(f"Trying ESP32 HTTP: {config['esp32_url']}")
+        if method == "POST":
+            success, result = send_http_post(config["esp32_url"], endpoint, data)
+        else:
+            success, result = send_http_get(config["esp32_url"], endpoint)
+        if success:
+            return True, result
+
+    return False, None
+
+def try_serial_target(command_data):
+    """Try Serial target.
+
+    Returns: (success, resolved_port)
+    """
+    config = get_config()
+
+    if not config["serial_port"]:
+        return False, None
+
+    resolved_port = resolve_serial_port(config["serial_port"])
+    if not resolved_port:
+        return False, None
+
+    debug_log(f"Trying Serial: {resolved_port}")
+    if send_serial(resolved_port, command_data):
+        return True, resolved_port
+
+    return False, None
+
+def try_all_targets(endpoint, http_data, serial_command, include_desktop=True):
+    """Try all targets: Desktop → ESP32 HTTP → Serial.
+
+    Returns: (success, result_text or None)
+    """
+    # Try HTTP targets first
+    success, result = try_http_targets(endpoint, http_data, "POST", include_desktop)
+    if success:
+        return True, result
+
+    # Try Serial
+    success, _ = try_serial_target(serial_command)
+    if success:
+        return True, None  # Serial doesn't return response
+
+    return False, None
+
+# ============================================================================
+# Command Functions
+# ============================================================================
+
+def send_lock(project):
+    """Lock the monitor to a specific project."""
+    debug_log(f"Locking project: {project}")
+
+    http_data = json.dumps({"project": project})
+    serial_data = json.dumps({"command": "lock", "project": project})
+
+    success, result = try_all_targets("/lock", http_data, serial_data)
+
+    if success:
+        if result:
+            print(result)
+        else:
+            print(f'{{"success":true,"locked":"{project}"}}')
+        return True
+
+    debug_log("No monitor target available")
+    print(ERR_NO_TARGET)
+    return False
+
+def send_unlock():
+    """Unlock the monitor."""
+    debug_log("Unlocking")
+
+    serial_data = json.dumps({"command": "unlock"})
+
+    success, result = try_all_targets("/unlock", None, serial_data)
+
+    if success:
+        if result:
+            print(result)
+        else:
+            print('{"success":true,"locked":null}')
+        return True
+
+    debug_log("No monitor target available")
+    print(ERR_NO_TARGET)
+    return False
+
+def get_status():
+    """Get current status from monitor."""
+    # Try HTTP targets
+    success, result = try_http_targets("/status", method="GET")
+    if success:
+        print(result)
+        return True
+
+    # Try Serial (can't read response)
+    serial_data = json.dumps({"command": "status"})
+    success, _ = try_serial_target(serial_data)
+    if success:
+        print('{"info":"Status command sent via serial. Check device output."}')
+        return True
+
+    debug_log("No monitor target available")
+    print(ERR_NO_TARGET)
+    return False
+
+def get_lock_mode():
+    """Get current lock mode from monitor."""
+    # Try HTTP targets
+    success, result = try_http_targets("/lock-mode", method="GET")
+    if success:
+        print(result)
+        return True
+
+    # Try Serial (can't read response)
+    serial_data = json.dumps({"command": "lock-mode"})
+    success, _ = try_serial_target(serial_data)
+    if success:
+        print('{"info":"Lock-mode command sent via serial. Check device output."}')
+        return True
+
+    debug_log("No monitor target available")
+    print(ERR_NO_TARGET)
+    return False
+
+def set_lock_mode(mode):
+    """Set lock mode on monitor."""
+    if mode not in VALID_LOCK_MODES:
+        print(ERR_INVALID_MODE % mode)
         return False
+
+    debug_log(f"Setting lock mode: {mode}")
+
+    http_data = json.dumps({"mode": mode})
+    serial_data = json.dumps({"command": "lock-mode", "mode": mode})
+
+    success, result = try_all_targets("/lock-mode", http_data, serial_data)
+
+    if success:
+        if result:
+            print(result)
+        else:
+            print(f'{{"success":true,"lockMode":"{mode}"}}')
+        return True
+
+    debug_log("No monitor target available")
+    print(ERR_NO_TARGET)
+    return False
+
+def send_reboot():
+    """Reboot the ESP32 device."""
+    debug_log("Rebooting ESP32")
+
+    serial_data = json.dumps({"command": "reboot"})
+
+    # ESP32 only - don't include Desktop
+    success, result = try_all_targets("/reboot", None, serial_data, include_desktop=False)
+
+    if success:
+        if result:
+            print(result)
+        else:
+            print('{"success":true,"rebooting":true}')
+        return True
+
+    debug_log("No ESP32 target available")
+    print(ERR_NO_ESP32)
+    return False
+
+# ============================================================================
+# Send to All Targets (for status updates)
+# ============================================================================
 
 def is_monitor_running(url):
     """Check if monitor is running."""
-    try:
-        with urlopen(f"{url}/health", timeout=1):
-            return True
-    except (URLError, TimeoutError, OSError):
-        return False
+    success, _ = send_http_get(url, "/health")
+    return success
 
 def show_monitor_window(url):
     """Show the monitor window."""
-    try:
-        req = Request(f"{url}/show", method="POST")
-        with urlopen(req, timeout=1):
-            pass
-    except (URLError, TimeoutError, OSError):
-        pass
+    send_http_post(url, "/show")
 
 def get_user_shell():
-    """Get user's login shell from /etc/passwd or SHELL env."""
-    # Try SHELL environment variable first
+    """Get user's login shell."""
     shell = os.environ.get("SHELL")
     if shell:
         return shell
 
-    # Fallback: read from /etc/passwd
     try:
         import pwd
         return pwd.getpwuid(os.getuid()).pw_shell
@@ -187,91 +397,27 @@ def launch_desktop():
     except Exception as e:
         debug_log(f"Failed to launch Desktop App: {e}")
 
-# ============================================================================
-# Lock/Unlock Functions (Desktop App only)
-# ============================================================================
-
-def send_lock(project):
-    """Lock the monitor to a specific project."""
-    url = os.environ.get("VIBEMON_DESKTOP_URL")
-    if not url:
-        debug_log("VIBEMON_DESKTOP_URL not set")
-        return False
-
-    debug_log(f"Locking project: {project}")
-    try:
-        data = json.dumps({"project": project})
-        req = Request(
-            f"{url}/lock",
-            data=data.encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urlopen(req, timeout=5) as response:
-            print(response.read().decode("utf-8"))
-            return True
-    except (URLError, TimeoutError, OSError):
-        return False
-
-def send_unlock():
-    """Unlock the monitor."""
-    url = os.environ.get("VIBEMON_DESKTOP_URL")
-    if not url:
-        debug_log("VIBEMON_DESKTOP_URL not set")
-        return False
-
-    debug_log("Unlocking")
-    try:
-        req = Request(f"{url}/unlock", method="POST")
-        with urlopen(req, timeout=5) as response:
-            print(response.read().decode("utf-8"))
-            return True
-    except (URLError, TimeoutError, OSError):
-        return False
-
-def get_status():
-    """Get current status from monitor."""
-    url = os.environ.get("VIBEMON_DESKTOP_URL")
-    if not url:
-        debug_log("VIBEMON_DESKTOP_URL not set")
-        return False
-
-    try:
-        with urlopen(f"{url}/status", timeout=5) as response:
-            print(response.read().decode("utf-8"))
-            return True
-    except (URLError, TimeoutError, OSError):
-        return False
-
-# ============================================================================
-# Send to All Targets
-# ============================================================================
-
 def send_to_all(payload, is_start=False):
     """Send payload to all configured targets."""
-    url = os.environ.get("VIBEMON_DESKTOP_URL")
-    serial_port = os.environ.get("VIBEMON_SERIAL_PORT")
-    esp32_url = os.environ.get("VIBEMON_ESP32_URL")
+    config = get_config()
 
     # Launch Desktop App if not running (on start)
-    if url and is_start:
-        if not is_monitor_running(url):
+    if config["desktop_url"] and is_start:
+        if not is_monitor_running(config["desktop_url"]):
             debug_log("Desktop App not running, launching...")
             launch_desktop()
 
     # Send to Desktop App via HTTP
-    if url:
-        debug_log(f"Trying Desktop App: {url}")
+    if config["desktop_url"]:
+        debug_log(f"Trying Desktop App: {config['desktop_url']}")
         if is_start:
-            show_monitor_window(url)
-        if send_http(url, payload):
-            debug_log("Sent to Desktop App")
-        else:
-            debug_log("Desktop App failed")
+            show_monitor_window(config["desktop_url"])
+        success, _ = send_http_post(config["desktop_url"], "/status", payload)
+        debug_log("Sent to Desktop App" if success else "Desktop App failed")
 
-    # Send to ESP32 USB Serial (supports wildcard patterns like /dev/cu.usbmodem*)
-    if serial_port:
-        resolved_port = resolve_serial_port(serial_port)
+    # Send to ESP32 USB Serial
+    if config["serial_port"]:
+        resolved_port = resolve_serial_port(config["serial_port"])
         if resolved_port:
             debug_log(f"Trying USB serial: {resolved_port}")
             if send_serial(resolved_port, payload):
@@ -279,32 +425,44 @@ def send_to_all(payload, is_start=False):
             else:
                 debug_log("USB serial failed")
         else:
-            debug_log(f"No serial port found for pattern: {serial_port}")
+            debug_log(f"No serial port found for pattern: {config['serial_port']}")
 
     # Send to ESP32 HTTP
-    if esp32_url:
-        debug_log(f"Trying ESP32 HTTP: {esp32_url}")
-        if send_http(esp32_url, payload):
-            debug_log("Sent via ESP32 HTTP")
-        else:
-            debug_log("ESP32 HTTP failed")
+    if config["esp32_url"]:
+        debug_log(f"Trying ESP32 HTTP: {config['esp32_url']}")
+        success, _ = send_http_post(config["esp32_url"], "/status", payload)
+        debug_log("Sent via ESP32 HTTP" if success else "ESP32 HTTP failed")
 
 # ============================================================================
 # Main
 # ============================================================================
 
+def handle_command(cmd, args):
+    """Handle CLI command."""
+    if cmd == "--lock":
+        project = args[0] if args else os.path.basename(os.getcwd())
+        return send_lock(project)
+    elif cmd == "--unlock":
+        return send_unlock()
+    elif cmd == "--status":
+        return get_status()
+    elif cmd == "--lock-mode":
+        if args:
+            return set_lock_mode(args[0])
+        return get_lock_mode()
+    elif cmd == "--reboot":
+        return send_reboot()
+    return None
+
 def main():
     """Main entry point."""
-    # Check for command modes
-    if len(sys.argv) > 1:
+    # Check for command modes (--lock, --unlock, etc.)
+    if len(sys.argv) > 1 and sys.argv[1].startswith("--"):
         cmd = sys.argv[1]
-        if cmd == "--lock":
-            project = sys.argv[2] if len(sys.argv) > 2 else os.path.basename(os.getcwd())
-            sys.exit(0 if send_lock(project) else 1)
-        elif cmd == "--unlock":
-            sys.exit(0 if send_unlock() else 1)
-        elif cmd == "--status":
-            sys.exit(0 if get_status() else 1)
+        args = sys.argv[2:]
+        result = handle_command(cmd, args)
+        if result is not None:
+            sys.exit(0 if result else 1)
 
     # Get event type from command line
     event_type = sys.argv[1] if len(sys.argv) > 1 else ""
