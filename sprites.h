@@ -253,16 +253,20 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
                          character->bodyX, character->bodyY, character->bodyW, character->bodyH);
   }
 
-  uint16_t charColor = character->color;
-
-  // Draw body using images
+  // Draw body using images (images include full character: body, arms, legs)
   if (character == &CHAR_CLAWD) {
-    // Use image for Clawd
     drawClawdImage(tft, x, y);
+    drawEyes(tft, x, y, eyeType, character);
+    return;  // Image includes everything, skip manual drawing
   } else if (character == &CHAR_KIRO) {
-    // Use image for Kiro
     drawKiroImage(tft, x, y);
-  } else if (character->isGhost) {
+    drawEyes(tft, x, y, eyeType, character);
+    return;  // Image includes everything, skip manual drawing
+  }
+
+  // Fallback for characters without images (charColor only needed here)
+  uint16_t charColor = character->color;
+  if (character->isGhost) {
     // Generic ghost body (rounded egg/chick shape) - fallback
     int bx = x + (character->bodyX * SCALE);
     int by = y + (character->bodyY * SCALE);
@@ -316,7 +320,7 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
     }
   }
 
-  // Draw eyes based on type
+  // Draw eyes based on type (for fallback characters only)
   drawEyes(tft, x, y, eyeType, character);
 }
 
@@ -720,6 +724,7 @@ uint16_t getGradientColor(int pos, int width, int percent) {
 }
 
 // Draw memory bar with gradient
+// Optimized: Uses segment-based rendering (8px segments) instead of per-pixel
 void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int percent, uint16_t bgColor) {
   int clampedPercent = min(100, max(0, percent));
   int fillWidth = (width * clampedPercent) / 100;
@@ -735,12 +740,16 @@ void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int perce
   // Background - inside border
   tft.fillRect(x + 1, y + 1, width - 2, height - 2, containerBg);
 
-  // Fill bar with gradient
+  // Fill bar with gradient using segments (8px each for ~8x speedup)
   if (fillWidth > 2) {
     int barHeight = height - 2;
-    for (int i = 0; i < fillWidth - 2; i++) {
-      uint16_t color = getGradientColor(i, fillWidth - 2, clampedPercent);
-      tft.drawFastVLine(x + 1 + i, y + 1, barHeight, color);
+    int innerWidth = fillWidth - 2;
+    int segmentSize = 8;
+
+    for (int i = 0; i < innerWidth; i += segmentSize) {
+      int segWidth = min(segmentSize, innerWidth - i);
+      uint16_t color = getGradientColor(i, innerWidth, clampedPercent);
+      tft.fillRect(x + 1 + i, y + 1, segWidth, barHeight, color);
     }
   }
 }
