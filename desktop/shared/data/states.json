@@ -14,7 +14,7 @@
     "textColor": "#FFFFFF"
   },
   "thinking": {
-    "bgColor": "#AA33BB",
+    "bgColor": "#9933FF",
     "text": "Thinking",
     "eyeType": "thinking",
     "showLoading": true,
