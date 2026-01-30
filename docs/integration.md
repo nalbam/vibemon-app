@@ -51,7 +51,7 @@ Edit `~/.claude/.env.local`:
 
 # Cache file for project metadata (model, memory)
 # Default: ~/.claude/statusline-cache.json
-export VIBEMON_CACHE_PATH=""
+export VIBEMON_CACHE_PATH="~/.claude/statusline-cache.json"
 
 # Desktop App URL (auto-launches via npx if not running)
 # e.g., http://127.0.0.1:19280
