@@ -336,29 +336,37 @@ void getEyeCoverPosition(int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, 
 }
 
 // Draw sleep eyes (closed eyes with body color background)
-void drawSleepEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+// Template version: works with both TFT_eSPI (LGFX) and TFT_eSprite (LGFX_Sprite)
+template<typename T>
+void drawSleepEyesT(T &canvas, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
   int lensW, lensH, lensY, leftLensX, rightLensX;
   getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
 
   // Cover original eyes with body color (same area as sunglasses)
-  tft.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
-  tft.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
+  canvas.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  canvas.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
 
   // Draw closed eyes (horizontal lines in the middle)
   int closedEyeY = lensY + lensH / 2;
   int closedEyeH = 2 * SCALE;  // 2px thick line (scaled)
-  tft.fillRect(leftLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
-  tft.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+  canvas.fillRect(leftLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+  canvas.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+}
+
+// Legacy wrapper for TFT
+inline void drawSleepEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  drawSleepEyesT(tft, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
 }
 
 // Draw happy eyes (> < style for done state)
-void drawHappyEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+template<typename T>
+void drawHappyEyesT(T &canvas, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
   int lensW, lensH, lensY, leftLensX, rightLensX;
   getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
 
   // Cover original eyes with body color
-  tft.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
-  tft.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
+  canvas.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
+  canvas.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
 
   // Center position for drawing > <
   int centerY = lensY + lensH / 2;
@@ -366,48 +374,57 @@ void drawHappyEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew,
   int rightCenterX = rightLensX + lensW / 2;
 
   // Draw > for left eye (pointing right)
-  tft.fillRect(leftCenterX - (2 * SCALE), centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  tft.fillRect(leftCenterX, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  tft.fillRect(leftCenterX - (2 * SCALE), centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(leftCenterX - (2 * SCALE), centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(leftCenterX, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(leftCenterX - (2 * SCALE), centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
 
   // Draw < for right eye (pointing left)
-  tft.fillRect(rightCenterX + SCALE, centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  tft.fillRect(rightCenterX - SCALE, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  tft.fillRect(rightCenterX + SCALE, centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(rightCenterX + SCALE, centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(rightCenterX - SCALE, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
+  canvas.fillRect(rightCenterX + SCALE, centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+}
+
+inline void drawHappyEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  drawHappyEyesT(tft, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
 }
 
 // Draw sunglasses (Matrix style)
-void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
+template<typename T>
+void drawSunglassesT(T &canvas, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
   int lensW, lensH, lensY, leftLensX, rightLensX;
   getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
 
   // Left lens (dark green tint)
-  tft.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  canvas.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
   // Left lens shine
-  tft.fillRect(leftLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+  canvas.fillRect(leftLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
 
   // Right lens (dark green tint)
-  tft.fillRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
+  canvas.fillRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
   // Right lens shine
-  tft.fillRect(rightLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
+  canvas.fillRect(rightLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
 
   // Frame - top
-  tft.fillRect(leftLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  tft.fillRect(rightLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(leftLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(rightLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
 
   // Frame - bottom
-  tft.fillRect(leftLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  tft.fillRect(rightLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(leftLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(rightLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
 
   // Frame - sides
-  tft.fillRect(leftLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  tft.fillRect(leftLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  tft.fillRect(rightLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  tft.fillRect(rightLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(leftLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(leftLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(rightLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(rightLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
 
   // Bridge (connects two lenses)
   int bridgeY = lensY + lensH / 2;
-  tft.fillRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, SCALE, COLOR_SUNGLASSES_FRAME);
+  canvas.fillRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, SCALE, COLOR_SUNGLASSES_FRAME);
+}
+
+inline void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
+  drawSunglassesT(tft, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
 }
 
 // Draw eyes based on eye type (scaled 2x)
@@ -473,84 +490,89 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
 }
 
 // Draw sparkle effect (scaled 2x)
-void drawSparkle(TFT_eSPI &tft, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
+template<typename T>
+void drawSparkleT(T &canvas, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
   // 4-point star sparkle
   int frame = animFrame % 4;
 
   // Center dot (2x2 -> 4x4)
-  tft.fillRect(x + (2 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+  canvas.fillRect(x + (2 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
 
   // Rays (rotating based on frame)
   if (frame == 0 || frame == 2) {
     // Vertical and horizontal
-    tft.fillRect(x + (2 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x, y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x + (2 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x, y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
   } else {
     // Diagonal
-    tft.fillRect(x, y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x + (4 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x, y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    tft.fillRect(x + (4 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x, y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x + (4 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x, y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
+    canvas.fillRect(x + (4 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
   }
+}
+
+inline void drawSparkle(TFT_eSPI &tft, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
+  drawSparkleT(tft, x, y, sparkleColor);
 }
 
 // Draw question mark effect (scaled 2x)
-void drawQuestionMark(TFT_eSPI &tft, int x, int y) {
+template<typename T>
+void drawQuestionMarkT(T &canvas, int x, int y) {
   uint16_t color = TFT_BLACK;  // Dark on yellow background
+  canvas.fillRect(x + (1 * SCALE), y, 4 * SCALE, 2 * SCALE, color);              // Top curve
+  canvas.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, color); // Right side
+  canvas.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, color); // Middle
+  canvas.fillRect(x + (2 * SCALE), y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color); // Lower middle
+  canvas.fillRect(x + (2 * SCALE), y + (10 * SCALE), 2 * SCALE, 2 * SCALE, color); // Dot
+}
 
-  // Question mark shape (6x10 pixels, scaled)
-  //   ████
-  //       ██
-  //     ██
-  //     ██
-  //
-  //     ██
-  tft.fillRect(x + (1 * SCALE), y, 4 * SCALE, 2 * SCALE, color);              // Top curve
-  tft.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, color); // Right side
-  tft.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, color); // Middle
-  tft.fillRect(x + (2 * SCALE), y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color); // Lower middle
-  tft.fillRect(x + (2 * SCALE), y + (10 * SCALE), 2 * SCALE, 2 * SCALE, color); // Dot
+inline void drawQuestionMark(TFT_eSPI &tft, int x, int y) {
+  drawQuestionMarkT(tft, x, y);
 }
 
 // Draw Zzz animation for sleep state (scaled 2x)
-void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-
+template<typename T>
+void drawZzzT(T &canvas, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
   // Blink effect: show Z for 10 frames, hide for 10 frames (2 second cycle)
   if ((frame % 20) < 10) {
-    // Z shape (6x6 pixels, scaled)
-    // ██████
-    //     ██
-    //   ██
-    //  ██
-    // ██████
-    tft.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);              // Top
-    tft.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 1
-    tft.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 2
-    tft.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 1
-    tft.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 2
-    tft.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color); // Bottom
+    canvas.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);              // Top
+    canvas.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 1
+    canvas.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 2
+    canvas.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 1
+    canvas.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color); // Lower diagonal 2
+    canvas.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color); // Bottom
   }
 }
 
+inline void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  drawZzzT(tft, x, y, frame, color);
+}
+
 // Draw thought bubble animation for thinking state (scaled 2x)
-void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+template<typename T>
+void drawThoughtBubbleT(T &canvas, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
   // Small dots leading to bubble (always visible)
-  tft.fillRect(x, y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
-  tft.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  canvas.fillRect(x, y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
+  canvas.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
 
   // Main bubble (animated size)
   if ((frame % 12) < 6) {
     // Larger bubble
-    tft.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
-    tft.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);
-    tft.fillRect(x + (3 * SCALE), y + (3 * SCALE), 6 * SCALE, 1 * SCALE, color);
+    canvas.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
+    canvas.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);
+    canvas.fillRect(x + (3 * SCALE), y + (3 * SCALE), 6 * SCALE, 1 * SCALE, color);
   } else {
     // Smaller bubble
-    tft.fillRect(x + (4 * SCALE), y - (1 * SCALE), 4 * SCALE, 2 * SCALE, color);
-    tft.fillRect(x + (3 * SCALE), y + (1 * SCALE), 6 * SCALE, 2 * SCALE, color);
+    canvas.fillRect(x + (4 * SCALE), y - (1 * SCALE), 4 * SCALE, 2 * SCALE, color);
+    canvas.fillRect(x + (3 * SCALE), y + (1 * SCALE), 6 * SCALE, 2 * SCALE, color);
   }
+}
+
+inline void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  drawThoughtBubbleT(tft, x, y, frame, color);
 }
 
 // Matrix rain colors (green shades - movie style)
@@ -575,25 +597,32 @@ float pseudoRandom(int seed) {
 }
 
 // Draw matrix stream with movie-style effect
-void drawMatrixStreamMovie(TFT_eSPI &tft, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
+template<typename T>
+void drawMatrixStreamMovieT(T &canvas, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
   if (height < 4) return;
   int pos = (frame * speed + offset) % height;
 
   // Head: bright white/green (flicker effect)
   bool flicker = ((frame + seed) % 3) == 0;
   uint16_t headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
-  tft.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
+  canvas.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
 
   // Tail with gradient
-  if (pos >= 2) tft.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (pos >= 4) tft.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (pos >= 6) tft.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (tailLen >= 8 && pos >= 8) tft.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
-  if (tailLen >= 8 && pos >= 10) tft.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
+  if (pos >= 2) canvas.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
+  if (pos >= 4) canvas.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (pos >= 6) canvas.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
+  if (tailLen >= 8 && pos >= 8) canvas.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
+  if (tailLen >= 8 && pos >= 10) canvas.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
+}
+
+inline void drawMatrixStreamMovie(TFT_eSPI &tft, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
+  drawMatrixStreamMovieT(tft, x, y, frame, offset, height, speed, tailLen, seed);
 }
 
 // Draw matrix background effect (full area, movie style)
-void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
+// Template version with x, y offset support
+template<typename T>
+void drawMatrixBackgroundT(T &canvas, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
   // Draw streams across entire area (character will be drawn on top)
   for (int i = 0; i < size / 4; i++) {
     uint16_t seed = i * 23 + 7;
@@ -605,8 +634,12 @@ void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int 
     int speed = 1 + ((fastRandom(seed + 1) * 6) >> 8);
     // Variable tail length based on speed
     int tailLen = speed > 3 ? 8 : 6;
-    drawMatrixStreamMovie(tft, colX, y, frame, offset, size, speed, tailLen, seed);
+    drawMatrixStreamMovieT(canvas, colX, y, frame, offset, size, speed, tailLen, seed);
   }
+}
+
+inline void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
+  drawMatrixBackgroundT(tft, x, y, frame, size, bodyX, bodyY, bodyW, bodyH);
 }
 
 // Draw loading dots animation (slow = true for thinking state)
@@ -901,159 +934,44 @@ void drawBrainIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
 }
 
 // =============================================================================
-// Sprite versions of drawing functions (for double buffering - no flickering)
+// Sprite versions - inline wrappers calling template functions
 // =============================================================================
 
-// Draw matrix stream to sprite
-void drawMatrixStreamMovieToSprite(TFT_eSprite &sprite, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
-  if (height < 4) return;
-  int pos = (frame * speed + offset) % height;
-
-  // Head: bright white/green (flicker effect)
-  bool flicker = ((frame + seed) % 3) == 0;
-  uint16_t headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
-  sprite.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
-
-  // Tail with gradient
-  if (pos >= 2) sprite.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (pos >= 4) sprite.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (pos >= 6) sprite.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (tailLen >= 8 && pos >= 8) sprite.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
-  if (tailLen >= 8 && pos >= 10) sprite.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
+inline void drawMatrixStreamMovieToSprite(TFT_eSprite &sprite, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
+  drawMatrixStreamMovieT(sprite, x, y, frame, offset, height, speed, tailLen, seed);
 }
 
-// Draw matrix background to sprite
-void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
-  for (int i = 0; i < size / 4; i++) {
-    uint16_t seed = i * 23 + 7;
-    // Show ~70% of streams (178/255 ≈ 0.70)
-    if (fastRandom(seed + 100) > 178) continue;
-    int colX = i * 4 * SCALE;
-    int offset = (fastRandom(seed) * size) >> 8;  // divide by 256
-    int speed = 1 + ((fastRandom(seed + 1) * 6) >> 8);
-    int tailLen = speed > 3 ? 8 : 6;
-    drawMatrixStreamMovieToSprite(sprite, colX, 0, frame, offset, size, speed, tailLen, seed);
-  }
+// Sprite version with no x,y offset (draws at 0,0)
+inline void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
+  drawMatrixBackgroundT(sprite, 0, 0, frame, size, bodyX, bodyY, bodyW, bodyH);
 }
 
-// Draw sleep eyes to sprite
-void drawSleepEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
-  int lensW, lensH, lensY, leftLensX, rightLensX;
-  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
-
-  sprite.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
-  sprite.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
-
-  int closedEyeY = lensY + lensH / 2;
-  int closedEyeH = 2 * SCALE;
-  sprite.fillRect(leftLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
-  sprite.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
+inline void drawSleepEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
 }
 
-// Draw happy eyes to sprite
-void drawHappyEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
-  int lensW, lensH, lensY, leftLensX, rightLensX;
-  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
-
-  sprite.fillRect(leftLensX, lensY, lensW, lensH, bodyColor);
-  sprite.fillRect(rightLensX, lensY, lensW, lensH, bodyColor);
-
-  int centerY = lensY + lensH / 2;
-  int leftCenterX = leftLensX + lensW / 2;
-  int rightCenterX = rightLensX + lensW / 2;
-
-  // Draw > for left eye
-  sprite.fillRect(leftCenterX - (2 * SCALE), centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  sprite.fillRect(leftCenterX, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  sprite.fillRect(leftCenterX - (2 * SCALE), centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-
-  // Draw < for right eye
-  sprite.fillRect(rightCenterX + SCALE, centerY - (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  sprite.fillRect(rightCenterX - SCALE, centerY, 2 * SCALE, 2 * SCALE, COLOR_EYE);
-  sprite.fillRect(rightCenterX + SCALE, centerY + (2 * SCALE), 2 * SCALE, 2 * SCALE, COLOR_EYE);
+inline void drawHappyEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
+  drawHappyEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
 }
 
-// Draw sunglasses to sprite
-void drawSunglassesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
-  int lensW, lensH, lensY, leftLensX, rightLensX;
-  getEyeCoverPosition(leftEyeX, rightEyeX, eyeY, ew, eh, isKiro, lensW, lensH, lensY, leftLensX, rightLensX);
-
-  // Left lens
-  sprite.fillRect(leftLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
-  sprite.fillRect(leftLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
-
-  // Right lens
-  sprite.fillRect(rightLensX, lensY, lensW, lensH, COLOR_SUNGLASSES_LENS);
-  sprite.fillRect(rightLensX + SCALE, lensY + SCALE, 2 * SCALE, SCALE, COLOR_SUNGLASSES_SHINE);
-
-  // Frame
-  sprite.fillRect(leftLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(rightLensX - SCALE, lensY - SCALE, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(leftLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(rightLensX - SCALE, lensY + lensH, lensW + (2 * SCALE), SCALE, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(leftLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(leftLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(rightLensX - SCALE, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-  sprite.fillRect(rightLensX + lensW, lensY, SCALE, lensH, COLOR_SUNGLASSES_FRAME);
-
-  // Bridge
-  int bridgeY = lensY + lensH / 2;
-  sprite.fillRect(leftLensX + lensW, bridgeY, rightLensX - leftLensX - lensW, SCALE, COLOR_SUNGLASSES_FRAME);
+inline void drawSunglassesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
+  drawSunglassesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
 }
 
-// Draw sparkle to sprite
-void drawSparkleToSprite(TFT_eSprite &sprite, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
-  int frame = animFrame % 4;
-  sprite.fillRect(x + (2 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-
-  if (frame == 0 || frame == 2) {
-    sprite.fillRect(x + (2 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x, y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-  } else {
-    sprite.fillRect(x, y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x + (4 * SCALE), y, 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x, y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-    sprite.fillRect(x + (4 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
-  }
+inline void drawSparkleToSprite(TFT_eSprite &sprite, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
+  drawSparkleT(sprite, x, y, sparkleColor);
 }
 
-// Draw question mark to sprite
-void drawQuestionMarkToSprite(TFT_eSprite &sprite, int x, int y) {
-  uint16_t color = TFT_BLACK;
-  sprite.fillRect(x + (1 * SCALE), y, 4 * SCALE, 2 * SCALE, color);
-  sprite.fillRect(x + (4 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, color);
-  sprite.fillRect(x + (2 * SCALE), y + (4 * SCALE), 2 * SCALE, 2 * SCALE, color);
-  sprite.fillRect(x + (2 * SCALE), y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
-  sprite.fillRect(x + (2 * SCALE), y + (10 * SCALE), 2 * SCALE, 2 * SCALE, color);
+inline void drawQuestionMarkToSprite(TFT_eSprite &sprite, int x, int y) {
+  drawQuestionMarkT(sprite, x, y);
 }
 
-// Draw Zzz to sprite
-void drawZzzToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-  if ((frame % 20) < 10) {
-    sprite.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);
-    sprite.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color);
-    sprite.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color);
-    sprite.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 1 * SCALE, color);
-    sprite.fillRect(x + (1 * SCALE), y + (4 * SCALE), 2 * SCALE, 1 * SCALE, color);
-    sprite.fillRect(x, y + (5 * SCALE), 6 * SCALE, 1 * SCALE, color);
-  }
+inline void drawZzzToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  drawZzzT(sprite, x, y, frame, color);
 }
 
-// Draw thought bubble to sprite
-void drawThoughtBubbleToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-  sprite.fillRect(x, y + (6 * SCALE), 2 * SCALE, 2 * SCALE, color);
-  sprite.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
-
-  if ((frame % 12) < 6) {
-    sprite.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
-    sprite.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);
-    sprite.fillRect(x + (3 * SCALE), y + (3 * SCALE), 6 * SCALE, 1 * SCALE, color);
-  } else {
-    sprite.fillRect(x + (4 * SCALE), y - (1 * SCALE), 4 * SCALE, 2 * SCALE, color);
-    sprite.fillRect(x + (3 * SCALE), y + (1 * SCALE), 6 * SCALE, 2 * SCALE, color);
-  }
+inline void drawThoughtBubbleToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
+  drawThoughtBubbleT(sprite, x, y, frame, color);
 }
 
 // Draw eyes to sprite based on eye type
@@ -1071,26 +989,26 @@ void drawEyesToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeome
 
   switch (eyeType) {
     case EYE_FOCUSED:
-      drawSunglassesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
+      drawSunglassesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
       break;
     case EYE_ALERT:
-      drawQuestionMarkToSprite(sprite, effectX, effectY);
+      drawQuestionMarkT(sprite, effectX, effectY);
       break;
     case EYE_SPARKLE:
-      drawSparkleToSprite(sprite, effectX, effectY + (2 * SCALE), effectColor);
+      drawSparkleT(sprite, effectX, effectY + (2 * SCALE), effectColor);
       break;
     case EYE_THINKING:
-      drawThoughtBubbleToSprite(sprite, effectX, effectY, animFrame, effectColor);
+      drawThoughtBubbleT(sprite, effectX, effectY, animFrame, effectColor);
       break;
     case EYE_SLEEP:
-      drawSleepEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-      drawZzzToSprite(sprite, effectX, effectY, animFrame, effectColor);
+      drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      drawZzzT(sprite, effectX, effectY, animFrame, effectColor);
       break;
     case EYE_BLINK:
-      drawSleepEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
       break;
     case EYE_HAPPY:
-      drawHappyEyesToSprite(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      drawHappyEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
       break;
     default:
       break;
