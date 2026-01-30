@@ -57,6 +57,11 @@ The `working` state displays context-aware text based on the active tool:
 
 **Desktop only:** After 10 minutes in sleep state, the window automatically closes.
 
+### Display Behavior
+
+- **Memory hidden on start**: Memory percentage is not displayed during `start` state
+- **Project change resets**: Model and memory are cleared when switching to a different project
+
 ## Animations
 
 - **Floating**: Gentle motion (±3px horizontal, ±5px vertical, ~3.2s cycle)
