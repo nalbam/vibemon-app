@@ -195,6 +195,9 @@ def send_serial(port, data):
 
         with open(port, "w") as f:
             f.write(data + "\n")
+            f.flush()  # Ensure data is sent to kernel buffer
+        # Small delay to allow kernel to transmit data before process exits
+        time.sleep(0.05)
         return True
     except (IOError, OSError):
         return False

@@ -428,25 +428,32 @@ void processInput(const char* input) {
 
   previousState = currentState;
 
+  // Track if info fields changed (for redraw when state is same)
+  // IMPORTANT: Must be declared BEFORE processing any fields
+  bool infoChanged = false;
+
   // Parse state
   const char* stateStr = doc["state"] | "";
   if (strlen(stateStr) > 0) {
-    currentState = parseState(stateStr);
+    AppState newState = parseState(stateStr);
+    // Clear tool when state changes (tool is only relevant for working state)
+    if (newState != currentState) {
+      currentTool[0] = '\0';
+    }
+    currentState = newState;
   }
 
-  // Clear model and memory when project changes
+  // Parse project - check for change and clear dependent fields
   const char* newProject = doc["project"] | "";
   if (strlen(newProject) > 0 && strcmp(newProject, currentProject) != 0) {
+    // Project changed - clear model/memory and trigger redraw
     currentModel[0] = '\0';
     currentMemory[0] = '\0';
-  }
-  if (strlen(newProject) > 0) {
+    currentTool[0] = '\0';
+    infoChanged = true;
     strncpy(currentProject, newProject, sizeof(currentProject) - 1);
     currentProject[sizeof(currentProject) - 1] = '\0';
   }
-
-  // Track if info fields changed (for redraw when state is same)
-  bool infoChanged = false;
 
   // Parse tool
   const char* toolStr = doc["tool"] | "";
@@ -589,8 +596,14 @@ void drawStatus() {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Normal
   }
 
-  // Project name
+  // Project name, tool, model, memory info
   if (dirtyInfo || needsRedraw) {
+    // Clear info region when only info changed (not full redraw)
+    // This prevents text overlap/ghosting
+    if (dirtyInfo && !needsRedraw) {
+      tft.fillRect(0, PROJECT_Y, SCREEN_WIDTH, BRAND_Y - PROJECT_Y, bgColor);
+    }
+
     if (strlen(currentProject) > 0) {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
