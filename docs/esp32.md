@@ -21,18 +21,12 @@ Tools → Board → Boards Manager → Search "esp32" → Install
 ### 3. Install Libraries
 
 Tools → Manage Libraries:
-- `TFT_eSPI` by Bodmer
-- `ArduinoJson` by Benoit Blanchon
 - `LovyanGFX` by lovyan03
+- `ArduinoJson` by Benoit Blanchon
 
-### 4. Configure TFT_eSPI
+> **Note:** TFT_eSPI is NOT required. The project uses LovyanGFX with a configuration file (`LGFX_ESP32C6.hpp`).
 
-Copy `User_Setup.h` to Arduino library folder:
-```bash
-cp User_Setup.h ~/Documents/Arduino/libraries/TFT_eSPI/User_Setup.h
-```
-
-### 5. Upload
+### 4. Upload
 
 - Tools → Board → ESP32C6 Dev Module
 - Tools → Port → /dev/cu.usbmodem* (or appropriate port)
@@ -40,12 +34,51 @@ cp User_Setup.h ~/Documents/Arduino/libraries/TFT_eSPI/User_Setup.h
 
 ## WiFi Mode (Optional)
 
-Edit `vibe-monitor.ino`:
+### 1. Create credentials file
+
+```bash
+cp credentials.h.example credentials.h
+```
+
+### 2. Edit `credentials.h` with your WiFi credentials
+
+```cpp
+#define WIFI_SSID "YOUR_SSID"
+#define WIFI_PASSWORD "YOUR_PASSWORD"
+```
+
+### 3. Enable WiFi in `vibe-monitor.ino`
+
+Uncomment the following line:
 
 ```cpp
 #define USE_WIFI
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
+```
+
+## WiFi HTTP Endpoints
+
+When WiFi is enabled, the ESP32 runs an HTTP server on port 80:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/status` | POST | Update monitor status |
+| `/status` | GET | Get current status |
+| `/lock` | POST | Lock to project |
+| `/unlock` | POST | Unlock project |
+| `/lock-mode` | GET | Get lock mode |
+| `/lock-mode` | POST | Set lock mode |
+| `/reboot` | POST | Reboot device |
+
+Example:
+
+```bash
+# Update status
+curl -X POST http://192.168.1.100/status \
+  -H "Content-Type: application/json" \
+  -d '{"state":"working","tool":"Bash","project":"my-project"}'
+
+# Get current status
+curl http://192.168.1.100/status
 ```
 
 ## Serial Port Check
@@ -97,6 +130,7 @@ echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
 
 | Issue | Solution |
 |-------|----------|
-| Display not working | Verify `User_Setup.h` is copied to TFT_eSPI library folder |
+| Display not working | Verify LovyanGFX library is installed and board is ESP32C6 Dev Module |
 | Serial connection failed | Check port permissions: `sudo chmod 666 /dev/ttyUSB0` |
 | JSON parsing error | Ensure JSON ends with LF (`\n`) |
+| WiFi not connecting | Check `credentials.h` exists and has correct SSID/password |

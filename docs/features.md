@@ -22,6 +22,15 @@ Character is **auto-detected** based on the IDE hook events. You can also manual
 | `done` | Green | > < | Done! | Tool completed |
 | `sleep` | Navy | ─ ─ + Z | Zzz... | 5min inactivity |
 
+### Thinking/Planning State Text
+
+The `thinking` and `planning` states display randomly selected text:
+
+| State | Possible Text |
+|-------|---------------|
+| Thinking | Thinking, Hmm..., Let me see |
+| Planning | Planning, Designing, Drafting |
+
 ### Working State Text
 
 The `working` state displays context-aware text based on the active tool:
