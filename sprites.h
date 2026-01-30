@@ -146,10 +146,12 @@ bool isValidCharacter(const char* name) {
 }
 
 // Legacy String versions for compatibility
+// DEPRECATED: Use getCharacterByName(const char*) to avoid heap allocation
 const CharacterGeometry* getCharacter(String name) {
   return getCharacterByName(name.c_str());
 }
 
+// DEPRECATED: Use isValidCharacter(const char*) to avoid heap allocation
 bool isValidCharacter(String name) {
   return isValidCharacter(name.c_str());
 }
@@ -646,7 +648,8 @@ inline void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int siz
 void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame, bool slow = false) {
   int dotRadius = 4;
   int dotSpacing = 16;
-  int startX = centerX - (dotSpacing * 1.5);
+  // Use integer arithmetic: 1.5 * 16 = 24
+  int startX = centerX - 24;
   int adjustedFrame = slow ? (frame / 3) : frame;
 
   for (int i = 0; i < 4; i++) {
@@ -844,6 +847,8 @@ void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
 }
 
 // Legacy String versions for compatibility
+// DEPRECATED: Use enum versions (getBackgroundColorEnum, etc.) to avoid heap allocation
+// These functions allocate memory on heap via String parameter - avoid in production
 uint16_t getBackgroundColor(String state) {
   if (state == "start") return COLOR_BG_SESSION;
   if (state == "idle") return COLOR_BG_IDLE;

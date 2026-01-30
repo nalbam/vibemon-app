@@ -95,7 +95,8 @@ bool dirtyInfo = true;
 unsigned long lastActivityTime = 0;
 
 // JSON buffer size for StaticJsonDocument
-#define JSON_BUFFER_SIZE 256
+// Increased from 256 to 512 for complex payloads with all fields
+#define JSON_BUFFER_SIZE 512
 
 // Helper: Parse state string to enum
 AppState parseState(const char* stateStr) {
@@ -285,7 +286,8 @@ void loop() {
   // Animation update (100ms interval)
   if (millis() - lastUpdate > 100) {
     lastUpdate = millis();
-    animFrame++;
+    // Reset animFrame at 4800 to prevent overflow (LCM of 32,12,20,4 = 480)
+    animFrame = (animFrame + 1) % 4800;
     updateAnimation();
   }
 
@@ -843,7 +845,8 @@ void setupWiFi() {
 
 void handleStatus() {
   if (server.hasArg("plain")) {
-    String body = server.arg("plain");
+    // Use const reference to avoid String copy (heap allocation)
+    const String& body = server.arg("plain");
     processInput(body.c_str());
     server.send(200, "application/json", "{\"ok\":true}");
   } else {
@@ -869,7 +872,9 @@ void handleLock() {
   char response[128];
   if (server.hasArg("plain")) {
     StaticJsonDocument<128> doc;
-    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    // Use const reference to avoid String copy
+    const String& body = server.arg("plain");
+    DeserializationError error = deserializeJson(doc, body);
     if (!error) {
       const char* projectToLock = doc["project"] | currentProject;
       if (strlen(projectToLock) > 0) {
@@ -906,7 +911,9 @@ void handleLockModeGet() {
 void handleLockModePost() {
   if (server.hasArg("plain")) {
     StaticJsonDocument<128> doc;
-    DeserializationError error = deserializeJson(doc, server.arg("plain"));
+    // Use const reference to avoid String copy
+    const String& body = server.arg("plain");
+    DeserializationError error = deserializeJson(doc, body);
     if (!error) {
       const char* modeStr = doc["mode"] | "";
       if (strlen(modeStr) > 0) {
