@@ -23,6 +23,7 @@ Tools → Board → Boards Manager → Search "esp32" → Install
 Tools → Manage Libraries:
 - `TFT_eSPI` by Bodmer
 - `ArduinoJson` by Benoit Blanchon
+- `LovyanGFX` by lovyan03
 
 ### 4. Configure TFT_eSPI
 

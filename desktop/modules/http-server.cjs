@@ -213,25 +213,40 @@ class HttpServer {
     // Apply auto-lock after window is successfully created (single mode only)
     this.windowManager.applyAutoLock(projectId, stateData.state);
 
-    // Update window state via windowManager
-    this.windowManager.updateState(projectId, stateData);
+    // Update window state via windowManager (with change detection)
+    const updateResult = this.windowManager.updateState(projectId, stateData);
 
-    // Update always on top based on state (active states stay on top)
-    this.windowManager.updateAlwaysOnTopByState(projectId, stateData.state);
-
-    // Rearrange windows by state and name (active states on right)
-    this.windowManager.rearrangeWindows();
-
-    // Set up state timeout for this project
-    this.stateManager.setupStateTimeout(projectId, stateData.state);
-
-    // Send update to renderer
-    this.windowManager.sendToWindow(projectId, 'state-update', stateData);
-
-    // Update tray
-    if (this.onStateUpdate) {
-      this.onStateUpdate(false);  // Full update
+    // No change - skip unnecessary updates
+    if (!updateResult.updated) {
+      sendJson(res, 200, {
+        success: true,
+        project: projectId,
+        state: stateData.state,
+        windowCount: this.windowManager.getWindowCount(),
+        skipped: true
+      });
+      return;
     }
+
+    // State changed - full update (alwaysOnTop, rearrange, timeout, tray)
+    if (updateResult.stateChanged) {
+      // Update always on top based on state (active states stay on top)
+      this.windowManager.updateAlwaysOnTopByState(projectId, stateData.state);
+
+      // Rearrange windows by state and name (active states on right)
+      this.windowManager.rearrangeWindows();
+
+      // Set up state timeout for this project
+      this.stateManager.setupStateTimeout(projectId, stateData.state);
+
+      // Update tray
+      if (this.onStateUpdate) {
+        this.onStateUpdate(false);  // Full update
+      }
+    }
+
+    // Send update to renderer (for both state and info changes)
+    this.windowManager.sendToWindow(projectId, 'state-update', stateData);
 
     sendJson(res, 200, {
       success: true,

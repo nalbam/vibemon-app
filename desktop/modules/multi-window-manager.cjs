@@ -554,22 +554,40 @@ class MultiWindowManager {
   }
 
   /**
-   * Update state for a project
+   * Update state for a project with change detection
    * Note: Entry object is mutated to preserve event handler closure references.
    * The state property is replaced with a new object for partial immutability.
    * @param {string} projectId
    * @param {Object} newState
-   * @returns {boolean} - true if updated
+   * @returns {{updated: boolean, stateChanged: boolean, infoChanged: boolean}}
    */
   updateState(projectId, newState) {
     const entry = this.windows.get(projectId);
     if (!entry) {
-      return false;
+      return { updated: false, stateChanged: false, infoChanged: false };
+    }
+
+    const oldState = entry.state || {};
+
+    // Check if state changed
+    const stateChanged = oldState.state !== newState.state;
+
+    // Check if info fields changed (tool, model, memory, character)
+    const infoChanged = !stateChanged && (
+      oldState.tool !== newState.tool ||
+      oldState.model !== newState.model ||
+      oldState.memory !== newState.memory ||
+      oldState.character !== newState.character
+    );
+
+    // No change - skip update
+    if (!stateChanged && !infoChanged) {
+      return { updated: false, stateChanged: false, infoChanged: false };
     }
 
     // Mutate entry's state property (entry object must be preserved for event handler closures)
     entry.state = { ...newState };
-    return true;
+    return { updated: true, stateChanged, infoChanged };
   }
 
   /**

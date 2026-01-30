@@ -445,42 +445,53 @@ void processInput(const char* input) {
     currentProject[sizeof(currentProject) - 1] = '\0';
   }
 
+  // Track if info fields changed (for redraw when state is same)
+  bool infoChanged = false;
+
   // Parse tool
   const char* toolStr = doc["tool"] | "";
-  if (strlen(toolStr) > 0) {
+  if (strlen(toolStr) > 0 && strcmp(toolStr, currentTool) != 0) {
     strncpy(currentTool, toolStr, sizeof(currentTool) - 1);
     currentTool[sizeof(currentTool) - 1] = '\0';
+    infoChanged = true;
   }
 
   // Parse model
   const char* modelStr = doc["model"] | "";
-  if (strlen(modelStr) > 0) {
+  if (strlen(modelStr) > 0 && strcmp(modelStr, currentModel) != 0) {
     strncpy(currentModel, modelStr, sizeof(currentModel) - 1);
     currentModel[sizeof(currentModel) - 1] = '\0';
+    infoChanged = true;
   }
 
   // Parse memory
   const char* memoryStr = doc["memory"] | "";
-  if (strlen(memoryStr) > 0) {
+  if (strlen(memoryStr) > 0 && strcmp(memoryStr, currentMemory) != 0) {
     strncpy(currentMemory, memoryStr, sizeof(currentMemory) - 1);
     currentMemory[sizeof(currentMemory) - 1] = '\0';
+    infoChanged = true;
   }
 
   // Parse character (use isValidCharacter() for dynamic validation)
   const char* charInput = doc["character"] | "";
-  if (strlen(charInput) > 0 && isValidCharacter(charInput)) {
+  if (strlen(charInput) > 0 && isValidCharacter(charInput) && strcmp(charInput, currentCharacter) != 0) {
     strncpy(currentCharacter, charInput, sizeof(currentCharacter) - 1);
     currentCharacter[sizeof(currentCharacter) - 1] = '\0';
+    infoChanged = true;
   }
 
   // Reset activity timer on any input
   lastActivityTime = millis();
 
-  // Redraw if state changed
+  // Redraw if state or info changed
   if (currentState != previousState) {
     needsRedraw = true;
     dirtyCharacter = true;
     dirtyStatus = true;
+    dirtyInfo = true;
+    drawStatus();
+  } else if (infoChanged) {
+    // Same state but info changed - only redraw info section
     dirtyInfo = true;
     drawStatus();
   }
