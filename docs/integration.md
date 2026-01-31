@@ -161,54 +161,54 @@ export VIBEMON_DESKTOP_URL="http://127.0.0.1:19280"
 
 ## OpenClaw Setup (Manual)
 
-OpenClaw uses a log-tailing bridge script (`esp32-status-bridge.mjs`) to send status to ESP32.
+OpenClaw uses a native plugin system for hook-based integration.
 
-> **Note:** OpenClaw integration is primarily designed for ESP32 hardware (USB Serial).
-
-### 1. Copy scripts
+### 1. Copy plugin
 
 ```bash
-mkdir -p ~/.openclaw/workspace/scripts
-
-cp config/openclaw/scripts/esp32-status-bridge.mjs ~/.openclaw/workspace/scripts/
-cp config/openclaw/scripts/sera-esp32-bridge.service ~/.openclaw/workspace/scripts/
+mkdir -p ~/.openclaw/extensions/vibemon-bridge
+cp config/openclaw/extensions/* ~/.openclaw/extensions/vibemon-bridge/
 ```
 
-### 2. Configure environment
+### 2. Enable in `~/.openclaw/openclaw.json`
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "vibemon-bridge": {
+        "enabled": true,
+        "config": {
+          "projectName": "OpenClaw",
+          "character": "claw",
+          "serialEnabled": true,
+          "httpEnabled": false,
+          "debug": false
+        }
+      }
+    }
+  }
+}
+```
+
+### 3. Restart OpenClaw
 
 ```bash
-# Project name displayed on ESP32
-export SERA_PROJECT="Sera"
-
-# OpenClaw log directory
-export OPENCLAW_LOG_DIR="/tmp/openclaw"
+systemctl --user restart openclaw-gateway
 ```
 
-### 3. Run manually (for testing)
+See [VibeMon Bridge Plugin](../config/openclaw/README.md) for configuration options.
 
-```bash
-cd ~/.openclaw/workspace
-node scripts/esp32-status-bridge.mjs
-```
+### OpenClaw Hook Events
 
-### 4. Run as systemd service (recommended)
-
-```bash
-sudo cp ~/.openclaw/workspace/scripts/sera-esp32-bridge.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now sera-esp32-bridge.service
-```
-
-See [OpenClaw Setup Guide](../config/openclaw/README.md) for detailed instructions.
-
-### OpenClaw Events
-
-| Event | State | Description |
-|-------|-------|-------------|
-| Run start | `thinking` | User prompt submitted |
-| Planning | `planning` | Prompt interpretation |
-| Tool execution | `working` | Tool running (exec, web_search, etc.) |
-| Run end | `done` | Task completed |
+| Hook | Vibe Monitor State | Description |
+|------|-------------------|-------------|
+| `gateway_start` | `start` | Gateway started |
+| `before_agent_start` | `thinking` | Processing user prompt |
+| `before_tool_call` | `working` | Tool executing (with tool name) |
+| `after_tool_call` | `thinking` | Tool completed |
+| `message_sent` | `done` | Response sent (3s delay) |
+| `session_end` | `done` | Session ended |
 
 ---
 
@@ -234,8 +234,8 @@ Commands try targets in order and stop on first success:
 
 | Action | Claude Code | Kiro | OpenClaw | State |
 |--------|-------------|------|----------|-------|
-| User input | `UserPromptSubmit` | `promptSubmit` | Run start | `thinking` |
-| Planning | - | - | Embedded run | `planning` |
-| File/Tool operations | `PreToolUse` | `fileCreated/fileSaved/fileDeleted` | Tool execution | `working` |
-| Agent done | `Stop` | `agentStop` | Run end | `done` |
+| Session start | `SessionStart` | - | `gateway_start` | `start` |
+| User input | `UserPromptSubmit` | `promptSubmit` | `before_agent_start` | `thinking` |
+| Tool execution | `PreToolUse` | `fileCreated/fileSaved/fileDeleted` | `before_tool_call` | `working` |
+| Agent done | `Stop` | `agentStop` | `message_sent` | `done` |
 | Notification | `Notification` | - | - | `notification` |
