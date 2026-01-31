@@ -25,5 +25,19 @@
     "tail": [],
     "eyes": { "left": { "x": 29, "y": 21 }, "right": { "x": 39, "y": 21 }, "w": 5, "h": 8 },
     "isGhost": true
+  },
+  "claw": {
+    "name": "claw",
+    "displayName": "Claw",
+    "color": "#DD4444",
+    "body": { "x": 4, "y": 8, "w": 56, "h": 44 },
+    "arms": null,
+    "legs": [
+      { "x": 16, "y": 50, "w": 8, "h": 10 },
+      { "x": 40, "y": 50, "w": 8, "h": 10 }
+    ],
+    "tail": null,
+    "eyes": { "left": { "x": 20, "y": 34 }, "right": { "x": 44, "y": 34 }, "size": 6 },
+    "isGhost": false
   }
 }
