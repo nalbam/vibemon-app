@@ -1,178 +1,187 @@
-# OpenClaw(세라) 재설정/복구 가이드
+# esp32-status-bridge 설정/운영 가이드
 
-이 문서는 **세라(OpenClaw 에이전트)**를 다른 머신/새 SD카드/재설치 상황에서 **빠르게 원상복구**하기 위한 체크리스트입니다.
+`esp32-status-bridge.mjs`는 **OpenClaw Gateway 로그(JSONL)**를 tail 하면서,
+현재 동작 상태를 **ESP32-C6(USB Serial, `/dev/ttyACM*`)**로 **NDJSON 한 줄(JSON + `\n`)** 형태로 흘려보내는 브릿지입니다.
 
-> 목표: “파일/토큰/설정 백업 → OpenClaw 설치 → 설정 복원 → Gateway 기동 → Slack 연결 확인”
-
----
-
-## 0) 용어 정리
-
-- **Gateway**: OpenClaw 백엔드 데몬(채널 연결, 도구 실행, 세션 관리)
-- **Workspace**: 에이전트의 성격/규칙/기억 파일이 들어있는 폴더 (이 리포지토리)
-- **Config**: Gateway 설정(채널 토큰, 라우팅, 도구 키 등)
+- 입력(브릿지가 읽는 것): OpenClaw 로그 파일 (`/tmp/openclaw/openclaw-YYYY-MM-DD.log`)
+- 출력(ESP32로 쓰는 것): `/dev/ttyACM0` 등
+- 출력 예시:
+  ```json
+  {"state":"working","tool":"exec","project":"Sera","ts":"2026-01-31T04:12:33.123Z"}
+  ```
 
 ---
 
-## 1) 반드시 백업할 것(가장 중요)
+## 1) 파일 구성
 
-아래 경로들을 통째로 백업해두면 “거의 그대로” 복원됩니다.
-
-### 1.1 핵심 설정/토큰
-- `~/.openclaw/openclaw.json`  ← **Gateway 메인 설정 파일**
-- `~/.openclaw/.env`           ← 환경변수(토큰/키를 env로 넣었으면 중요)
-
-### 1.2 인증/자격 증명
-- `~/.openclaw/credentials/`   ← OAuth/세션 등(사용 중인 경우)
-- `~/.openclaw/agents/`        ← 에이전트별 auth profile 등
-
-### 1.3 데이터/상태(선택이지만 있으면 편함)
-- `~/.openclaw/cron/`          ← 크론(리마인더/정기 작업)
-- `~/.openclaw/memory/`        ← 런타임 메모리/상태 파일
-
-### 1.4 Workspace(세라의 성격/규칙/기억)
-- `~/.openclaw/workspace/`     ← **이 폴더 자체**
-  - `SOUL.md`, `USER.md`, `MEMORY.md`, `memory/*.md` 등이 여기 있습니다.
-
-> 팁: 가장 안전한 백업 단위는 `~/.openclaw/` 전체입니다.
+- `scripts/esp32-status-bridge.mjs` : 브릿지 본체(Node.js)
+- `scripts/sera-esp32-bridge.service` : systemd (system) 서비스 유닛(권장: 라즈베리파이/서버)
+- `scripts/sera-esp32-bridge.user.service` : systemd (user) 서비스 유닛(선택)
 
 ---
 
-## 2) 새 환경 준비(Prereqs)
+## 2) 사전 준비(필수)
 
-- Node.js **>= 22**
-- (권장) `pnpm`은 소스 빌드 시에만 필요
+### 2.1 ESP32를 USB로 연결
+- ESP32-C6 보드를 USB로 연결하면 보통 `/dev/ttyACM0` 같은 디바이스로 잡힙니다.
+- 확인:
+  ```bash
+  ls -la /dev/ttyACM*
+  dmesg | tail -n 50
+  ```
 
-버전 확인:
+### 2.2 시리얼 권한(dialout)
+브릿지는 해당 TTY에 write 해야 합니다.
+
+- 현재 사용자(예: `pi`)를 `dialout`에 추가:
+  ```bash
+  sudo usermod -aG dialout pi
+  # 적용을 위해 로그아웃/재부팅 필요할 수 있음
+  ```
+
+권한이 없으면 브릿지에서 아래와 유사한 경고가 뜹니다.
+- `Found /dev/ttyACM0 but not writable. Check permissions (dialout group) ...`
+
+### 2.3 OpenClaw 로그가 생성되는지 확인
+브릿지는 기본으로 아래 로그를 tail 합니다.
+- `OPENCLAW_LOG_DIR=/tmp/openclaw`
+- 파일 패턴: `openclaw-YYYY-MM-DD.log`
+
+확인:
 ```bash
-node -v
+ls -la /tmp/openclaw
+```
+
+> 만약 로그 경로가 다르면 `OPENCLAW_LOG_DIR` 환경변수로 맞춰주셔야 합니다.
+
+---
+
+## 3) 빠른 실행(수동 테스트)
+
+서비스로 올리기 전에, 먼저 수동으로 테스트하는 게 제일 안전합니다.
+
+```bash
+cd ~/.openclaw/workspace
+node scripts/esp32-status-bridge.mjs
+```
+
+정상이라면 stderr에 이런 로그가 나옵니다.
+- `Using tty: /dev/ttyACM0`
+- `Tailing log: /tmp/openclaw/openclaw-YYYY-MM-DD.log`
+
+ESP32 쪽에서 JSON 라인이 수신되는지 확인하세요.
+
+---
+
+## 4) 환경변수(설정값)
+
+브릿지는 아래 환경변수를 사용합니다.
+
+- `SERA_PROJECT` (기본: `Sera`)
+  - ESP32 디스플레이에 찍을 프로젝트/이름 구분용
+- `SERA_DONE_TO_IDLE_MS` (기본: `10000`)
+  - `done` 상태를 보낸 뒤 **몇 ms 후** 자동으로 `idle`로 전환할지
+- `OPENCLAW_LOG_DIR` (기본: `/tmp/openclaw`)
+  - OpenClaw 로그 디렉토리
+
+예:
+```bash
+SERA_PROJECT=Sera \
+SERA_DONE_TO_IDLE_MS=10000 \
+OPENCLAW_LOG_DIR=/tmp/openclaw \
+node scripts/esp32-status-bridge.mjs
 ```
 
 ---
 
-## 3) OpenClaw 설치
+## 5) 상태(state) 스펙(ESP32 입력 프로토콜)
 
-### 3.1 권장: 설치 스크립트
+브릿지는 크게 아래 상태들을 보냅니다.
+
+- `idle` : 대기
+- `start` : 실행 시작 감지
+- `thinking` : 추론/응답 생성 중
+- `planning` : 프롬프트 구간(특히 embedded run prompt start/end)에서 계획 단계
+- `working` : tool 실행 중 (`tool` 필드 포함)
+- `done` : 실행 종료(답변 deliver 또는 session idle 전환 감지)
+
+`working`일 때는 추가 필드가 붙습니다.
+- `tool`: 예) `exec`, `web_search`, `browser`, ...
+
+공통 필드:
+- `project`: `SERA_PROJECT`
+- `ts`: ISO timestamp
+
+---
+
+## 6) systemd로 상시 실행(권장)
+
+### 6.1 (system) 서비스로 설치
+`pi` 유저 기준 예시입니다.
+
+1) 유닛 파일 복사
 ```bash
-curl -fsSL https://openclaw.bot/install.sh | bash
+sudo cp ~/.openclaw/workspace/scripts/sera-esp32-bridge.service /etc/systemd/system/sera-esp32-bridge.service
 ```
 
-### 3.2 대안: npm 글로벌 설치
+2) systemd 리로드
 ```bash
-npm install -g openclaw@latest
+sudo systemctl daemon-reload
 ```
 
-설치 확인:
+3) 활성화 + 시작
 ```bash
-openclaw --help
+sudo systemctl enable --now sera-esp32-bridge.service
+```
+
+4) 상태/로그 확인
+```bash
+sudo systemctl status sera-esp32-bridge.service -n 50
+sudo journalctl -u sera-esp32-bridge.service -f
+```
+
+### 6.2 (user) 서비스로 설치(선택)
+GUI 로그인 세션/유저 서비스로 돌리고 싶을 때만 사용하세요.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp ~/.openclaw/workspace/scripts/sera-esp32-bridge.user.service ~/.config/systemd/user/sera-esp32-bridge.service
+systemctl --user daemon-reload
+systemctl --user enable --now sera-esp32-bridge.service
+journalctl --user -u sera-esp32-bridge.service -f
 ```
 
 ---
 
-## 4) 설정 복원(백업에서 되돌리기)
+## 7) 트러블슈팅
 
-1) 백업해둔 `~/.openclaw/`를 새 머신에 복사합니다.
-   - 최소: `openclaw.json`, `.env`, `workspace/`
-2) 권한이 꼬였으면(특히 `.env`, `openclaw.json`):
-```bash
-chmod 600 ~/.openclaw/openclaw.json ~/.openclaw/.env || true
-```
+### 7.1 `/dev/ttyACM*`가 없어요
+- 케이블(데이터 지원) 확인
+- `dmesg | tail`로 인식 로그 확인
+- 보드 리셋/부트모드 확인
 
----
+### 7.2 권한 문제로 쓰기 실패
+- `ls -la /dev/ttyACM0`에서 그룹이 `dialout`인지 확인
+- `pi`가 `dialout` 그룹에 포함됐는지 확인:
+  ```bash
+  groups pi
+  ```
+- 그래도 안 되면 임시로 root 실행(비권장)이 아닌, udev rule 쪽으로 해결하는 게 안전합니다.
 
-## 5) Slack 연결(이 환경 기준)
+### 7.3 OpenClaw 로그 파일이 없다고 나와요
+- 브릿지는 **오늘 날짜** 파일만 봅니다: `openclaw-YYYY-MM-DD.log`
+- `OPENCLAW_LOG_DIR`가 실제 로그 경로와 일치하는지 확인
+- Gateway가 로그를 그 위치에 쓰고 있는지 확인
 
-현재 세라는 Slack `#sandbox` 채널에서 동작합니다.
-
-### 5.1 Socket Mode(기본) 토큰
-Slack Socket Mode는 보통 아래 2개가 필요합니다.
-- **App Token**: `xapp-...`
-- **Bot Token**: `xoxb-...`
-
-토큰을 env로 쓰는 경우(권장):
-```bash
-export SLACK_APP_TOKEN="xapp-..."
-export SLACK_BOT_TOKEN="xoxb-..."
-```
-
-또는 `~/.openclaw/.env`에 넣어도 됩니다.
-
-Slack 앱 설정 방법(공식 문서):
-- 로컬 문서: `/home/pi/.npm-global/lib/node_modules/openclaw/docs/channels/slack.md`
-- 핵심: Socket Mode 활성화 + `connections:write` app token + bot scope 설정
+### 7.4 상태가 `planning`에 멈춰요
+- 어떤 실행은 tool 없이 끝날 수 있어서, 브릿지는 prompt end 시 `thinking`으로 복귀하도록 처리했습니다.
+- 그래도 stuck이면 OpenClaw 로그 샘플과 함께 알려주시면 파서 규칙을 조정하겠습니다.
 
 ---
 
-## 6) Gateway 실행/재시작
+## 8) 개선 아이디어(필요 시)
 
-### 6.1 서비스(데몬)로 실행 중이면
-```bash
-openclaw gateway status
-openclaw gateway restart
-```
-
-### 6.2 포그라운드로 수동 실행(테스트용)
-```bash
-openclaw gateway --port 18789 --verbose
-```
-
-대시보드/Control UI(로컬):
-- `http://127.0.0.1:18789/`
-
----
-
-## 7) 동작 확인(2분 점검)
-
-```bash
-openclaw status
-openclaw health
-openclaw channels status
-```
-
-Slack이 제대로 붙었는지 확인:
-```bash
-openclaw channels capabilities --channel slack
-```
-
----
-
-## 8) “세라” 워크스페이스 확인 체크리스트
-
-이 폴더(`~/.openclaw/workspace`)에 아래가 있어야 “성격/기억”이 유지됩니다.
-
-- `SOUL.md` : 말투/규칙(존댓말 등)
-- `USER.md` : 사용자 정보(호칭: 날밤님 등)
-- `MEMORY.md` : 장기 기억
-- `memory/YYYY-MM-DD.md` : 일지/로그
-- `HEARTBEAT.md` : 주기 작업(비어있으면 heartbeat 스킵)
-
----
-
-## 9) 문제 해결(자주 겪는 증상)
-
-### 9.1 Slack에서 반응이 없어요
-- Gateway가 떠있는지: `openclaw gateway status`
-- 토큰이 맞는지: `SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`
-- Slack 앱에서 Socket Mode 켰는지
-- 봇을 채널에 초대했는지
-
-### 9.2 설정 파일 위치가 헷갈려요
-- 이 환경에서 메인 설정은: `~/.openclaw/openclaw.json`
-- 워크스페이스는: `~/.openclaw/workspace/`
-
----
-
-## 10) 재설정 원칙(추천)
-
-- **백업 우선순위 1순위:** `~/.openclaw/openclaw.json` + `~/.openclaw/workspace/`
-- 외부 노출 방지: 토큰은 가능하면 `.env`/권한 600으로 관리
-- 큰 변경(채널 추가/라우팅 변경)은 한 번에 하지 말고, 변경 후 `openclaw health`로 확인
-
----
-
-## 참고 문서(로컬)
-
-- Getting Started: `/home/pi/.npm-global/lib/node_modules/openclaw/docs/start/getting-started.md`
-- Slack: `/home/pi/.npm-global/lib/node_modules/openclaw/docs/channels/slack.md`
-- `openclaw config` CLI: `/home/pi/.npm-global/lib/node_modules/openclaw/docs/cli/config.md`
-- `openclaw channels` CLI: `/home/pi/.npm-global/lib/node_modules/openclaw/docs/cli/channels.md`
+현재 v1은 “TTY 변경 감지”만 하고 **재오픈(reopen)**은 하지 않습니다.
+USB 재연결이 잦다면 아래 개선을 권장합니다.
+- `/dev/ttyACM*` 변경 시 기존 stream 종료 + 새 stream open
+- ESP32로 heartbeat/ping 주기 전송
