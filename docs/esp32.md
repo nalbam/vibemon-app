@@ -93,6 +93,14 @@ ls /dev/ttyUSB* /dev/ttyACM*
 
 ## Testing
 
+## Character
+
+```bash
+echo '{"state":"idle","project":"my-project","character":"clawd"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"idle","project":"my-project","character":"kiro"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"idle","project":"my-project","character":"claw"}' > /dev/cu.usbmodem1101
+```
+
 ### macOS
 
 ```bash

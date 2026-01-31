@@ -91,7 +91,7 @@ const CharacterGeometry CHAR_KIRO = {
   "kiro",
   COLOR_KIRO,
   // Eyes (leftX, rightX, y, w, h) - tall vertical eyes
-  29, 39, 21, 5, 8,
+  30, 39, 21, 5, 8,
   // Effect position (effectX, effectY)
   50, 3
 };
@@ -100,7 +100,7 @@ const CharacterGeometry CHAR_CLAW = {
   "claw",
   COLOR_CLAW,
   // Eyes (leftX, rightX, y, w, h)
-  20, 39, 16, 6, 6,
+  21, 38, 16, 6, 6,
   // Effect position (effectX, effectY)
   49, 4
 };
