@@ -71,11 +71,13 @@ function nowIso() {
 
 // --- state machine ---
 let currentState = null; // last emitted state
+let activeRuns = 0; // count of active embedded runs
 
 function setState(stream, nextState, extra = {}) {
   if (nextState === currentState && Object.keys(extra).length === 0) return;
   currentState = nextState;
 
+  debug(`setState: ${nextState}, activeRuns=${activeRuns}`, extra);
   writeJsonLine(stream, {
     state: nextState,
     project: PROJECT,
@@ -300,16 +302,21 @@ function handleLogLine(stream, obj) {
 
   // Run lifecycle events
   if (matchesSubsystem(subsystem, "agent") || msg.toLowerCase().includes("run")) {
-    // Run start -> thinking
+    // Run start -> increment counter and set thinking
     if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.start)) {
-      debug("State -> thinking (run start)");
+      activeRuns++;
+      debug(`Run start: activeRuns=${activeRuns}`);
       setState(stream, "thinking");
       return;
     }
 
-    // NOTE: run done is NOT used for done transition
-    // It fires before the reply is actually delivered to the user
-    // We only use "delivered reply to" for reliable completion detection
+    // Run done -> decrement counter, check if all runs completed
+    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.done)) {
+      activeRuns = Math.max(0, activeRuns - 1);
+      debug(`Run done: activeRuns=${activeRuns}`);
+      // Don't transition to done here - wait for delivered reply
+      return;
+    }
 
     // Prompt start -> planning
     if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.promptStart)) {
@@ -345,11 +352,17 @@ function handleLogLine(stream, obj) {
     }
   }
 
-  // Delivery marker (reliable for chat turns)
+  // Delivery marker - only transition to done if no active runs
   if (matchesSubsystem(subsystem, "gateway") || matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.delivered)) {
     if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.delivered)) {
-      debug("State -> done (reply delivered)");
-      setState(stream, "done");
+      debug(`Reply delivered: activeRuns=${activeRuns}`);
+      // Only go to done if no other runs are active
+      if (activeRuns === 0) {
+        debug("State -> done (all runs completed, reply delivered)");
+        setState(stream, "done");
+      } else {
+        debug(`Skipping done: ${activeRuns} runs still active`);
+      }
       return;
     }
   }
