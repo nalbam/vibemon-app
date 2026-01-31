@@ -324,7 +324,8 @@ class MultiWindowManager {
     // Shift existing windows to the left
     // Windows will be arranged after ready-to-show
 
-    const window = new BrowserWindow({
+    // macOS: Use 'panel' type to prevent focus stealing
+    const windowOptions = {
       width: WINDOW_WIDTH,
       height: WINDOW_HEIGHT,
       x: position.x,
@@ -342,7 +343,14 @@ class MultiWindowManager {
         contextIsolation: true,
         nodeIntegration: false
       }
-    });
+    };
+
+    // On macOS, use panel type to prevent focus stealing
+    if (process.platform === 'darwin') {
+      windowOptions.type = 'panel';
+    }
+
+    const window = new BrowserWindow(windowOptions);
 
     window.loadFile(path.join(__dirname, '..', 'index.html'));
 
