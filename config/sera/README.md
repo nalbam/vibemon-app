@@ -10,6 +10,8 @@
   {"state":"working","tool":"exec","project":"Sera","ts":"2026-01-31T04:12:33.123Z"}
   ```
 
+> 참고: `done → idle` 전환은 **VibeMon**이 담당합니다. 브릿지는 **thinking/planning/working/done**만 보냅니다.
+
 ---
 
 ## 1) 파일 구성
@@ -79,15 +81,12 @@ ESP32 쪽에서 JSON 라인이 수신되는지 확인하세요.
 
 - `SERA_PROJECT` (기본: `Sera`)
   - ESP32 디스플레이에 찍을 프로젝트/이름 구분용
-- `SERA_DONE_TO_IDLE_MS` (기본: `10000`)
-  - `done` 상태를 보낸 뒤 **몇 ms 후** 자동으로 `idle`로 전환할지
 - `OPENCLAW_LOG_DIR` (기본: `/tmp/openclaw`)
   - OpenClaw 로그 디렉토리
 
 예:
 ```bash
 SERA_PROJECT=Sera \
-SERA_DONE_TO_IDLE_MS=10000 \
 OPENCLAW_LOG_DIR=/tmp/openclaw \
 node scripts/esp32-status-bridge.mjs
 ```
@@ -96,14 +95,12 @@ node scripts/esp32-status-bridge.mjs
 
 ## 5) 상태(state) 스펙(ESP32 입력 프로토콜)
 
-브릿지는 크게 아래 상태들을 보냅니다.
+브릿지는 아래 상태들만 보냅니다.
 
-- `idle` : 대기
-- `start` : 실행 시작 감지
-- `thinking` : 추론/응답 생성 중
-- `planning` : 프롬프트 구간(특히 embedded run prompt start/end)에서 계획 단계
+- `thinking` : 사용자가 프롬프트 전달(런 시작) / 응답 생성 중
+- `planning` : 프롬프트 해석/계획 단계(embedded run prompt start/end 기반)
 - `working` : tool 실행 중 (`tool` 필드 포함)
-- `done` : 실행 종료(답변 deliver 또는 session idle 전환 감지)
+- `done` : 작업 완료(답변 deliver 또는 run 종료 감지)
 
 `working`일 때는 추가 필드가 붙습니다.
 - `tool`: 예) `exec`, `web_search`, `browser`, ...
@@ -166,16 +163,11 @@ journalctl --user -u sera-esp32-bridge.service -f
 ```bash
 groups pi
 ```
-- 그래도 안 되면 임시로 root 실행(비권장)이 아닌, udev rule 쪽으로 해결하는 게 안전합니다.
 
 ### 7.3 OpenClaw 로그 파일이 없다고 나와요
 - 브릿지는 **오늘 날짜** 파일만 봅니다: `openclaw-YYYY-MM-DD.log`
 - `OPENCLAW_LOG_DIR`가 실제 로그 경로와 일치하는지 확인
 - Gateway가 로그를 그 위치에 쓰고 있는지 확인
-
-### 7.4 상태가 `planning`에 멈춰요
-- 어떤 실행은 tool 없이 끝날 수 있어서, 브릿지는 prompt end 시 `thinking`으로 복귀하도록 처리했습니다.
-- 그래도 stuck이면 OpenClaw 로그 샘플과 함께 알려주시면 파서 규칙을 조정하겠습니다.
 
 ---
 

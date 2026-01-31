@@ -3,7 +3,7 @@
  * ESP32-C6 LCD status bridge for OpenClaw
  *
  * - Watches OpenClaw gateway JSONL log file(s)
- * - Derives high-level state (start/thinking/planning/working/done/idle)
+ * - Derives high-level state (thinking/planning/working/done)
  * - Writes newline-delimited JSON to the first /dev/ttyACM* device
  *
  * Expected ESP32 input example:
@@ -15,7 +15,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 const PROJECT = process.env.SERA_PROJECT ?? "Sera";
-const DONE_TO_IDLE_MS = Number.parseInt(process.env.SERA_DONE_TO_IDLE_MS ?? "10000", 10);
 const LOG_DIR = process.env.OPENCLAW_LOG_DIR ?? "/tmp/openclaw";
 
 function listTtys() {
@@ -52,8 +51,7 @@ function safeJsonParse(line) {
 }
 
 function writeJsonLine(stream, obj) {
-  const line = JSON.stringify(obj);
-  stream.write(line + "\n");
+  stream.write(JSON.stringify(obj) + "\n");
 }
 
 function nowIso() {
@@ -61,18 +59,11 @@ function nowIso() {
 }
 
 // --- state machine ---
-let currentState = "idle"; // what we last emitted
-let doneTimer = null;
+let currentState = null; // last emitted state
 
 function setState(stream, nextState, extra = {}) {
   if (nextState === currentState && Object.keys(extra).length === 0) return;
   currentState = nextState;
-
-  // Clear any pending done->idle timer if we move away from done/idle.
-  if (doneTimer) {
-    clearTimeout(doneTimer);
-    doneTimer = null;
-  }
 
   writeJsonLine(stream, {
     state: nextState,
@@ -80,14 +71,6 @@ function setState(stream, nextState, extra = {}) {
     ts: nowIso(),
     ...extra,
   });
-
-  if (nextState === "done") {
-    doneTimer = setTimeout(() => {
-      currentState = "idle";
-      writeJsonLine(stream, { state: "idle", project: PROJECT, ts: nowIso() });
-      doneTimer = null;
-    }, DONE_TO_IDLE_MS);
-  }
 }
 
 function parseEmbeddedTool(line) {
@@ -108,20 +91,11 @@ function parseSessionState(line) {
   return { prev, next, reason };
 }
 
-function parsePromptPhase(line) {
-  // embedded run prompt start/end
-  const m = line.match(/embedded run prompt (start|end):/);
-  if (!m) return null;
-  return { phase: m[1] };
-}
-
 function handleLogLine(stream, obj) {
   // The OpenClaw JSONL file logs often look like:
   // {"0":"{\"subsystem\":\"diagnostic\"}","1":"session state: ...", ...}
   const subsystemRaw = typeof obj?.["0"] === "string" ? obj["0"] : "";
   const msg = typeof obj?.["1"] === "string" ? obj["1"] : "";
-
-  // We only care about lines that have the message in field "1".
   if (!msg) return;
 
   // Session state transitions
@@ -130,34 +104,27 @@ function handleLogLine(stream, obj) {
     if (!s) return;
 
     if (s.next === "processing") {
-      // Start of a run
-      setState(stream, "start");
+      // User prompt/run started
       setState(stream, "thinking");
       return;
     }
 
     if (s.next === "idle") {
-      // End of a run
+      // Run ended
       setState(stream, "done");
       return;
     }
 
-    // If other states appear, reflect them best-effort
-    if (s.next) {
-      setState(stream, s.next);
-    }
     return;
   }
 
   // Embedded run lifecycle (fallbacks when diagnostics/session.state is missing)
   if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run start:")) {
-    setState(stream, "start");
     setState(stream, "thinking");
     return;
   }
 
   if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run done:")) {
-    // Reliable end-of-run marker
     setState(stream, "done");
     return;
   }
@@ -175,7 +142,6 @@ function handleLogLine(stream, obj) {
   }
 
   // Delivery marker (reliable for chat turns): once we deliver a reply, the run is effectively done.
-  // This is a practical fallback in case we miss / suppress some DEBUG diagnostics lines.
   if (subsystemRaw.includes("gateway/channels/") && msg.startsWith("delivered reply to")) {
     setState(stream, "done");
     return;
@@ -190,18 +156,16 @@ function handleLogLine(stream, obj) {
       setState(stream, "working", { tool: t.tool });
       return;
     }
+
     if (t.phase === "end") {
       // Go back to thinking while processing
-      if (currentState !== "done" && currentState !== "idle") {
-        setState(stream, "thinking");
-      }
+      if (currentState !== "done") setState(stream, "thinking");
       return;
     }
   }
 }
 
 function ensureDeviceReady(dev) {
-  // Basic permission sanity check (non-fatal)
   try {
     fs.accessSync(dev, fs.constants.W_OK);
     return true;
@@ -227,10 +191,10 @@ async function main() {
     process.exit(3);
   });
 
-  // Initial ping
-  writeJsonLine(ttyStream, { state: "idle", project: PROJECT, ts: nowIso(), note: "bridge_started" });
+  // Startup marker (VibeMon will handle done->idle, so we only emit done here)
+  setState(ttyStream, "done", { note: "bridge_started" });
 
-  let logPath = todayLogPath();
+  const logPath = todayLogPath();
   console.error("Using tty:", dev);
   console.error("Tailing log:", logPath);
 
@@ -244,7 +208,6 @@ async function main() {
   const tail = spawn("tail", ["-n", "0", "-F", logPath], { stdio: ["ignore", "pipe", "pipe"] });
 
   tail.stderr.on("data", (buf) => {
-    // tail prints errors here; keep them visible for debugging
     const s = buf.toString("utf8").trim();
     if (s) console.error("tail:", s);
   });
