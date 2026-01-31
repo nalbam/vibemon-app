@@ -47,6 +47,7 @@ function initDomCache() {
     display: document.getElementById('display'),
     statusText: document.getElementById('status-text'),
     loadingDots: document.getElementById('loading-dots'),
+    projectLine: document.getElementById('project-line'),
     toolLine: document.getElementById('tool-line'),
     modelLine: document.getElementById('model-line'),
     memoryLine: document.getElementById('memory-line'),
@@ -199,8 +200,8 @@ window.updateDisplay = function() {
   d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values from inputs
-  const projectName = d.projectInput.value;
-  const modelName = d.modelInput.value;
+  const projectName = d.projectInput.value.trim();
+  const modelName = d.modelInput.value.trim();
   const memoryUsage = d.memoryInput.value + '%';
   d.projectValue.textContent = projectName.length > PROJECT_NAME_MAX_LENGTH
     ? projectName.substring(0, PROJECT_NAME_TRUNCATE_AT) + '...'
@@ -211,9 +212,11 @@ window.updateDisplay = function() {
     : modelName;
   d.memoryValue.textContent = memoryUsage;
 
-  // Update model/memory visibility (hide memory on start state, hide all for kiro)
-  d.modelLine.style.display = modelName && !isKiro ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && memoryUsage && !isKiro;
+  // Update project/model/memory visibility (matches desktop behavior)
+  const showProject = projectName && projectName !== '-';
+  d.projectLine.style.display = showProject ? 'block' : 'none';
+  d.modelLine.style.display = modelName && modelName !== '-' && !isKiro ? 'block' : 'none';
+  const showMemory = currentState !== 'start' && memoryUsage && memoryUsage !== '-' && !isKiro;
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)
