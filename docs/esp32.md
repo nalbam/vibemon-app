@@ -93,28 +93,37 @@ ls /dev/ttyUSB* /dev/ttyACM*
 
 ## Testing
 
+### macOS
+
 ```bash
-# Test start state
-echo '{"state":"start","project":"my-project"}' > /dev/cu.usbmodem1101
-
-# Test idle state
-echo '{"state":"idle","project":"my-project"}' > /dev/cu.usbmodem1101
-
-# Test thinking state
-echo '{"state":"thinking","project":"my-project"}' > /dev/cu.usbmodem1101
-
-# Test planning state
-echo '{"state":"planning","project":"my-project"}' > /dev/cu.usbmodem1101
-
-# Test working state
-echo '{"state":"working","tool":"Bash","project":"my-project","model":"Opus 4.5","memory":"55%"}' > /dev/cu.usbmodem1101
-
-# Test notification state
-echo '{"state":"notification","project":"my-project"}' > /dev/cu.usbmodem1101
-
-# Test done state
+echo '{"state":"start","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"idle","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"thinking","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"planning","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"working","tool":"Bash","project":"my-project","model":"Opus 4.5","memory":"55%"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"notification","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"done","project":"my-project"}' > /dev/cu.usbmodem1101
 ```
+
+### Raspberry Pi / Linux
+
+Linux에서는 시리얼 통신 전에 baud rate 설정이 필요합니다.
+
+```bash
+# Set baud rate first (required, only once per session)
+stty -F /dev/ttyACM0 115200
+
+# Test states
+echo '{"state":"start","project":"my-project"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"idle","project":"my-project"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"thinking","project":"my-project"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"planning","project":"my-project"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"working","tool":"Bash","project":"my-project","model":"Opus 4.5","memory":"55%"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"notification","project":"my-project"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"done","project":"my-project"}' > /dev/ttyACM0
+```
+
+> **Note:** `stty` 명령은 세션당 한 번만 실행하면 됩니다. 터미널을 닫거나 장치를 재연결하면 다시 설정해야 합니다.
 
 ## Serial Commands
 
@@ -147,5 +156,6 @@ echo '{"command":"reboot"}' > /dev/cu.usbmodem1101
 |-------|----------|
 | Display not working | Verify LovyanGFX library is installed and board is ESP32C6 Dev Module |
 | Serial connection failed | Check port permissions: `sudo chmod 666 /dev/ttyUSB0` |
+| Serial not responding (Linux) | Set baud rate first: `stty -F /dev/ttyACM0 115200` |
 | JSON parsing error | Ensure JSON ends with LF (`\n`) |
 | WiFi not connecting | Check `credentials.h` exists and has correct SSID/password |

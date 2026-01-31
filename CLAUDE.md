@@ -133,8 +133,12 @@ curl -X POST http://127.0.0.1:19280/status \
 # List windows
 curl http://127.0.0.1:19280/windows
 
-# ESP32 Serial
-echo '{"state":"working","tool":"Bash"}' > /dev/cu.usbmodem1101
+# ESP32 Serial (macOS)
+echo '{"state":"working","tool":"Bash","project":"my-project"}' > /dev/cu.usbmodem1101
+
+# ESP32 Serial (Raspberry Pi / Linux)
+stty -F /dev/ttyACM0 115200  # Set baud rate first (required)
+echo '{"state":"working","tool":"Bash","project":"my-project"}' > /dev/ttyACM0
 ```
 
 ## Important Notes
