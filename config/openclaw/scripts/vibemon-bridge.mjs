@@ -322,23 +322,11 @@ function handleLogLine(stream, obj) {
 
   // Run lifecycle events
   if (matchesSubsystem(subsystem, "agent") || msg.toLowerCase().includes("run")) {
-    // Run start -> cancel any pending done timer, set thinking
-    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.start)) {
-      cancelDoneTimer();
-      debug("Run start -> thinking");
-      setState(stream, "thinking");
-      return;
-    }
-
-    // Run done -> just log, wait for delivered to schedule done
-    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.done)) {
-      debug("Run done (waiting for delivered)");
-      return;
-    }
+    // IMPORTANT: Check prompt patterns BEFORE run patterns (prompt contains "run")
 
     // Prompt start -> planning
     if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.promptStart)) {
-      cancelDoneTimer(); // Still working, don't go to done
+      cancelDoneTimer();
       debug("State -> planning (prompt start)");
       setState(stream, "planning");
       return;
@@ -353,11 +341,11 @@ function handleLogLine(stream, obj) {
       return;
     }
 
-    // Tool activity
+    // Tool activity (check BEFORE run start - "run tool start" contains "run...start")
     const t = parseEmbeddedTool(msg);
     if (t) {
       if (t.phase === "start") {
-        cancelDoneTimer(); // Still working, don't go to done
+        cancelDoneTimer();
         debug("State -> working:", t.tool);
         setState(stream, "working", { tool: t.tool });
         return;
@@ -369,6 +357,20 @@ function handleLogLine(stream, obj) {
         }
         return;
       }
+    }
+
+    // Run start -> cancel any pending done timer, set thinking
+    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.start)) {
+      cancelDoneTimer();
+      debug("Run start -> thinking");
+      setState(stream, "thinking");
+      return;
+    }
+
+    // Run done -> just log, wait for delivered to schedule done
+    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.done)) {
+      debug("Run done (waiting for delivered)");
+      return;
     }
   }
 
