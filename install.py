@@ -58,6 +58,11 @@ OPENCLAW_FILES = [
     "config/openclaw/scripts/vibemon-bridge.plist",
 ]
 
+OPENCLAW_PLUGIN_FILES = [
+    "config/openclaw/plugins/vibemon-bridge/openclaw.plugin.json",
+    "config/openclaw/plugins/vibemon-bridge/index.mjs",
+]
+
 
 def colored(text: str, color: str) -> str:
     """Return colored text for terminal output."""
@@ -349,9 +354,49 @@ def install_kiro(source: FileSource) -> bool:
     return True
 
 
-def install_openclaw(source: FileSource) -> bool:
-    """Install Vibe Monitor bridge for OpenClaw."""
-    print(f"\n{colored('Installing Vibe Monitor for OpenClaw...', 'cyan')}\n")
+def install_openclaw_plugin(source: FileSource) -> bool:
+    """Install VibeMon plugin for OpenClaw (recommended)."""
+    print(f"\n{colored('Installing VibeMon Plugin for OpenClaw...', 'cyan')}\n")
+
+    openclaw_home = Path.home() / ".openclaw" / "workspace"
+    plugin_dir = openclaw_home / "plugins" / "vibemon-bridge"
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+
+    print("Copying plugin files:")
+
+    # openclaw.plugin.json
+    content = source.get_file("config/openclaw/plugins/vibemon-bridge/openclaw.plugin.json")
+    write_file_with_diff(plugin_dir / "openclaw.plugin.json", content, "openclaw.plugin.json")
+
+    # index.mjs
+    content = source.get_file("config/openclaw/plugins/vibemon-bridge/index.mjs")
+    write_file_with_diff(plugin_dir / "index.mjs", content, "index.mjs")
+
+    print(f"\n{colored('Plugin installation complete!', 'green')}")
+    print(f"\n{colored('Next steps:', 'yellow')}")
+    print("  1. Connect ESP32 via USB")
+    print("  2. Enable plugin in OpenClaw config (~/.openclaw/config.json):")
+    print(f"""     {colored('''{
+  "plugins": {
+    "vibemon-bridge": {
+      "enabled": true,
+      "config": {
+        "projectName": "OpenClaw",
+        "character": "claw",
+        "serialEnabled": true
+      }
+    }
+  }
+}''', 'cyan')}""")
+    print("  3. Restart OpenClaw Gateway")
+    print("  4. Check OpenClaw logs for: [vibemon] Plugin loaded")
+
+    return True
+
+
+def install_openclaw_legacy(source: FileSource) -> bool:
+    """Install VibeMon log-based bridge for OpenClaw (legacy)."""
+    print(f"\n{colored('Installing VibeMon Bridge (log-based) for OpenClaw...', 'cyan')}\n")
 
     is_macos = platform.system() == "Darwin"
     is_linux = platform.system() == "Linux"
@@ -375,7 +420,7 @@ def install_openclaw(source: FileSource) -> bool:
         content = source.get_file("config/openclaw/scripts/vibemon-bridge.plist")
         write_file_with_diff(scripts_dir / "vibemon-bridge.plist", content, "scripts/vibemon-bridge.plist")
 
-        print(f"\n{colored('OpenClaw installation complete!', 'green')}")
+        print(f"\n{colored('OpenClaw bridge installation complete!', 'green')}")
         print(f"\n{colored('Next steps:', 'yellow')}")
         print("  1. Connect ESP32 via USB")
         print("  2. Install as launchd user service:")
@@ -391,7 +436,7 @@ def install_openclaw(source: FileSource) -> bool:
         content = source.get_file("config/openclaw/scripts/vibemon-bridge.service")
         write_file_with_diff(scripts_dir / "vibemon-bridge.service", content, "scripts/vibemon-bridge.service")
 
-        print(f"\n{colored('OpenClaw installation complete!', 'green')}")
+        print(f"\n{colored('OpenClaw bridge installation complete!', 'green')}")
         print(f"\n{colored('Next steps:', 'yellow')}")
         print("  1. Connect ESP32 via USB")
         print("  2. Add user to dialout group:")
@@ -408,12 +453,39 @@ def install_openclaw(source: FileSource) -> bool:
         print(f"     {colored('node ~/.openclaw/workspace/scripts/vibemon-bridge.mjs', 'cyan')}")
 
     else:
-        print(f"\n{colored('OpenClaw installation complete!', 'green')}")
+        print(f"\n{colored('OpenClaw bridge installation complete!', 'green')}")
         print(f"\n{colored('Note:', 'yellow')} Service files are only available for macOS and Linux.")
         print("  Run manually:")
         print(f"     {colored('node ~/.openclaw/workspace/scripts/vibemon-bridge.mjs', 'cyan')}")
 
     return True
+
+
+def install_openclaw(source: FileSource) -> bool:
+    """Install Vibe Monitor for OpenClaw."""
+    print(f"\n{colored('Installing Vibe Monitor for OpenClaw...', 'cyan')}\n")
+
+    print("Select installation method:")
+    print(f"  {colored('1)', 'cyan')} Plugin (recommended) - uses OpenClaw hooks")
+    print(f"  {colored('2)', 'cyan')} Log-based (legacy) - tails log files")
+    print(f"  {colored('3)', 'cyan')} Both")
+    print(f"  {colored('q)', 'cyan')} Cancel")
+
+    while True:
+        choice = input("\nYour choice [1/2/3/q]: ").strip().lower()
+        if choice in ("1", "plugin"):
+            return install_openclaw_plugin(source)
+        elif choice in ("2", "legacy", "log"):
+            return install_openclaw_legacy(source)
+        elif choice in ("3", "both"):
+            install_openclaw_plugin(source)
+            install_openclaw_legacy(source)
+            return True
+        elif choice in ("q", "quit", "cancel"):
+            print("\nOpenClaw installation cancelled.")
+            return False
+        else:
+            print("Please enter 1, 2, 3, or q")
 
 
 def main():
