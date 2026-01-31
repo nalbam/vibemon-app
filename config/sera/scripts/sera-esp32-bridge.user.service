@@ -1,11 +1,8 @@
 [Unit]
-Description=OpenClaw -> ESP32-C6 LCD status bridge (Sera)
-After=openclaw-gateway.service
-Wants=openclaw-gateway.service
+Description=OpenClaw -> ESP32-C6 LCD status bridge (Sera) [user]
 
 [Service]
 Type=simple
-User=pi
 WorkingDirectory=/home/pi/.openclaw/workspace
 ExecStart=/usr/bin/env node /home/pi/.openclaw/workspace/scripts/esp32-status-bridge.mjs
 Restart=always
@@ -14,9 +11,5 @@ Environment=SERA_PROJECT=Sera
 Environment=SERA_DONE_TO_IDLE_MS=10000
 Environment=OPENCLAW_LOG_DIR=/tmp/openclaw
 
-# If tty permissions are an issue, either:
-# - add user 'pi' to dialout group, or
-# - run as root (not recommended)
-
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

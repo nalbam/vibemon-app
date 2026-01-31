@@ -25,19 +25,19 @@
 ### 2.1 ESP32를 USB로 연결
 - ESP32-C6 보드를 USB로 연결하면 보통 `/dev/ttyACM0` 같은 디바이스로 잡힙니다.
 - 확인:
-  ```bash
-  ls -la /dev/ttyACM*
-  dmesg | tail -n 50
-  ```
+```bash
+ls -la /dev/ttyACM*
+dmesg | tail -n 50
+```
 
 ### 2.2 시리얼 권한(dialout)
 브릿지는 해당 TTY에 write 해야 합니다.
 
 - 현재 사용자(예: `pi`)를 `dialout`에 추가:
-  ```bash
-  sudo usermod -aG dialout pi
-  # 적용을 위해 로그아웃/재부팅 필요할 수 있음
-  ```
+```bash
+sudo usermod -aG dialout pi
+# 적용을 위해 로그아웃/재부팅 필요할 수 있음
+```
 
 권한이 없으면 브릿지에서 아래와 유사한 경고가 뜹니다.
 - `Found /dev/ttyACM0 but not writable. Check permissions (dialout group) ...`
@@ -163,9 +163,9 @@ journalctl --user -u sera-esp32-bridge.service -f
 ### 7.2 권한 문제로 쓰기 실패
 - `ls -la /dev/ttyACM0`에서 그룹이 `dialout`인지 확인
 - `pi`가 `dialout` 그룹에 포함됐는지 확인:
-  ```bash
-  groups pi
-  ```
+```bash
+groups pi
+```
 - 그래도 안 되면 임시로 root 실행(비권장)이 아닌, udev rule 쪽으로 해결하는 게 안전합니다.
 
 ### 7.3 OpenClaw 로그 파일이 없다고 나와요
