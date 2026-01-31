@@ -43,7 +43,7 @@ describe('validateCharacter', () => {
   });
 
   test('accepts valid characters', () => {
-    const validCharacters = ['clawd', 'kiro'];
+    const validCharacters = ['clawd', 'kiro', 'claw'];
     validCharacters.forEach(character => {
       const result = validateCharacter(character);
       expect(result.valid).toBe(true);

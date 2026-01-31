@@ -547,7 +547,7 @@ function validateTerminalId(terminalId) {
 /**
  * 시스템 트레이 아이콘을 생성합니다.
  * @param {string} state - 현재 상태 ('idle', 'working', 등)
- * @param {string} character - 캐릭터 이름 ('clawd', 'kiro')
+ * @param {string} character - 캐릭터 이름 ('clawd', 'kiro', 'claw')
  * @returns {nativeImage} Electron nativeImage 객체
  */
 function createTrayIcon(state, character = 'clawd') {

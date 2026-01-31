@@ -4,10 +4,11 @@
 
 | Character | Color | Description | Auto-selected for |
 |-----------|-------|-------------|-------------------|
-| `clawd` | Orange | Default character with arms and legs | Claude Code |
-| `kiro` | White | Ghost character with wavy tail | Kiro |
+| `clawd` | Orange | Default character | Claude Code |
+| `kiro` | White | Ghost character | Kiro |
+| `claw` | Red | Antenna character | - |
 
-Character is **auto-detected** based on the IDE hook events. You can also manually change it via the system tray menu.
+All characters use **image-based rendering** (128x128 PNG). Character is **auto-detected** based on the IDE hook events. You can also manually change it via the system tray menu.
 
 ## States
 

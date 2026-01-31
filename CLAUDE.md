@@ -48,7 +48,7 @@ open simulator/index.html
 - **Config Data**: `desktop/shared/data/` folder (JSON files - single source of truth)
   - `constants.json`: Window dimensions, animation settings, limits
   - `states.json`: State colors, text, eyeType definitions
-  - `characters.json`: Character body/eyes/limbs configuration
+  - `characters.json`: Character eyes/effect configuration (image-based rendering)
   - `texts.json`: Thinking/planning/tool status texts
 
 ## Key Patterns
@@ -58,7 +58,7 @@ open simulator/index.html
 - **Floating**: Cosine/Sine wave offset (X: ±3px, Y: ±5px, ~3.2s cycle)
 - **Working text**: Tool-based random selection via `getWorkingText(tool)`
 - **JSON fields**: `{"state", "tool", "project", "model", "memory", "character", "terminalId"}`
-- **Characters**: `clawd` (orange), `kiro` (white ghost)
+- **Characters**: `clawd` (orange), `kiro` (white ghost), `claw` (red)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
 - **Matrix rain (working)**: Movie-style effect with flicker head, gradient tail, variable speed (1-6)

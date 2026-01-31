@@ -20,7 +20,7 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | `tool` | 50 chars | String |
 | `model` | 50 chars | String |
 | `memory` | - | `N%` where N is 0-100 |
-| `character` | - | `clawd` or `kiro` |
+| `character` | - | `clawd`, `kiro`, or `claw` |
 | `terminalId` | - | String (iTerm2 session ID or Ghostty PID) |
 
 ---
@@ -65,7 +65,7 @@ curl -X POST http://127.0.0.1:19280/status \
 | `project` | string | Project name |
 | `model` | string | Model name (e.g., `opus`, `sonnet`) |
 | `memory` | string | Memory usage (e.g., `45%`) |
-| `character` | string | `clawd` or `kiro` |
+| `character` | string | `clawd`, `kiro`, or `claw` |
 | `terminalId` | string | Terminal ID for click-to-focus (iTerm2 session ID or Ghostty PID) |
 
 **Response:**

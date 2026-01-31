@@ -17,7 +17,7 @@ Vibe Monitor는 AI 코딩 어시스턴트(Claude Code, Kiro IDE)의 실시간 �
 
 ### 핵심 기능
 - **8가지 상태**: `start`, `idle`, `thinking`, `planning`, `working`, `notification`, `done`, `sleep`
-- **2개 캐릭터**: `clawd` (오렌지), `kiro` (흰색 고스트) - IDE별 자동 감지
+- **3개 캐릭터**: `clawd` (오렌지), `kiro` (흰색 고스트), `claw` (빨간색) - IDE별 자동 감지
 - **실시간 애니메이션**: 부유 효과, 깜빡임, 로딩 도트, Matrix rain, 선글라스, 생각 버블
 - **IDE 통합**: 훅 시스템을 통한 자동 상태 업데이트
 - **멀티 윈도우**: 프로젝트별 독립 윈도우 (최대 5개)
@@ -228,7 +228,7 @@ vibe-monitor/
 
 ### 2. 네이밍 컨벤션
 - **상태**: snake_case (`start`, `done`)
-- **캐릭터**: 소문자 (`clawd`, `kiro`)
+- **캐릭터**: 소문자 (`clawd`, `kiro`, `claw`)
 - **색상**: RGB565 (ESP32), HEX (Web/Desktop)
 - **함수**: camelCase (JS), snake_case (C++)
 

@@ -105,6 +105,7 @@ See [Features](docs/features.md) for animations, working state text, and more.
 |-----------|-------|-------------------|
 | `clawd` | Orange | Claude Code |
 | `kiro` | White | Kiro |
+| `claw` | Red | OpenClew |
 
 ## HTTP API
 
@@ -197,6 +198,7 @@ See [ESP32 Setup](docs/esp32.md) for hardware setup instructions.
 
 ## Version History
 
+- **v1.4**: New claw character, ESP32 claw support, image-based character rendering
 - **v1.3**: Multi-window mode, window mode API, enhanced lock modes
 - **v1.2**: Project lock, modular architecture, npx support
 - **v1.1**: Desktop app, system tray, memory bar gradient
