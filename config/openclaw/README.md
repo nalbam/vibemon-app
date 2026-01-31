@@ -1,6 +1,6 @@
 # ESP32 Status Bridge Setup Guide
 
-`esp32-status-bridge.mjs` is a bridge that tails **OpenClaw Gateway logs (JSONL)** and streams the current status to **ESP32-C6 (USB Serial, `/dev/ttyACM*`)** as **NDJSON (JSON + `\n`)**.
+`vibemon-bridge.mjs` is a bridge that tails **OpenClaw Gateway logs (JSONL)** and streams the current status to **ESP32-C6 (USB Serial, `/dev/ttyACM*`)** as **NDJSON (JSON + `\n`)**.
 
 - Input (what the bridge reads): OpenClaw log file (`/tmp/openclaw/openclaw-YYYY-MM-DD.log`)
 - Output (what goes to ESP32): `/dev/ttyACM0` etc.
@@ -15,9 +15,9 @@
 
 ## 1) File Structure
 
-- `scripts/esp32-status-bridge.mjs`: Bridge script (Node.js)
-- `scripts/sera-esp32-bridge.service`: systemd (system) service unit (recommended for Raspberry Pi/servers)
-- `scripts/sera-esp32-bridge.user.service`: systemd (user) service unit (optional)
+- `scripts/vibemon-bridge.mjs`: Bridge script (Node.js)
+- `scripts/vibemon-bridge.service`: systemd (system) service unit (recommended for Raspberry Pi/servers)
+- `scripts/vibemon-bridge.user.service`: systemd (user) service unit (optional)
 
 ---
 
@@ -63,7 +63,7 @@ Before setting up as a service, test manually first.
 
 ```bash
 cd ~/.openclaw/workspace
-node scripts/esp32-status-bridge.mjs
+node scripts/vibemon-bridge.mjs
 ```
 
 If working correctly, you'll see logs on stderr:
@@ -87,7 +87,7 @@ Example:
 ```bash
 PROJECT_NAME=OpenClaw \
 OPENCLAW_LOG_DIR=/tmp/openclaw \
-node scripts/esp32-status-bridge.mjs
+node scripts/vibemon-bridge.mjs
 ```
 
 ---
@@ -118,7 +118,7 @@ Example for `pi` user.
 
 1) Copy the unit file
 ```bash
-sudo cp ~/.openclaw/workspace/scripts/sera-esp32-bridge.service /etc/systemd/system/sera-esp32-bridge.service
+sudo cp ~/.openclaw/workspace/scripts/vibemon-bridge.service /etc/systemd/system/vibemon-bridge.service
 ```
 
 2) Reload systemd
@@ -128,13 +128,13 @@ sudo systemctl daemon-reload
 
 3) Enable and start
 ```bash
-sudo systemctl enable --now sera-esp32-bridge.service
+sudo systemctl enable --now vibemon-bridge.service
 ```
 
 4) Check status/logs
 ```bash
-sudo systemctl status sera-esp32-bridge.service -n 50
-sudo journalctl -u sera-esp32-bridge.service -f
+sudo systemctl status vibemon-bridge.service -n 50
+sudo journalctl -u vibemon-bridge.service -f
 ```
 
 ### 6.2 Install as User Service (Optional)
@@ -142,10 +142,10 @@ Use this only if you want to run as a user service in a GUI login session.
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp ~/.openclaw/workspace/scripts/sera-esp32-bridge.user.service ~/.config/systemd/user/sera-esp32-bridge.service
+cp ~/.openclaw/workspace/scripts/vibemon-bridge.user.service ~/.config/systemd/user/vibemon-bridge.service
 systemctl --user daemon-reload
-systemctl --user enable --now sera-esp32-bridge.service
-journalctl --user -u sera-esp32-bridge.service -f
+systemctl --user enable --now vibemon-bridge.service
+journalctl --user -u vibemon-bridge.service -f
 ```
 
 ---
