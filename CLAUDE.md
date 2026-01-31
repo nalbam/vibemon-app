@@ -82,6 +82,7 @@ Two modes available (`multi` or `single`):
 - Max 5 windows (or screen limit)
 - Auto-rearranges when state changes or window closes
 - 10px gap between windows
+- System tray shows up to 10 projects in menu
 
 ### API Endpoints
 
