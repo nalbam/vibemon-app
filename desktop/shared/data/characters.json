@@ -20,7 +20,7 @@
     "displayName": "Claw",
     "color": "#DD4444",
     "eyes": { "left": { "x": 20, "y": 16 }, "right": { "x": 39, "y": 16 }, "size": 6 },
-    "effect": { "x": 52, "y": 4 },
+    "effect": { "x": 48, "y": 4 },
     "isGhost": false
   }
 }
