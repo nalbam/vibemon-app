@@ -35,7 +35,7 @@ function createTrayIcon(state, character = 'clawd') {
   const bgColor = STATE_COLORS[state] || STATE_COLORS.idle;
   const charConfig = CHARACTER_CONFIG[character] || CHARACTER_CONFIG[DEFAULT_CHARACTER];
   const charColor = charConfig.color;
-  const isGhost = charConfig.isGhost;
+  const charName = charConfig.name;
 
   // Helper to draw filled rectangle
   function rect(x, y, w, h, color) {
@@ -53,7 +53,7 @@ function createTrayIcon(state, character = 'clawd') {
   ctx.roundRect(0, 0, size, size, radius);
   ctx.fill();
 
-  if (isGhost) {
+  if (charName === 'kiro') {
     // Draw ghost character for kiro
     rect(6, 4, 10, 2, charColor);   // Rounded top
     rect(5, 6, 12, 8, charColor);   // Main body
@@ -62,6 +62,15 @@ function createTrayIcon(state, character = 'clawd') {
     rect(13, 14, 4, 3, charColor);  // Right wave
     rect(7, 8, 2, 2, COLOR_EYE);    // Left eye
     rect(13, 8, 2, 2, COLOR_EYE);   // Right eye
+  } else if (charName === 'claw') {
+    // Draw claw character (red with antennae)
+    rect(8, 2, 2, 4, charColor);    // Left antenna
+    rect(12, 2, 2, 4, charColor);   // Right antenna
+    rect(5, 6, 12, 10, charColor);  // Body
+    rect(6, 16, 3, 3, charColor);   // Left leg
+    rect(13, 16, 3, 3, charColor);  // Right leg
+    rect(7, 10, 2, 2, '#40E0D0');   // Left eye (cyan)
+    rect(13, 10, 2, 2, '#40E0D0');  // Right eye (cyan)
   } else {
     // Draw clawd character (default)
     rect(4, 6, 14, 8, charColor);   // Body

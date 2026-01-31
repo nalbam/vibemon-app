@@ -151,9 +151,8 @@ export function initRenderer(canvasCtx) {
 typedef struct {
   const char* name;
   uint16_t color;
-  int bodyX, bodyY, bodyW, bodyH;
-  bool isGhost;
-  // ... 기타 필드
+  int eyeLeftX, eyeRightX, eyeY, eyeW, eyeH;
+  int effectX, effectY;
 } CharacterGeometry;
 
 // ✅ 열거형 사용

@@ -779,9 +779,7 @@ void updateBlink() {
           drawCharacterToSprite(charSprite, EYE_BLINK, bgColor, character);
           charSprite.pushSprite(charX, charY);
         } else {
-          tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-                       character->bodyW * SCALE, 30 * SCALE, character->color);
-          drawBlinkEyes(tft, charX, charY, 0, character);
+          drawCharacter(tft, charX, charY, EYE_BLINK, bgColor, character);
         }
         blinkPhase = BLINK_CLOSED;
         blinkPhaseStart = now;
@@ -796,9 +794,7 @@ void updateBlink() {
           drawCharacterToSprite(charSprite, EYE_NORMAL, bgColor, character);
           charSprite.pushSprite(charX, charY);
         } else {
-          tft.fillRect(charX + (character->bodyX * SCALE), charY + (character->bodyY * SCALE),
-                       character->bodyW * SCALE, 30 * SCALE, character->color);
-          drawBlinkEyes(tft, charX, charY, 1, character);
+          drawCharacter(tft, charX, charY, EYE_NORMAL, bgColor, character);
         }
         blinkPhase = BLINK_NONE;
         lastBlink = now;

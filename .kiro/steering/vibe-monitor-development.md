@@ -102,17 +102,22 @@ main.js                      # 오케스트레이터 - 모듈 연결 및 IPC 핸
     "name": "clawd",
     "displayName": "Clawd",
     "color": "#D97757",
-    "body": { "x": 4, "y": 6, "w": 14, "h": 8 },
-    "eyes": { "left": { "x": 6, "y": 9 }, "right": { "x": 14, "y": 9 }, "w": 6, "h": 6 },
-    "isGhost": false
+    "eyes": { "left": { "x": 14, "y": 22 }, "right": { "x": 44, "y": 22 }, "size": 6 },
+    "effect": { "x": 52, "y": 4 }
   },
   "kiro": {
     "name": "kiro",
     "displayName": "Kiro",
     "color": "#FFFFFF",
-    "body": { "x": 5, "y": 4, "w": 12, "h": 14 },
-    "eyes": { "left": { "x": 7, "y": 8 }, "right": { "x": 13, "y": 8 }, "w": 6, "h": 6 },
-    "isGhost": true
+    "eyes": { "left": { "x": 29, "y": 21 }, "right": { "x": 39, "y": 21 }, "w": 5, "h": 8 },
+    "effect": { "x": 50, "y": 3 }
+  },
+  "claw": {
+    "name": "claw",
+    "displayName": "Claw",
+    "color": "#DD4444",
+    "eyes": { "left": { "x": 20, "y": 16 }, "right": { "x": 39, "y": 16 }, "size": 6 },
+    "effect": { "x": 49, "y": 4 }
   }
 }
 ```

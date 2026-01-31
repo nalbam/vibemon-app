@@ -12,10 +12,12 @@
 // Character image data (RGB565 format)
 #include "img_clawd.h"
 #include "img_kiro.h"
+#include "img_claw.h"
 
 // Character colors (RGB565)
 #define COLOR_CLAUDE      0xDBAA  // #D97757 Claude orange (217,119,87)
 #define COLOR_KIRO        0xFFFF  // #FFFFFF White ghost
+#define COLOR_CLAW        0xDA28  // #DD4444 Claw red (221,68,68)
 #define COLOR_EYE         0x0000  // #000000 Black
 #define COLOR_TRANSPARENT 0x0000  // Transparent (same as background)
 #define COLOR_EFFECT_ALT  0xFD20  // #FFA500 Orange for white character effects
@@ -40,6 +42,10 @@ void drawKiroImage(TFT_eSPI &tft, int x, int y) {
   drawImageToTFT(tft, x, y, IMG_KIRO, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
+void drawClawImage(TFT_eSPI &tft, int x, int y) {
+  drawImageToTFT(tft, x, y, IMG_CLAW, IMG_CLAW_WIDTH, IMG_CLAW_HEIGHT, COLOR_TRANSPARENT_MARKER);
+}
+
 // Helper function to draw PROGMEM image with transparency to sprite
 // Optimized: Uses pushImage instead of pixel-by-pixel drawing (100x faster)
 void drawImageWithTransparency(TFT_eSprite &sprite, const uint16_t* img, int width, int height, uint16_t transparentColor) {
@@ -57,70 +63,54 @@ void drawKiroImageToSprite(TFT_eSprite &sprite) {
   drawImageWithTransparency(sprite, IMG_KIRO, IMG_KIRO_WIDTH, IMG_KIRO_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
+void drawClawImageToSprite(TFT_eSprite &sprite) {
+  drawImageWithTransparency(sprite, IMG_CLAW, IMG_CLAW_WIDTH, IMG_CLAW_HEIGHT, COLOR_TRANSPARENT_MARKER);
+}
+
 // Character geometry structure
 typedef struct {
   const char* name;
   uint16_t color;
-  // Body
-  int bodyX, bodyY, bodyW, bodyH;
-  bool isGhost;           // Ghost shape flag
-  // Arms (optional)
-  bool hasArms;
-  int armLeftX, armRightX, armY, armW, armH;
-  // Legs or Tail parts
-  int partCount;          // Number of legs or tail parts
-  int partX[4];
-  int partY[4];
-  int partW[4];
-  int partH[4];
   // Eyes
   int eyeLeftX, eyeRightX, eyeY, eyeW, eyeH;
+  // Effect position (sparkle, thought bubble, zzz, etc.)
+  int effectX, effectY;
 } CharacterGeometry;
 
 // Character definitions
 const CharacterGeometry CHAR_CLAWD = {
   "clawd",
   COLOR_CLAUDE,
-  // Body: x=6, y=8, w=52, h=36
-  6, 8, 52, 36,
-  false,  // Not a ghost
-  // Arms: hasArms=true
-  true,
-  0, 58, 22, 6, 10,  // leftX, rightX, y, w, h
-  // Legs: 4 parts
-  4,
-  {10, 18, 40, 48},  // partX
-  {44, 44, 44, 44},  // partY
-  {6, 6, 6, 6},      // partW
-  {12, 12, 12, 12},  // partH
-  // Eyes (w, h for width and height)
-  14, 44, 22, 6, 6      // leftX, rightX, y, w, h
+  // Eyes (leftX, rightX, y, w, h)
+  14, 44, 22, 6, 6,
+  // Effect position (effectX, effectY)
+  52, 4
 };
 
 const CharacterGeometry CHAR_KIRO = {
   "kiro",
   COLOR_KIRO,
-  // Sprite-based rendering (64x64 sprite, body geometry for reference)
-  10, 3, 44, 30,
-  true,   // Is a ghost (uses sprite)
-  // Arms: hasArms=false
-  false,
-  0, 0, 0, 0, 0,
-  // No tail parts (included in sprite)
-  0,
-  {0, 0, 0, 0},
-  {0, 0, 0, 0},
-  {0, 0, 0, 0},
-  {0, 0, 0, 0},
-  // Eyes (matches 64x64 sprite, tall vertical eyes)
-  29, 39, 21, 5, 8      // leftX, rightX, y, w, h
+  // Eyes (leftX, rightX, y, w, h) - tall vertical eyes
+  29, 39, 21, 5, 8,
+  // Effect position (effectX, effectY)
+  50, 3
+};
+
+const CharacterGeometry CHAR_CLAW = {
+  "claw",
+  COLOR_CLAW,
+  // Eyes (leftX, rightX, y, w, h)
+  20, 39, 16, 6, 6,
+  // Effect position (effectX, effectY)
+  49, 4
 };
 
 // Character array for dynamic lookup
 // To add a new character, add to this array and define the CharacterGeometry above
 const CharacterGeometry* ALL_CHARACTERS[] = {
   &CHAR_CLAWD,
-  &CHAR_KIRO
+  &CHAR_KIRO,
+  &CHAR_CLAW
 };
 const int CHARACTER_COUNT = sizeof(ALL_CHARACTERS) / sizeof(ALL_CHARACTERS[0]);
 const CharacterGeometry* DEFAULT_CHARACTER = &CHAR_CLAWD;
@@ -191,7 +181,7 @@ enum EyeType {
 extern int animFrame;
 
 // Forward declarations for functions called before definition
-void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH);
+void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size);
 void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character);
 void drawQuestionMark(TFT_eSPI &tft, int x, int y);
 void drawSparkle(TFT_eSPI &tft, int x, int y, uint16_t sparkleColor);
@@ -217,7 +207,7 @@ void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
  */
 
 // Forward declarations for sprite versions
-void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH);
+void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size);
 void drawEyesToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character);
 
 // Draw the Claude character to sprite buffer (128x128) - NO FLICKERING
@@ -227,8 +217,7 @@ void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, uint16_t bgColo
 
   // Draw matrix background for working state (behind character)
   if (eyeType == EYE_FOCUSED) {
-    drawMatrixBackgroundToSprite(sprite, animFrame, CHAR_WIDTH / SCALE,
-                                 character->bodyX, character->bodyY, character->bodyW, character->bodyH);
+    drawMatrixBackgroundToSprite(sprite, animFrame, CHAR_WIDTH / SCALE);
   }
 
   // Draw body using images
@@ -236,6 +225,8 @@ void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, uint16_t bgColo
     drawClawdImageToSprite(sprite);
   } else if (character == &CHAR_KIRO) {
     drawKiroImageToSprite(sprite);
+  } else if (character == &CHAR_CLAW) {
+    drawClawImageToSprite(sprite);
   }
 
   // Draw eyes based on type
@@ -249,78 +240,19 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, uint16_t bgColo
 
   // Draw matrix background for working state (behind character)
   if (eyeType == EYE_FOCUSED) {
-    drawMatrixBackground(tft, x, y, animFrame, CHAR_WIDTH / SCALE,
-                         character->bodyX, character->bodyY, character->bodyW, character->bodyH);
+    drawMatrixBackground(tft, x, y, animFrame, CHAR_WIDTH / SCALE);
   }
 
-  // Draw body using images (images include full character: body, arms, legs)
+  // Draw character image
   if (character == &CHAR_CLAWD) {
     drawClawdImage(tft, x, y);
-    drawEyes(tft, x, y, eyeType, character);
-    return;  // Image includes everything, skip manual drawing
   } else if (character == &CHAR_KIRO) {
     drawKiroImage(tft, x, y);
-    drawEyes(tft, x, y, eyeType, character);
-    return;  // Image includes everything, skip manual drawing
+  } else if (character == &CHAR_CLAW) {
+    drawClawImage(tft, x, y);
   }
 
-  // Fallback for characters without images (charColor only needed here)
-  uint16_t charColor = character->color;
-  if (character->isGhost) {
-    // Generic ghost body (rounded egg/chick shape) - fallback
-    int bx = x + (character->bodyX * SCALE);
-    int by = y + (character->bodyY * SCALE);
-    int bw = character->bodyW * SCALE;
-    int bh = character->bodyH * SCALE;
-
-    // Rounded top (gradual curve)
-    tft.fillRect(bx + (10 * SCALE), by, bw - (20 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (6 * SCALE), by + (2 * SCALE), bw - (12 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (4 * SCALE), by + (4 * SCALE), bw - (8 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (2 * SCALE), by + (6 * SCALE), bw - (4 * SCALE), 2 * SCALE, charColor);
-
-    // Main body (middle)
-    tft.fillRect(bx, by + (8 * SCALE), bw, bh - (16 * SCALE), charColor);
-
-    // Rounded bottom (gradual curve)
-    tft.fillRect(bx + (2 * SCALE), by + bh - (8 * SCALE), bw - (4 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (4 * SCALE), by + bh - (6 * SCALE), bw - (8 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (6 * SCALE), by + bh - (4 * SCALE), bw - (12 * SCALE), 2 * SCALE, charColor);
-    tft.fillRect(bx + (10 * SCALE), by + bh - (2 * SCALE), bw - (20 * SCALE), 2 * SCALE, charColor);
-  } else {
-    // Standard rectangular body
-    tft.fillRect(x + (character->bodyX * SCALE), y + (character->bodyY * SCALE),
-                 character->bodyW * SCALE, character->bodyH * SCALE, charColor);
-  }
-
-  // Draw arms (if exists)
-  if (character->hasArms) {
-    int armY = y + (character->armY * SCALE);
-    int armW = character->armW * SCALE;
-    int armH = character->armH * SCALE;
-    tft.fillRect(x + (character->armLeftX * SCALE), armY, armW, armH, charColor);
-    tft.fillRect(x + (character->armRightX * SCALE), armY, armW, armH, charColor);
-  }
-
-  // Draw legs or tail parts
-  for (int i = 0; i < character->partCount; i++) {
-    int px = x + (character->partX[i] * SCALE);
-    int py = y + (character->partY[i] * SCALE);
-    int pw = character->partW[i] * SCALE;
-    int ph = character->partH[i] * SCALE;
-
-    if (character->isGhost) {
-      // Draw rounded blob for ghost tail/leg parts
-      tft.fillRect(px + (2 * SCALE), py, pw - (4 * SCALE), 2 * SCALE, charColor);
-      tft.fillRect(px + (1 * SCALE), py + (2 * SCALE), pw - (2 * SCALE), ph - (4 * SCALE), charColor);
-      tft.fillRect(px + (2 * SCALE), py + ph - (2 * SCALE), pw - (4 * SCALE), 2 * SCALE, charColor);
-    } else {
-      // Standard rectangular parts
-      tft.fillRect(px, py, pw, ph, charColor);
-    }
-  }
-
-  // Draw eyes based on type (for fallback characters only)
+  // Draw eyes/effects
   drawEyes(tft, x, y, eyeType, character);
 }
 
@@ -447,9 +379,9 @@ void drawEyes(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeome
   // Effect color (yellow for white characters, white for others)
   uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
 
-  // Effect position (relative to right eye, above eyes)
-  int effectX = rightEyeX + ew + (2 * SCALE);
-  int effectY = eyeY - (18 * SCALE);
+  // Effect position (from character config)
+  int effectX = x + (character->effectX * SCALE);
+  int effectY = y + (character->effectY * SCALE);
 
   // Only draw effects and sunglasses (eyes are in the images)
   switch (eyeType) {
@@ -628,7 +560,7 @@ inline void drawMatrixStreamMovie(TFT_eSPI &tft, int x, int y, int frame, int of
 // Draw matrix background effect (full area, movie style)
 // Template version with x, y offset support
 template<typename T>
-void drawMatrixBackgroundT(T &canvas, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
+void drawMatrixBackgroundT(T &canvas, int x, int y, int frame, int size) {
   // Draw streams across entire area (character will be drawn on top)
   for (int i = 0; i < size / 4; i++) {
     uint16_t seed = i * 23 + 7;
@@ -644,8 +576,8 @@ void drawMatrixBackgroundT(T &canvas, int x, int y, int frame, int size, int bod
   }
 }
 
-inline void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
-  drawMatrixBackgroundT(tft, x, y, frame, size, bodyX, bodyY, bodyW, bodyH);
+inline void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size) {
+  drawMatrixBackgroundT(tft, x, y, frame, size);
 }
 
 // Draw loading dots animation (slow = true for thinking state)
@@ -956,8 +888,8 @@ inline void drawMatrixStreamMovieToSprite(TFT_eSprite &sprite, int x, int y, int
 }
 
 // Sprite version with no x,y offset (draws at 0,0)
-inline void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size, int bodyX, int bodyY, int bodyW, int bodyH) {
-  drawMatrixBackgroundT(sprite, 0, 0, frame, size, bodyX, bodyY, bodyW, bodyH);
+inline void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size) {
+  drawMatrixBackgroundT(sprite, 0, 0, frame, size);
 }
 
 inline void drawSleepEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
@@ -998,8 +930,10 @@ void drawEyesToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeome
   bool isKiro = (character == &CHAR_KIRO);
 
   uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
-  int effectX = rightEyeX + ew + (2 * SCALE);
-  int effectY = eyeY - (18 * SCALE);
+
+  // Effect position (from character config)
+  int effectX = character->effectX * SCALE;
+  int effectY = character->effectY * SCALE;
 
   switch (eyeType) {
     case EYE_FOCUSED:
