@@ -391,8 +391,8 @@ async function main() {
     process.exit(3);
   });
 
-  // Startup marker (VibeMon will handle done->idle, so we only emit done here)
-  setState(ttyStream, "done", { note: "bridge_started" });
+  // Startup marker - show "Hello!" on ESP32
+  setState(ttyStream, "start", { note: "bridge_started" });
 
   const logPath = todayLogPath();
   console.error("=".repeat(50));
