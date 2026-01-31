@@ -27,6 +27,20 @@ let canvas, ctx;
 // Cached DOM elements (initialized once in init())
 let domCache = null;
 
+// Parse URL parameters
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    character: params.get('character'),
+    state: params.get('state'),
+    project: params.get('project'),
+    tool: params.get('tool'),
+    model: params.get('model'),
+    memory: params.get('memory'),
+    icon: params.get('icon')
+  };
+}
+
 // Initialize DOM cache
 function initDomCache() {
   domCache = {
@@ -67,14 +81,23 @@ async function init() {
   await initRenderer(ctx);
   initDomCache();
 
-  // Random state selection
+  // Get URL parameters
+  const urlParams = getUrlParams();
   const stateNames = Object.keys(states);
-  const randomState = stateNames[Math.floor(Math.random() * stateNames.length)];
-  currentState = randomState;
 
-  // Random character selection
-  const randomCharacter = CHARACTER_NAMES[Math.floor(Math.random() * CHARACTER_NAMES.length)];
-  currentCharacter = randomCharacter;
+  // State: use URL param or random
+  if (urlParams.state && states[urlParams.state]) {
+    currentState = urlParams.state;
+  } else {
+    currentState = stateNames[Math.floor(Math.random() * stateNames.length)];
+  }
+
+  // Character: use URL param or random
+  if (urlParams.character && CHARACTER_CONFIG[urlParams.character]) {
+    currentCharacter = urlParams.character;
+  } else {
+    currentCharacter = CHARACTER_NAMES[Math.floor(Math.random() * CHARACTER_NAMES.length)];
+  }
 
   // Populate character dropdown from CHARACTER_CONFIG
   const characterSelect = document.getElementById('character-select');
@@ -83,14 +106,41 @@ async function init() {
     const option = document.createElement('option');
     option.value = name;
     option.textContent = char.displayName || name;
-    if (name === randomCharacter) option.selected = true;
+    if (name === currentCharacter) option.selected = true;
     characterSelect.appendChild(option);
   });
 
-  // Set random initial memory value (10-90%)
-  const randomMemory = Math.floor(Math.random() * 81) + 10;
-  domCache.memoryInput.value = randomMemory;
-  document.getElementById('memory-display').textContent = randomMemory + '%';
+  // Project: use URL param or default
+  if (urlParams.project) {
+    domCache.projectInput.value = urlParams.project;
+  }
+
+  // Tool: use URL param or default
+  if (urlParams.tool) {
+    domCache.toolInput.value = urlParams.tool;
+  }
+
+  // Model: use URL param or default
+  if (urlParams.model) {
+    domCache.modelInput.value = urlParams.model;
+  }
+
+  // Memory: use URL param (0-100) or random (10-90%)
+  let memoryValue;
+  if (urlParams.memory !== null) {
+    const parsed = parseInt(urlParams.memory, 10);
+    memoryValue = isNaN(parsed) ? 45 : Math.max(0, Math.min(100, parsed));
+  } else {
+    memoryValue = Math.floor(Math.random() * 81) + 10;
+  }
+  domCache.memoryInput.value = memoryValue;
+  document.getElementById('memory-display').textContent = memoryValue + '%';
+
+  // Icon type: use URL param or default
+  if (urlParams.icon === 'pixel' || urlParams.icon === 'emoji') {
+    iconType = urlParams.icon;
+    document.getElementById('icon-type-select').value = iconType;
+  }
 
   updateDisplay();
   startAnimation();

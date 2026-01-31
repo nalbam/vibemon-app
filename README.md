@@ -71,6 +71,22 @@ No installation required:
 open simulator/index.html
 ```
 
+**URL Parameters**: Open with specific state/character:
+
+```
+?character=kiro&state=working&project=my-app&tool=Bash&memory=75
+```
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `character` | `clawd`, `kiro`, `claw` | Character to display |
+| `state` | `start`, `idle`, `thinking`, `planning`, `working`, `notification`, `done`, `sleep` | Initial state |
+| `project` | string | Project name |
+| `tool` | string | Tool name |
+| `model` | string | Model name |
+| `memory` | `0-100` | Memory usage % |
+| `icon` | `emoji`, `pixel` | Icon type |
+
 ## Integration
 
 ### Quick Install (Recommended)
