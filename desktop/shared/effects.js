@@ -120,9 +120,9 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
   const isKiro = char.name === 'kiro';
   const effectColor = getEffectColor(char);
 
-  // Effect position (relative to character, above eyes)
-  const effectX = rightX + eyeW + 2;
-  const effectY = eyeY - 18;
+  // Effect position (from character config, fallback to eye-based calculation)
+  const effectX = char.effect?.x ?? (rightX + eyeW + 2);
+  const effectY = char.effect?.y ?? (eyeY - 18);
 
   switch (eyeType) {
     case 'focused':
@@ -237,7 +237,7 @@ function pseudoRandom(seed) {
 }
 
 // Draw matrix background effect (full area, movie style)
-export function drawMatrixBackground(animFrame, drawRect, size = 64, _body = null) {
+export function drawMatrixBackground(animFrame, drawRect, size = 64) {
   // Draw streams across entire area (character will be drawn on top)
   const streamCount = Math.floor(size / MATRIX_COLUMN_WIDTH);
   for (let i = 0; i < streamCount; i++) {

@@ -72,7 +72,7 @@ export function drawCharacter(eyeType, currentState, currentCharacter, animFrame
 
   // Draw matrix background for working state (behind character)
   if (currentState === 'working') {
-    drawMatrixBackground(animFrame, drawRect, CHAR_SIZE / SCALE, char.body);
+    drawMatrixBackground(animFrame, drawRect, CHAR_SIZE / SCALE);
   }
 
   // Draw character image
