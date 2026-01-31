@@ -149,9 +149,35 @@ function handleLogLine(stream, obj) {
     return;
   }
 
-  // Prompt boundaries (optional: map to planning)
+  // Embedded run lifecycle (fallbacks when diagnostics/session.state is missing)
+  if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run start:")) {
+    setState(stream, "start");
+    setState(stream, "thinking");
+    return;
+  }
+
+  if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run done:")) {
+    // Reliable end-of-run marker
+    setState(stream, "done");
+    return;
+  }
+
+  // Prompt boundaries (map to planning)
   if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run prompt start")) {
     setState(stream, "planning");
+    return;
+  }
+
+  if (subsystemRaw.includes("agent/embedded") && msg.startsWith("embedded run prompt end")) {
+    // If the run had no tools, we may otherwise remain stuck in planning.
+    if (currentState === "planning") setState(stream, "thinking");
+    return;
+  }
+
+  // Delivery marker (reliable for chat turns): once we deliver a reply, the run is effectively done.
+  // This is a practical fallback in case we miss / suppress some DEBUG diagnostics lines.
+  if (subsystemRaw.includes("gateway/channels/") && msg.startsWith("delivered reply to")) {
+    setState(stream, "done");
     return;
   }
 
