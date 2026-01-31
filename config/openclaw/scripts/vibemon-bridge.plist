@@ -7,8 +7,9 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/node</string>
-        <string>HOME_DIR/.openclaw/workspace/scripts/vibemon-bridge.mjs</string>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>exec /usr/bin/env node HOME_DIR/.openclaw/workspace/scripts/vibemon-bridge.mjs</string>
     </array>
 
     <key>WorkingDirectory</key>
@@ -16,6 +17,8 @@
 
     <key>EnvironmentVariables</key>
     <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>PROJECT_NAME</key>
         <string>OpenClaw</string>
         <key>OPENCLAW_LOG_DIR</key>

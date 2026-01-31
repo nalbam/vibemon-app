@@ -3,7 +3,7 @@
 `vibemon-bridge.mjs` is a bridge that tails **OpenClaw Gateway logs (JSONL)** and streams the current status to **ESP32-C6 (USB Serial, `/dev/ttyACM*`)** as **NDJSON (JSON + `\n`)**.
 
 - Input (what the bridge reads): OpenClaw log file (`/tmp/openclaw/openclaw-YYYY-MM-DD.log`)
-- Output (what goes to ESP32): `/dev/ttyACM0` etc.
+- Output (what goes to ESP32): `/dev/ttyACM0` (Linux) or `/dev/cu.usbmodem*` (macOS)
 - Output example:
 ```json
 {"state":"working","tool":"exec","project":"OpenClaw","character":"claw"}
@@ -74,7 +74,7 @@ node scripts/vibemon-bridge.mjs
 ```
 
 If working correctly, you'll see logs on stderr:
-- `Using tty: /dev/ttyACM0`
+- `Using tty: /dev/ttyACM0` (Linux) or `/dev/cu.usbmodem*` (macOS)
 - `Tailing log: /tmp/openclaw/openclaw-YYYY-MM-DD.log`
 
 Verify that JSON lines are being received on the ESP32.
@@ -142,24 +142,24 @@ launchctl unload ~/Library/LaunchAgents/vibemon-bridge.plist
 
 ### 6.2 Linux (systemd) - System Service
 
-1) Edit the service file and replace `YOUR_USERNAME` with your actual username
+> **Note:** If you used `install.py`, the username and paths are already configured automatically.
 
-2) Copy the unit file
+1) Copy the unit file
 ```bash
 sudo cp ~/.openclaw/workspace/scripts/vibemon-bridge.service /etc/systemd/system/vibemon-bridge.service
 ```
 
-3) Reload systemd
+2) Reload systemd
 ```bash
 sudo systemctl daemon-reload
 ```
 
-4) Enable and start
+3) Enable and start
 ```bash
 sudo systemctl enable --now vibemon-bridge.service
 ```
 
-5) Check status/logs
+4) Check status/logs
 ```bash
 sudo systemctl status vibemon-bridge.service -n 50
 sudo journalctl -u vibemon-bridge.service -f

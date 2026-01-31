@@ -3,8 +3,12 @@ Description=VibeMon Bridge - OpenClaw status to ESP32
 
 [Service]
 Type=simple
-WorkingDirectory=%h/.openclaw/workspace
-ExecStart=/usr/bin/env node %h/.openclaw/workspace/scripts/vibemon-bridge.mjs
+# ============================================================
+# MANUAL INSTALL: Replace YOUR_HOME_DIR with your home directory
+# install.py does this automatically
+# ============================================================
+WorkingDirectory=YOUR_HOME_DIR/.openclaw/workspace
+ExecStart=/usr/bin/env node YOUR_HOME_DIR/.openclaw/workspace/scripts/vibemon-bridge.mjs
 Restart=always
 RestartSec=2
 Environment=PROJECT_NAME=OpenClaw

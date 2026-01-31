@@ -5,10 +5,13 @@ Wants=openclaw-gateway.service
 
 [Service]
 Type=simple
-# Change YOUR_USERNAME to your actual username
+# ============================================================
+# MANUAL INSTALL: Replace YOUR_USERNAME and YOUR_HOME_DIR
+# install.py does this automatically
+# ============================================================
 User=YOUR_USERNAME
-WorkingDirectory=%h/.openclaw/workspace
-ExecStart=/usr/bin/env node %h/.openclaw/workspace/scripts/vibemon-bridge.mjs
+WorkingDirectory=YOUR_HOME_DIR/.openclaw/workspace
+ExecStart=/usr/bin/env node YOUR_HOME_DIR/.openclaw/workspace/scripts/vibemon-bridge.mjs
 Restart=always
 RestartSec=2
 Environment=PROJECT_NAME=OpenClaw

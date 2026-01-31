@@ -396,11 +396,11 @@ def install_openclaw(source: FileSource) -> bool:
         # Linux: systemd service files
         content = source.get_file("config/openclaw/scripts/vibemon-bridge.service")
         content = content.replace("YOUR_USERNAME", current_user)
-        content = content.replace("%h", home_dir)
+        content = content.replace("YOUR_HOME_DIR", home_dir)
         write_file_with_diff(scripts_dir / "vibemon-bridge.service", content, "scripts/vibemon-bridge.service")
 
         content = source.get_file("config/openclaw/scripts/vibemon-bridge.user.service")
-        content = content.replace("%h", home_dir)
+        content = content.replace("YOUR_HOME_DIR", home_dir)
         write_file_with_diff(scripts_dir / "vibemon-bridge.user.service", content, "scripts/vibemon-bridge.user.service")
 
         print(f"\n{colored('OpenClaw installation complete!', 'green')}")
