@@ -196,7 +196,6 @@ window.updateDisplay = function() {
   d.loadingDots.style.display = state.showLoading ? 'flex' : 'none';
 
   // Update tool line visibility
-  const isKiro = currentCharacter === 'kiro';
   d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values from inputs
@@ -212,11 +211,11 @@ window.updateDisplay = function() {
     : modelName;
   d.memoryValue.textContent = memoryUsage;
 
-  // Update project/model/memory visibility (matches desktop behavior)
+  // Update project/model/memory visibility (hide memory on start state)
   const showProject = projectName && projectName !== '-';
   d.projectLine.style.display = showProject ? 'block' : 'none';
-  d.modelLine.style.display = modelName && modelName !== '-' && !isKiro ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && memoryUsage && memoryUsage !== '-' && !isKiro;
+  d.modelLine.style.display = modelName && modelName !== '-' ? 'block' : 'none';
+  const showMemory = currentState !== 'start' && memoryUsage && memoryUsage !== '-';
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)

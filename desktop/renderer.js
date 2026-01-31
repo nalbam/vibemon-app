@@ -164,7 +164,6 @@ function updateDisplay() {
   d.loadingDots.style.display = state.showLoading ? 'flex' : 'none';
 
   // Update tool line visibility
-  const isKiro = currentCharacter === 'kiro';
   d.toolLine.style.display = currentState === 'working' ? 'block' : 'none';
 
   // Update values (using constants for truncation)
@@ -181,11 +180,11 @@ function updateDisplay() {
   d.modelValue.textContent = displayModel;
   d.memoryValue.textContent = currentMemory;
 
-  // Update project/model/memory visibility (hide memory on start state, hide tool/model/memory for kiro)
+  // Update project/model/memory visibility (hide memory on start state)
   const showProject = currentProject && currentProject !== '-';
   d.projectLine.style.display = showProject ? 'block' : 'none';
-  d.modelLine.style.display = currentModel && currentModel !== '-' && !isKiro ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && currentMemory && currentMemory !== '-' && !isKiro;
+  d.modelLine.style.display = currentModel && currentModel !== '-' ? 'block' : 'none';
+  const showMemory = currentState !== 'start' && currentMemory && currentMemory !== '-';
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)

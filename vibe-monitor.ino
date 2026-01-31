@@ -625,9 +625,6 @@ void drawStatus() {
       tft.println(displayProject);
     }
 
-    // Check if kiro character (hide model/memory for kiro)
-    bool isKiro = (strcmp(currentCharacter, "kiro") == 0);
-
     // Tool name (working state only)
     if (strlen(currentTool) > 0 && currentState == STATE_WORKING) {
       tft.setTextColor(textColor);
@@ -637,8 +634,8 @@ void drawStatus() {
       tft.println(currentTool);
     }
 
-    // Model name (hide for kiro)
-    if (strlen(currentModel) > 0 && !isKiro) {
+    // Model name
+    if (strlen(currentModel) > 0) {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawRobotIcon(tft, 10, MODEL_Y, textColor);
@@ -657,8 +654,8 @@ void drawStatus() {
       tft.println(displayModel);
     }
 
-    // Memory usage (hide on start state, hide for kiro)
-    if (strlen(currentMemory) > 0 && currentState != STATE_START && !isKiro) {
+    // Memory usage (hide on start state)
+    if (strlen(currentMemory) > 0 && currentState != STATE_START) {
       tft.setTextColor(textColor);
       tft.setTextSize(1);
       drawBrainIcon(tft, 10, MEMORY_Y, textColor);
