@@ -283,7 +283,7 @@ function handleLogLine(stream, obj) {
   const { subsystem, msg } = fields;
   debug("Processing:", { subsystem: subsystem.slice(0, 50), msg: msg.slice(0, 80) });
 
-  // Session state transitions (highest priority)
+  // Session state transitions (for starting work, not for completion)
   if (matchesSubsystem(subsystem, "diagnostic") || msg.toLowerCase().includes("session")) {
     const s = parseSessionState(msg);
     if (s) {
@@ -293,11 +293,8 @@ function handleLogLine(stream, obj) {
         setState(stream, "thinking");
         return;
       }
-      if (nextState === "idle" || nextState === "inactive" || nextState === "ready") {
-        debug("State -> done (session idle)");
-        setState(stream, "done");
-        return;
-      }
+      // NOTE: session idle is NOT used for done transition
+      // It fires too early, before the actual reply is delivered
     }
   }
 
@@ -310,12 +307,9 @@ function handleLogLine(stream, obj) {
       return;
     }
 
-    // Run done -> done
-    if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.done)) {
-      debug("State -> done (run done)");
-      setState(stream, "done");
-      return;
-    }
+    // NOTE: run done is NOT used for done transition
+    // It fires before the reply is actually delivered to the user
+    // We only use "delivered reply to" for reliable completion detection
 
     // Prompt start -> planning
     if (matchesAnyPattern(msg, RUN_LIFECYCLE_PATTERNS.promptStart)) {
