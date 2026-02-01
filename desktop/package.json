@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "canvas": "^3.2.1",
+    "dotenv": "^17.2.3",
     "electron": "^33.0.0",
     "electron-store": "^8.2.0",
     "ws": "^8.19.0"

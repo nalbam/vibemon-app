@@ -8,6 +8,11 @@
  * - HttpServer: HTTP API server
  */
 
+// Load environment variables from .env.local or .env
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const { app, ipcMain, BrowserWindow, dialog } = require('electron');
 const { exec } = require('child_process');
 

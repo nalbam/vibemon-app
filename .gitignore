@@ -41,6 +41,10 @@ target/
 *.bak
 *.backup
 
+# local env files
+.env*.local
+.env
+
 # claude
 .claude/
 .prompt-*.md

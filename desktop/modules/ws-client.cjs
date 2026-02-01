@@ -137,12 +137,20 @@ class WsClient {
       }
 
       // Handle auth success
-      if (message.type === 'auth' && message.success) {
-        console.log('WebSocket auth successful');
+      if (message.type === 'authenticated') {
+        console.log('WebSocket authenticated, userId:', message.userId);
         return;
       }
 
-      // Handle status update (existing format)
+      // Handle status update (server sends {type: "status", data: {...}})
+      if (message.type === 'status' && message.data) {
+        if (this.onStatusUpdate) {
+          this.onStatusUpdate(message.data);
+        }
+        return;
+      }
+
+      // Handle status update (direct format: {state: "..."})
       if (message.state) {
         if (this.onStatusUpdate) {
           this.onStatusUpdate(message);
