@@ -23,6 +23,7 @@ Tools → Board → Boards Manager → Search "esp32" → Install
 Tools → Manage Libraries:
 - `LovyanGFX` by lovyan03
 - `ArduinoJson` by Benoit Blanchon
+- `WebSockets` by Markus Sattler (required for WebSocket mode)
 
 > **Note:** TFT_eSPI is NOT required. The project uses LovyanGFX with a configuration file (`LGFX_ESP32C6.hpp`).
 
@@ -49,6 +50,54 @@ cp credentials.h.example credentials.h
 #define WIFI_SSID "YOUR_SSID"
 #define WIFI_PASSWORD "YOUR_PASSWORD"
 ```
+
+## WebSocket Mode (Optional)
+
+WebSocket mode allows ESP32 to receive real-time status updates from a central server.
+
+### 1. Enable WebSocket in `credentials.h`
+
+```cpp
+// Enable WiFi (required for WebSocket)
+#define USE_WIFI
+
+#define WIFI_SSID "YOUR_SSID"
+#define WIFI_PASSWORD "YOUR_PASSWORD"
+
+// Enable WebSocket client
+#define USE_WEBSOCKET
+
+// WebSocket server configuration
+#define WS_HOST "vibemon.io"     // Server hostname
+#define WS_PORT 443              // Port (443 for HTTPS, 80 for HTTP)
+#define WS_PATH "/api/ws"        // WebSocket endpoint path
+
+// Enable SSL for HTTPS servers (wss://)
+#define WS_USE_SSL true
+
+// Authentication token
+#define WS_TOKEN "your-access-token"
+```
+
+### 2. Configuration Examples
+
+**Production server (vibemon.io):**
+```cpp
+#define WS_HOST "vibemon.io"
+#define WS_PORT 443
+#define WS_PATH "/api/ws"
+#define WS_USE_SSL true
+```
+
+**Local development server:**
+```cpp
+#define WS_HOST "192.168.1.100"  // Your PC's IP address
+#define WS_PORT 3000
+#define WS_PATH "/api/ws"
+#define WS_USE_SSL false
+```
+
+> **Note:** For local servers, use your PC's IP address, not `localhost` (ESP32 treats localhost as itself).
 
 ## WiFi HTTP Endpoints
 
