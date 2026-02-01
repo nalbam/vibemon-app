@@ -263,9 +263,9 @@ async function sendHttp(payload) {
 }
 
 /**
- * Send status to Vibemon API with Bearer token authentication
+ * Send status to VibeMon API with Bearer token authentication
  */
-async function sendVibemonApi(payload) {
+async function sendVibeMonApi(payload) {
   if (!config.vibemonUrl || !config.vibemonToken) return;
 
   const project = payload.project || config.projectName;
@@ -291,13 +291,13 @@ async function sendVibemonApi(payload) {
     });
 
     if (!response.ok) {
-      debug(`Vibemon API failed: ${response.status}`);
+      debug(`VibeMon API failed: ${response.status}`);
       return false;
     }
-    debug(`Vibemon API sent: ${JSON.stringify(apiPayload)}`);
+    debug(`VibeMon API sent: ${JSON.stringify(apiPayload)}`);
     return true;
   } catch (err) {
-    debug(`Vibemon API error: ${err.message}`);
+    debug(`VibeMon API error: ${err.message}`);
     return false;
   }
 }
@@ -335,10 +335,10 @@ function sendStatus(state, extra = {}) {
 
   const payload = buildPayload(state, extra);
 
-  // Send to serial, HTTP, and Vibemon API
+  // Send to serial, HTTP, and VibeMon API
   sendSerial(payload);
   sendHttp(payload);
-  sendVibemonApi(payload);
+  sendVibeMonApi(payload);
 }
 
 /**
@@ -401,7 +401,7 @@ const plugin = {
       api.logger.info(`[vibemon] HTTP URLs: ${config.httpUrls.join(", ")}`);
     }
     if (config.vibemonUrl && config.vibemonToken) {
-      api.logger.info(`[vibemon] Vibemon API: ${config.vibemonUrl}`);
+      api.logger.info(`[vibemon] VibeMon API: ${config.vibemonUrl}`);
     }
 
     // Find TTY device at startup

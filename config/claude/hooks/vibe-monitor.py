@@ -229,11 +229,11 @@ def get_terminal_id() -> str:
     return ""
 
 
-def build_payload(state: str, tool: str, project: str) -> str:
-    """Build JSON payload for sending to monitor."""
+def build_payload(state: str, tool: str, project: str) -> dict[str, Any]:
+    """Build payload dict for sending to monitor."""
     metadata = get_project_metadata(project)
 
-    return json.dumps({
+    return {
         "state": state,
         "tool": tool,
         "project": project,
@@ -241,7 +241,7 @@ def build_payload(state: str, tool: str, project: str) -> str:
         "memory": metadata.get("memory", 0),
         "character": CHARACTER,
         "terminalId": get_terminal_id(),
-    })
+    }
 
 # ============================================================================
 # Low-Level Send Functions
@@ -406,17 +406,8 @@ def send_http_get(url: str, endpoint: str) -> tuple[bool, str | None]:
         return False, None
 
 
-def send_vibemon_api(
-    url: str,
-    token: str,
-    state: str,
-    project: str,
-    tool: str,
-    model: str,
-    memory: int,
-    character: str,
-) -> bool:
-    """Send status to Vibemon API with Bearer token authentication.
+def send_vibemon_api(url: str, token: str, payload: dict[str, Any]) -> bool:
+    """Send status to VibeMon API with Bearer token authentication.
 
     API: POST /status
     Headers: Authorization: Bearer <token>, Content-Type: application/json
@@ -424,18 +415,19 @@ def send_vibemon_api(
     """
     try:
         api_url = f"{url.rstrip('/')}/status"
-        payload = json.dumps({
-            "state": state,
-            "project": project,
-            "tool": tool,
-            "model": model,
-            "memory": memory,
-            "character": character,
+        # VibeMon API doesn't need terminalId
+        api_payload = json.dumps({
+            "state": payload.get("state", ""),
+            "project": payload.get("project", ""),
+            "tool": payload.get("tool", ""),
+            "model": payload.get("model", ""),
+            "memory": payload.get("memory", 0),
+            "character": payload.get("character", CHARACTER),
         })
 
         req = Request(
             api_url,
-            data=payload.encode("utf-8"),
+            data=api_payload.encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
@@ -444,10 +436,10 @@ def send_vibemon_api(
         )
 
         with urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as response:
-            debug_log(f"Vibemon API response: {response.status}")
+            debug_log(f"VibeMon API response: {response.status}")
             return response.status == 200
     except (URLError, TimeoutError, OSError) as e:
-        debug_log(f"Vibemon API error: {e}")
+        debug_log(f"VibeMon API error: {e}")
         return False
 
 
@@ -713,7 +705,7 @@ def get_desktop_url(http_urls: tuple[str, ...]) -> str | None:
     return None
 
 
-def send_to_all(payload: str, is_start: bool = False) -> None:
+def send_to_all(payload: dict[str, Any], is_start: bool = False) -> None:
     """Send payload to all configured targets concurrently."""
     config = get_config()
 
@@ -724,6 +716,9 @@ def send_to_all(payload: str, is_start: bool = False) -> None:
             debug_log("Desktop App not running, launching...")
             launch_desktop()
         show_monitor_window(desktop_url)
+
+    # Convert to JSON string once for HTTP/Serial targets
+    payload_str = json.dumps(payload)
 
     # Resolve serial port once
     resolved_port: str | None = None
@@ -739,32 +734,19 @@ def send_to_all(payload: str, is_start: bool = False) -> None:
         # Capture url in closure
         u = url
         label = "Desktop App" if is_localhost_url(url) else f"HTTP ({url})"
-        tasks.append((label, lambda u=u: send_http_post(u, "/status", payload)[0]))
+        tasks.append((label, lambda u=u: send_http_post(u, "/status", payload_str)[0]))
 
     if resolved_port:
         # Capture resolved_port in closure
         port = resolved_port
-        tasks.append(("USB serial", lambda p=port: send_serial(p, payload)))
+        tasks.append(("USB serial", lambda p=port: send_serial(p, payload_str)))
 
-    # Add Vibemon API target if configured
-    if config.vibemon_url and config.vibemon_token:
-        # Parse payload to extract fields for Vibemon API
-        payload_data = parse_json(payload)
-        project = payload_data.get("project", "")
-        if project:
-            tasks.append((
-                "Vibemon API",
-                lambda: send_vibemon_api(
-                    url=config.vibemon_url,
-                    token=config.vibemon_token,
-                    state=payload_data.get("state", ""),
-                    project=project,
-                    tool=payload_data.get("tool", ""),
-                    model=payload_data.get("model", ""),
-                    memory=payload_data.get("memory", 0),
-                    character=payload_data.get("character", CHARACTER),
-                )
-            ))
+    # Add VibeMon API target if configured
+    if config.vibemon_url and config.vibemon_token and payload.get("project"):
+        tasks.append((
+            "VibeMon API",
+            lambda: send_vibemon_api(config.vibemon_url, config.vibemon_token, payload)
+        ))
 
     if not tasks:
         return
@@ -833,7 +815,7 @@ def main() -> None:
     debug_log(f"Event: {event_name}, Tool: {tool_name}, Project: {project_name}")
 
     payload = build_payload(state, tool_name, project_name)
-    debug_log(f"Payload: {payload}")
+    debug_log(f"Payload: {json.dumps(payload)}")
 
     is_start = event_name == "SessionStart"
     send_to_all(payload, is_start)

@@ -41,12 +41,12 @@
       "vibemonUrl": {
         "type": "string",
         "default": null,
-        "description": "Vibemon API URL (e.g., https://vibemon.io)"
+        "description": "VibeMon API URL (e.g., https://vibemon.io)"
       },
       "vibemonToken": {
         "type": "string",
         "default": null,
-        "description": "Vibemon API access token"
+        "description": "VibeMon API access token"
       },
       "debug": {
         "type": "boolean",
@@ -82,13 +82,13 @@
       "help": "Auto-launch Desktop App via npx if not running"
     },
     "vibemonUrl": {
-      "label": "Vibemon API URL",
-      "help": "URL for Vibemon cloud service (e.g., https://vibemon.io)",
+      "label": "VibeMon API URL",
+      "help": "URL for VibeMon cloud service (e.g., https://vibemon.io)",
       "advanced": true
     },
     "vibemonToken": {
-      "label": "Vibemon API Token",
-      "help": "Access token from Vibemon dashboard",
+      "label": "VibeMon API Token",
+      "help": "Access token from VibeMon dashboard",
       "advanced": true
     },
     "debug": {
