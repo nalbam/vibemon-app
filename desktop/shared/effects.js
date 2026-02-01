@@ -198,7 +198,7 @@ export function drawEyes(eyeType, char, animFrame, drawRect) {
     'sparkle': { eye: 'normal', fx: 'sparkle' },
     'thinking': { eye: 'normal', fx: 'thinking' },
     'alert': { eye: 'normal', fx: 'alert' },
-    'sleep': { eye: 'blink', fx: 'zzz' },
+    'sleep': { eye: 'blink', fx: 'zzz' }
   };
 
   const { eye, fx } = mapping[eyeType] || { eye: 'normal', fx: 'none' };

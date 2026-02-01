@@ -226,7 +226,7 @@ def build_payload(state: str, tool: str, project: str) -> str:
         "tool": tool,
         "project": project,
         "model": metadata.get("model", ""),
-        "memory": metadata.get("memory", ""),
+        "memory": metadata.get("memory", 0),
         "character": "clawd",
         "terminalId": get_terminal_id(),
     })

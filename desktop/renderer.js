@@ -24,7 +24,7 @@ let currentCharacter = 'clawd';
 let currentProject = '-';
 let currentTool = '-';
 let currentModel = '-';
-let currentMemory = '-';
+let currentMemory = 0;
 let animFrame = 0;
 let blinkFrame = 0;
 
@@ -104,7 +104,7 @@ async function init() {
       if (data.project !== undefined) currentProject = data.project || '-';
       if (data.tool !== undefined) currentTool = data.tool || '-';
       if (data.model !== undefined) currentModel = data.model || '-';
-      if (data.memory !== undefined) currentMemory = data.memory || '-';
+      if (data.memory !== undefined) currentMemory = data.memory || 0;
 
       // Reset blinkFrame when transitioning to idle state for consistent blink timing
       if (currentState === 'idle' && prevState !== 'idle') {
@@ -178,13 +178,13 @@ function updateDisplay() {
     ? currentModel.substring(0, MODEL_NAME_TRUNCATE_AT) + '...'
     : currentModel;
   d.modelValue.textContent = displayModel;
-  d.memoryValue.textContent = currentMemory;
+  d.memoryValue.textContent = currentMemory > 0 ? currentMemory + '%' : '-';
 
   // Update project/model/memory visibility (hide memory on start state)
   const showProject = currentProject && currentProject !== '-';
   d.projectLine.style.display = showProject ? 'block' : 'none';
   d.modelLine.style.display = currentModel && currentModel !== '-' ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && currentMemory && currentMemory !== '-';
+  const showMemory = currentState !== 'start' && currentMemory > 0;
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)

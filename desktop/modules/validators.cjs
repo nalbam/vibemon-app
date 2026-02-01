@@ -9,7 +9,7 @@ const PROJECT_MAX_LENGTH = 100;
 const TOOL_MAX_LENGTH = 50;
 const MODEL_MAX_LENGTH = 50;
 const TERMINAL_ID_MAX_LENGTH = 100;
-const MEMORY_PATTERN = /^(100|[1-9]?\d)%$/;  // 0-100 only
+// Memory is now a number (0-100), not a string
 // iTerm2: w0t0p0:UUID format, Ghostty: numeric PID
 const ITERM2_SESSION_PATTERN = /^w\d+t\d+p\d+:[0-9A-Fa-f-]{36}$/;
 const GHOSTTY_PID_PATTERN = /^\d{1,10}$/;
@@ -63,19 +63,19 @@ function validateProject(project) {
 }
 
 /**
- * Validate memory value (format: "N%" where N is 0-100)
- * @param {string} memory
+ * Validate memory value (number 0-100)
+ * @param {number} memory
  * @returns {{valid: boolean, error: string|null}}
  */
 function validateMemory(memory) {
-  if (memory === undefined || memory === '') {
+  if (memory === undefined || memory === null || memory === '') {
     return { valid: true, error: null };
   }
-  if (typeof memory !== 'string') {
-    return { valid: false, error: 'Memory must be a string' };
+  if (typeof memory !== 'number') {
+    return { valid: false, error: 'Memory must be a number' };
   }
-  if (!MEMORY_PATTERN.test(memory)) {
-    return { valid: false, error: 'Memory must be in format "N%" where N is 0-100' };
+  if (!Number.isInteger(memory) || memory < 0 || memory > 100) {
+    return { valid: false, error: 'Memory must be an integer between 0 and 100' };
   }
   return { valid: true, error: null };
 }

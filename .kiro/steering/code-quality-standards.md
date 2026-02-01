@@ -509,8 +509,8 @@ function validateStatusPayload(data) {
     return { valid: false, error: 'Tool name too long' };
   }
 
-  if (data.memory && !/^\d+%$/.test(data.memory)) {
-    return { valid: false, error: 'Invalid memory format' };
+  if (data.memory !== undefined && (typeof data.memory !== 'number' || data.memory < 0 || data.memory > 100)) {
+    return { valid: false, error: 'Memory must be a number between 0 and 100' };
   }
 
   if (data.state && !VALID_STATES.includes(data.state)) {
@@ -577,7 +577,7 @@ int getFloatOffsetX() {
  *   "project": "my-project", // 선택: 프로젝트 이름
  *   "character": "clawd",    // 선택: 캐릭터
  *   "model": "opus",         // 선택: 모델 이름
- *   "memory": "45%",         // 선택: 메모리 사용량
+ *   "memory": 45,            // 선택: 메모리 사용량 (0-100)
  *   "terminalId": "iterm2:w0t4p0:UUID" // 선택: 터미널 ID
  * }
  *

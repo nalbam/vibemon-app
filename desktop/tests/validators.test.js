@@ -92,6 +92,12 @@ describe('validateMemory', () => {
     expect(result.error).toBeNull();
   });
 
+  test('accepts null memory', () => {
+    const result = validateMemory(null);
+    expect(result.valid).toBe(true);
+    expect(result.error).toBeNull();
+  });
+
   test('accepts empty string memory', () => {
     const result = validateMemory('');
     expect(result.valid).toBe(true);
@@ -99,7 +105,7 @@ describe('validateMemory', () => {
   });
 
   test('accepts valid memory values', () => {
-    const validMemories = ['0%', '50%', '100%', '1%', '99%'];
+    const validMemories = [0, 50, 100, 1, 99];
     validMemories.forEach(memory => {
       const result = validateMemory(memory);
       expect(result.valid).toBe(true);
@@ -107,33 +113,28 @@ describe('validateMemory', () => {
     });
   });
 
-  test('rejects non-string memory', () => {
-    const result = validateMemory(50);
+  test('rejects non-number memory', () => {
+    const result = validateMemory('50%');
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('must be a string');
+    expect(result.error).toContain('must be a number');
   });
 
-  test('rejects invalid format', () => {
-    const result = validateMemory('50');
+  test('rejects memory over 100', () => {
+    const result = validateMemory(101);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('format');
+    expect(result.error).toContain('0 and 100');
   });
 
-  test('rejects memory over 100%', () => {
-    const result = validateMemory('101%');
+  test('rejects negative memory', () => {
+    const result = validateMemory(-1);
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('0-100');
+    expect(result.error).toContain('0 and 100');
   });
 
-  test('rejects memory with leading zeros except for 0%', () => {
-    // '00%' should fail as regex expects 0-100
-    const result = validateMemory('00%');
+  test('rejects non-integer memory', () => {
+    const result = validateMemory(50.5);
     expect(result.valid).toBe(false);
-  });
-
-  test('accepts single digit memory', () => {
-    const result = validateMemory('5%');
-    expect(result.valid).toBe(true);
+    expect(result.error).toContain('integer');
   });
 });
 
@@ -194,7 +195,7 @@ describe('validateStatusPayload', () => {
       state: 'thinking',
       character: 'clawd',
       project: 'my-project',
-      memory: '50%'
+      memory: 50
     });
     expect(result.valid).toBe(true);
     expect(result.error).toBeNull();
@@ -224,10 +225,10 @@ describe('validateStatusPayload', () => {
 
   test('rejects invalid memory in payload', () => {
     const result = validateStatusPayload({
-      memory: '150%'
+      memory: 150
     });
     expect(result.valid).toBe(false);
-    expect(result.error).toContain('0-100');
+    expect(result.error).toContain('0 and 100');
   });
 
   test('accepts payload with tool, model', () => {

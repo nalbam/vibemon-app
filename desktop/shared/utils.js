@@ -63,8 +63,9 @@ export function getMemoryGradient(percent) {
 
 // Calculate memory bar styles (pure function, no DOM access)
 // Returns { display, containerStyles, barStyles } for the caller to apply
+// memoryUsage: number (0-100) or null/undefined to hide
 export function getMemoryBarStyles(memoryUsage, bgColor) {
-  if (!memoryUsage || memoryUsage === '-') {
+  if (memoryUsage === null || memoryUsage === undefined || memoryUsage <= 0) {
     return { display: 'none', containerStyles: null, barStyles: null };
   }
 
@@ -74,8 +75,7 @@ export function getMemoryBarStyles(memoryUsage, bgColor) {
     background: isDarkBg ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.3)'
   };
 
-  const percent = parseInt(memoryUsage.replace('%', '')) || 0;
-  const clampedPercent = Math.min(100, Math.max(0, percent));
+  const clampedPercent = Math.min(100, Math.max(0, memoryUsage));
 
   const barStyles = {
     width: clampedPercent + '%',

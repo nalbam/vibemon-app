@@ -201,7 +201,7 @@ window.updateDisplay = function() {
   // Update values from inputs
   const projectName = d.projectInput.value.trim();
   const modelName = d.modelInput.value.trim();
-  const memoryUsage = d.memoryInput.value + '%';
+  const memoryValue = parseInt(d.memoryInput.value, 10) || 0;
   d.projectValue.textContent = projectName.length > PROJECT_NAME_MAX_LENGTH
     ? projectName.substring(0, PROJECT_NAME_TRUNCATE_AT) + '...'
     : projectName;
@@ -209,17 +209,17 @@ window.updateDisplay = function() {
   d.modelValue.textContent = modelName.length > MODEL_NAME_MAX_LENGTH
     ? modelName.substring(0, MODEL_NAME_TRUNCATE_AT) + '...'
     : modelName;
-  d.memoryValue.textContent = memoryUsage;
+  d.memoryValue.textContent = memoryValue > 0 ? memoryValue + '%' : '-';
 
   // Update project/model/memory visibility (hide memory on start state)
   const showProject = projectName && projectName !== '-';
   d.projectLine.style.display = showProject ? 'block' : 'none';
   d.modelLine.style.display = modelName && modelName !== '-' ? 'block' : 'none';
-  const showMemory = currentState !== 'start' && memoryUsage && memoryUsage !== '-';
+  const showMemory = currentState !== 'start' && memoryValue > 0;
   d.memoryLine.style.display = showMemory ? 'block' : 'none';
 
   // Update memory bar (hide on start state, hide for kiro)
-  updateMemoryBar(showMemory ? memoryUsage : null, state.bgColor);
+  updateMemoryBar(showMemory ? memoryValue : null, state.bgColor);
 
   // Update all text colors based on state (using cached elements)
   d.infoTexts.forEach(el => el.style.color = state.textColor);
@@ -237,7 +237,7 @@ window.updateDisplay = function() {
     tool: currentState === 'working' ? toolName : '',
     project: projectName,
     model: modelName,
-    memory: memoryUsage,
+    memory: memoryValue,
     character: currentCharacter
   };
   d.jsonPreview.textContent = JSON.stringify(json, null, 2);

@@ -228,7 +228,7 @@ def get_cache_path() -> str:
     cache_path = os.environ.get("VIBEMON_CACHE_PATH", "~/.claude/statusline-cache.json")
     return os.path.expanduser(cache_path)
 
-def save_to_cache(project: str, model: str, memory: str) -> None:
+def save_to_cache(project: str, model: str, memory: int) -> None:
     """Save project metadata to cache file.
 
     Uses fcntl for proper file locking to avoid race conditions.
@@ -483,7 +483,7 @@ def build_statusline(
 # Background Cache Save
 # ============================================================================
 
-def save_cache_background(project: str, model: str, memory: str) -> None:
+def save_cache_background(project: str, model: str, memory: int) -> None:
     """Save to cache in background process.
 
     Uses fork on POSIX systems for efficiency, falls back to synchronous
@@ -552,7 +552,9 @@ def main() -> None:
         cost = duration = lines_added = lines_removed = 0
 
     # Save project metadata to cache in background
-    save_cache_background(dir_name, model_display, context_usage)
+    # Convert "85%" to 85, "" to 0
+    memory_int = int(context_usage.rstrip("%")) if context_usage else 0
+    save_cache_background(dir_name, model_display, memory_int)
 
     # Output statusline
     print(

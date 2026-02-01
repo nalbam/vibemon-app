@@ -272,7 +272,7 @@ curl -X POST http://127.0.0.1:19280/status \
     "tool": "Bash",
     "project": "my-project",
     "model": "opus",
-    "memory": "45%",
+    "memory": 45,
     "character": "clawd",
     "terminalId": "iterm2:w0t4p0:UUID"
   }'

@@ -19,7 +19,7 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | `project` | 100 chars | String |
 | `tool` | 50 chars | String |
 | `model` | 50 chars | String |
-| `memory` | - | `N%` where N is 0-100 |
+| `memory` | - | Integer 0-100 |
 | `character` | - | `clawd`, `kiro`, or `claw` |
 | `terminalId` | - | Terminal session ID from `ITERM_SESSION_ID` (e.g., `w0t4p0:UUID`) or `GHOSTTY_PID` (e.g., `12345`) env |
 
@@ -64,7 +64,7 @@ curl -X POST http://127.0.0.1:19280/status \
 | `tool` | string | Tool name (e.g., `Bash`, `Read`, `Edit`) |
 | `project` | string | Project name |
 | `model` | string | Model name (e.g., `opus`, `sonnet`) |
-| `memory` | string | Memory usage (e.g., `45%`) |
+| `memory` | number | Memory usage (0-100) |
 | `character` | string | `clawd`, `kiro`, or `claw` |
 | `terminalId` | string | Terminal ID for click-to-focus (iTerm2 session ID or Ghostty PID) |
 
@@ -86,7 +86,7 @@ curl http://127.0.0.1:19280/status
 {
   "windowCount": 2,
   "projects": {
-    "my-project": {"state": "working", "tool": "Bash", "model": "opus", "memory": "45%"},
+    "my-project": {"state": "working", "tool": "Bash", "model": "opus", "memory": 45},
     "other-project": {"state": "idle"}
   }
 }

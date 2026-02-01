@@ -78,7 +78,7 @@ char currentCharacter[16] = "clawd";  // "clawd", "kiro", or "claw"
 char currentProject[32] = "";
 char currentTool[32] = "";
 char currentModel[32] = "";
-char currentMemory[16] = "";
+int currentMemory = 0;
 unsigned long lastUpdate = 0;
 unsigned long lastBlink = 0;
 int animFrame = 0;
@@ -167,7 +167,7 @@ void lockProject(const char* project) {
       currentProject[sizeof(currentProject) - 1] = '\0';
       currentTool[0] = '\0';
       currentModel[0] = '\0';
-      currentMemory[0] = '\0';
+      currentMemory = 0;
       lastActivityTime = millis();
       needsRedraw = true;
       dirtyCharacter = true;
@@ -487,7 +487,7 @@ void processInput(const char* input) {
   if (strlen(newProject) > 0 && strcmp(newProject, currentProject) != 0) {
     // Project changed - clear model/memory and trigger redraw
     currentModel[0] = '\0';
-    currentMemory[0] = '\0';
+    currentMemory = 0;
     currentTool[0] = '\0';
     infoChanged = true;
     strncpy(currentProject, newProject, sizeof(currentProject) - 1);
@@ -510,11 +510,10 @@ void processInput(const char* input) {
     infoChanged = true;
   }
 
-  // Parse memory
-  const char* memoryStr = doc["memory"] | "";
-  if (strlen(memoryStr) > 0 && strcmp(memoryStr, currentMemory) != 0) {
-    strncpy(currentMemory, memoryStr, sizeof(currentMemory) - 1);
-    currentMemory[sizeof(currentMemory) - 1] = '\0';
+  // Parse memory (number 0-100)
+  int memoryVal = doc["memory"] | -1;
+  if (memoryVal >= 0 && memoryVal != currentMemory) {
+    currentMemory = memoryVal;
     infoChanged = true;
   }
 
@@ -693,16 +692,16 @@ void drawStatus() {
     }
 
     // Memory usage (hide on start state)
-    if (strlen(currentMemory) > 0 && currentState != STATE_START) {
+    if (currentMemory > 0 && currentState != STATE_START) {
       tft.setTextColor(textColor);
       tft.setTextSize(1.3);
       drawBrainIcon(tft, 10, MEMORY_Y, textColor);
       tft.setCursor(24, MEMORY_Y);
-      tft.println(currentMemory);
+      tft.print(currentMemory);
+      tft.println("%");
 
       // Memory bar (below percentage)
-      int memoryPercent = atoi(currentMemory);
-      drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, memoryPercent, bgColor);
+      drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, currentMemory, bgColor);
     }
   }
 
