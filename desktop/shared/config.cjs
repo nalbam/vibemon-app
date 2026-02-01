@@ -16,6 +16,12 @@ const characters = require('./data/characters.json');
 const constants = require('./constants.cjs');
 
 // =============================================================================
+// WebSocket Configuration (from environment variables)
+// =============================================================================
+const WS_URL = process.env.VIBEMON_WS_URL || null;
+const WS_TOKEN = process.env.VIBEMON_WS_TOKEN || null;
+
+// =============================================================================
 // Paths
 // =============================================================================
 const STATS_CACHE_PATH = path.join(os.homedir(), '.claude', 'stats-cache.json');
@@ -50,5 +56,9 @@ module.exports = {
 
   // Character data
   CHARACTER_CONFIG,
-  CHARACTER_NAMES
+  CHARACTER_NAMES,
+
+  // WebSocket
+  WS_URL,
+  WS_TOKEN
 };

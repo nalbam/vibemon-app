@@ -42,7 +42,8 @@
   "dependencies": {
     "canvas": "^3.2.1",
     "electron": "^33.0.0",
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "electron-builder": "^25.0.0",

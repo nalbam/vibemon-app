@@ -95,11 +95,20 @@ function createTrayIcon(state, character = 'clawd') {
 }
 
 class TrayManager {
-  constructor(windowManager, app) {
+  constructor(windowManager, app, wsClient = null) {
     this.tray = null;
     this.windowManager = windowManager;
     this.app = app;
+    this.wsClient = wsClient;
     this.statsWindow = null;
+  }
+
+  /**
+   * Set WebSocket client reference (can be set after construction)
+   * @param {WsClient} wsClient
+   */
+  setWsClient(wsClient) {
+    this.wsClient = wsClient;
   }
 
   openStatsWindow() {
@@ -322,6 +331,41 @@ class TrayManager {
     }));
   }
 
+  buildWebSocketStatusMenu() {
+    if (!this.wsClient) {
+      return [];
+    }
+
+    const status = this.wsClient.getStatus();
+    let statusLabel;
+    let statusIcon;
+
+    switch (status) {
+      case 'connected':
+        statusIcon = '●';
+        statusLabel = 'WebSocket: Connected';
+        break;
+      case 'connecting':
+        statusIcon = '○';
+        statusLabel = 'WebSocket: Connecting...';
+        break;
+      case 'disconnected':
+        statusIcon = '○';
+        statusLabel = 'WebSocket: Disconnected';
+        break;
+      case 'not-configured':
+      default:
+        return [];  // Don't show if not configured
+    }
+
+    return [
+      {
+        label: `${statusIcon} ${statusLabel}`,
+        enabled: false
+      }
+    ];
+  }
+
   buildMenuTemplate() {
     const projectIds = this.windowManager.getProjectIds();
     const windowCount = projectIds.length;
@@ -380,6 +424,7 @@ class TrayManager {
         click: () => this.openStatsWindow()
       },
       { type: 'separator' },
+      ...this.buildWebSocketStatusMenu(),
       {
         label: `HTTP Server: localhost:${HTTP_PORT}`,
         enabled: false

@@ -16,6 +16,9 @@ const { StateManager } = require('./modules/state-manager.cjs');
 const { MultiWindowManager } = require('./modules/multi-window-manager.cjs');
 const { TrayManager } = require('./modules/tray-manager.cjs');
 const { HttpServer } = require('./modules/http-server.cjs');
+const { WsClient } = require('./modules/ws-client.cjs');
+const { validateStatusPayload } = require('./modules/validators.cjs');
+const { MAX_WINDOWS } = require('./shared/config.cjs');
 
 // Single instance lock - prevent duplicate instances
 const gotTheLock = app.requestSingleInstanceLock();
@@ -31,6 +34,7 @@ const stateManager = new StateManager();
 const windowManager = new MultiWindowManager();
 let trayManager = null;
 let httpServer = null;
+let wsClient = null;
 
 // Handle second instance launch attempt
 app.on('second-instance', () => {
@@ -79,6 +83,77 @@ windowManager.onWindowClosed = (projectId) => {
     trayManager.updateIcon();
   }
 };
+
+/**
+ * Handle status update from WebSocket
+ * Reuses the same logic as HTTP POST /status
+ */
+function handleWsStatusUpdate(data) {
+  // Validate payload
+  const validation = validateStatusPayload(data);
+  if (!validation.valid) {
+    console.error('WebSocket invalid payload:', validation.error);
+    return;
+  }
+
+  // Validate and normalize state data via stateManager
+  const stateValidation = stateManager.validateStateData(data);
+  if (!stateValidation.valid) {
+    console.error('WebSocket invalid state data:', stateValidation.error);
+    return;
+  }
+  const stateData = stateValidation.data;
+
+  // Get projectId from data or use default
+  const projectId = stateData.project || 'default';
+
+  // Create window if not exists
+  if (!windowManager.getWindow(projectId)) {
+    const result = windowManager.createWindow(projectId);
+
+    // Blocked by lock in single mode
+    if (result.blocked) {
+      return;
+    }
+
+    // No window created (max limit in multi mode)
+    if (!result.window) {
+      console.log(`WebSocket: Max windows limit (${MAX_WINDOWS}) reached`);
+      return;
+    }
+
+    // Project was switched in single mode
+    if (result.switchedProject) {
+      stateManager.cleanupProject(result.switchedProject);
+    }
+  }
+
+  // Apply auto-lock after window is successfully created (single mode only)
+  windowManager.applyAutoLock(projectId, stateData.state);
+
+  // Update window state via windowManager (with change detection)
+  const updateResult = windowManager.updateState(projectId, stateData);
+
+  // No change - skip unnecessary updates
+  if (!updateResult.updated) {
+    return;
+  }
+
+  // State changed - full update (alwaysOnTop, rearrange, timeout, tray)
+  if (updateResult.stateChanged) {
+    windowManager.updateAlwaysOnTopByState(projectId, stateData.state);
+    windowManager.rearrangeWindows();
+    stateManager.setupStateTimeout(projectId, stateData.state);
+
+    if (trayManager) {
+      trayManager.updateIcon();
+      trayManager.updateMenu();
+    }
+  }
+
+  // Send update to renderer
+  windowManager.sendToWindow(projectId, 'state-update', stateData);
+}
 
 // IPC handlers
 ipcMain.handle('get-version', () => {
@@ -231,6 +306,22 @@ app.whenReady().then(() => {
   };
   httpServer.start();
 
+  // Start WebSocket client (if configured)
+  wsClient = new WsClient();
+  wsClient.onStatusUpdate = (data) => {
+    handleWsStatusUpdate(data);
+  };
+  wsClient.onConnectionChange = () => {
+    if (trayManager) {
+      trayManager.updateMenu();
+    }
+  };
+
+  // Set wsClient reference in trayManager for status display
+  trayManager.setWsClient(wsClient);
+
+  wsClient.connect();
+
   app.on('activate', () => {
     const first = windowManager.getFirstWindow();
     if (first && !first.isDestroyed()) {
@@ -255,5 +346,8 @@ app.on('before-quit', () => {
   }
   if (httpServer) {
     httpServer.stop();
+  }
+  if (wsClient) {
+    wsClient.cleanup();
   }
 });

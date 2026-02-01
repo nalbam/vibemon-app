@@ -27,6 +27,15 @@ Preferences preferences;
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 WebServer server(80);
+
+// WebSocket client (optional, requires USE_WIFI)
+#ifdef USE_WEBSOCKET
+#include <WebSocketsClient.h>
+WebSocketsClient webSocket;
+bool wsConnected = false;
+unsigned long lastWsReconnect = 0;
+const unsigned long WS_RECONNECT_INTERVAL = 5000;  // 5 seconds
+#endif
 #endif
 
 // tft instance is defined in TFT_Compat.h
@@ -261,6 +270,9 @@ void setup() {
 
 #ifdef USE_WIFI
   setupWiFi();
+#ifdef USE_WEBSOCKET
+  setupWebSocket();
+#endif
 #endif
 }
 
@@ -285,6 +297,9 @@ void loop() {
 
 #ifdef USE_WIFI
   server.handleClient();
+#ifdef USE_WEBSOCKET
+  webSocket.loop();
+#endif
 #endif
 
   // Animation update (100ms interval)
@@ -953,4 +968,59 @@ void handleReboot() {
   delay(100);  // Allow HTTP response to complete
   ESP.restart();
 }
+
+#ifdef USE_WEBSOCKET
+void setupWebSocket() {
+  // Connect to WebSocket server
+#if WS_USE_SSL
+  webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+#else
+  webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
+#endif
+
+  // Set event handler
+  webSocket.onEvent(webSocketEvent);
+
+  // Set reconnect interval
+  webSocket.setReconnectInterval(WS_RECONNECT_INTERVAL);
+
+  Serial.println("{\"websocket\":\"connecting\"}");
+}
+
+void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+  switch (type) {
+    case WStype_DISCONNECTED:
+      wsConnected = false;
+      Serial.println("{\"websocket\":\"disconnected\"}");
+      break;
+
+    case WStype_CONNECTED:
+      wsConnected = true;
+      Serial.print("{\"websocket\":\"connected\",\"url\":\"");
+      Serial.print((char*)payload);
+      Serial.println("\"}");
+
+      // Send authentication message if token is configured
+      if (strlen(WS_TOKEN) > 0) {
+        char authMsg[128];
+        snprintf(authMsg, sizeof(authMsg), "{\"type\":\"auth\",\"token\":\"%s\"}", WS_TOKEN);
+        webSocket.sendTXT(authMsg);
+        Serial.println("{\"websocket\":\"auth_sent\"}");
+      }
+      break;
+
+    case WStype_TEXT:
+      // Process received message (same as Serial/HTTP input)
+      processInput((char*)payload);
+      break;
+
+    case WStype_ERROR:
+      Serial.println("{\"websocket\":\"error\"}");
+      break;
+
+    default:
+      break;
+  }
+}
+#endif
 #endif
