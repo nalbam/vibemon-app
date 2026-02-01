@@ -80,7 +80,7 @@ open simulator/index.html
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `character` | `clawd`, `kiro`, `claw` | Character to display |
-| `state` | `start`, `idle`, `thinking`, `planning`, `working`, `notification`, `done`, `sleep` | Initial state |
+| `state` | `start`, `idle`, `thinking`, `planning`, `working`, `packing`, `notification`, `done`, `sleep` | Initial state |
 | `project` | string | Project name |
 | `tool` | string | Tool name |
 | `model` | string | Model name |

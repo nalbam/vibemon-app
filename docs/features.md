@@ -95,7 +95,7 @@ The Desktop App supports two window modes:
 
 - Each project gets its own window
 - Windows arranged by state and name:
-  - **Right side**: Active states (thinking, planning, working, notification)
+  - **Right side**: Active states (thinking, planning, working, packing, notification)
   - **Left side**: Inactive states (start, idle, done, sleep)
   - Within each group, sorted by project name (Z first = rightmost)
 - Max 5 windows (or screen limit)
@@ -167,12 +167,12 @@ python3 ~/.claude/hooks/vibe-monitor.py --reboot
 
 | Mode | Description |
 |------|-------------|
-| `active-only` | Only active states (thinking, planning, working, notification) stay on top - **Default** |
+| `active-only` | Only active states (thinking, planning, working, packing, notification) stay on top - **Default** |
 | `all` | All windows stay on top regardless of state |
 | `disabled` | No windows stay on top |
 
 When `active-only` is selected:
-- Active states (thinking, planning, working, notification) immediately enable always on top
+- Active states (thinking, planning, working, packing, notification) immediately enable always on top
 - Inactive states (start, idle, done, sleep) immediately disable always on top (prevents focus stealing)
 
 Change via system tray menu: Always on Top → Select mode
