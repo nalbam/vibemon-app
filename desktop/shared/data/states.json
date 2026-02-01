@@ -34,6 +34,13 @@
     "showLoading": true,
     "textColor": "#FFFFFF"
   },
+  "packing": {
+    "bgColor": "#FF6600",
+    "text": "Packing",
+    "eyeType": "thinking",
+    "showLoading": false,
+    "textColor": "#000000"
+  },
   "notification": {
     "bgColor": "#FFCC00",
     "text": "Input?",
@@ -41,17 +48,17 @@
     "showLoading": false,
     "textColor": "#000000"
   },
-  "done": {
-    "bgColor": "#00AA00",
-    "text": "Done!",
-    "eyeType": "happy",
-    "showLoading": false,
-    "textColor": "#FFFFFF"
-  },
   "sleep": {
     "bgColor": "#111144",
     "text": "Zzz...",
     "eyeType": "sleep",
+    "showLoading": false,
+    "textColor": "#FFFFFF"
+  },
+  "done": {
+    "bgColor": "#00AA00",
+    "text": "Done!",
+    "eyeType": "happy",
     "showLoading": false,
     "textColor": "#FFFFFF"
   }

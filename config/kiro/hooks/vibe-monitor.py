@@ -145,6 +145,7 @@ EVENT_STATE_MAP: dict[str, str] = {
     "fileDeleted": "working",
     "fileEdited": "working",
     "preToolUse": "working",
+    "preCompact": "packing",
     "agentStop": "done",
     "stop": "done",
 }

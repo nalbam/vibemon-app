@@ -147,12 +147,13 @@ bool isValidCharacter(String name) {
 }
 
 // Background colors by state (RGB565)
+#define COLOR_BG_SESSION  0x0679  // #00CCCC Cyan
 #define COLOR_BG_IDLE     0x0540  // #00AA00 Green
 #define COLOR_BG_THINKING 0xA997  // #AA33BB Purple
 #define COLOR_BG_PLANNING 0x0451  // #008888 Teal
 #define COLOR_BG_WORKING  0x0339  // #0066CC Blue
+#define COLOR_BG_PACKING  0xFB20  // #FF6600 Orange
 #define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
-#define COLOR_BG_SESSION  0x0679  // #00CCCC Cyan
 #define COLOR_BG_DONE     0x0540  // #00AA00 Green
 #define COLOR_BG_SLEEP    0x1088  // #111144 Navy blue
 
@@ -708,6 +709,7 @@ enum AppState {
   STATE_THINKING,
   STATE_PLANNING,
   STATE_WORKING,
+  STATE_PACKING,
   STATE_NOTIFICATION,
   STATE_DONE,
   STATE_SLEEP
@@ -721,6 +723,7 @@ uint16_t getBackgroundColorEnum(AppState state) {
     case STATE_THINKING: return COLOR_BG_THINKING;
     case STATE_PLANNING: return COLOR_BG_PLANNING;
     case STATE_WORKING: return COLOR_BG_WORKING;
+    case STATE_PACKING: return COLOR_BG_PACKING;
     case STATE_NOTIFICATION: return COLOR_BG_NOTIFY;
     case STATE_DONE: return COLOR_BG_DONE;
     case STATE_SLEEP: return COLOR_BG_SLEEP;
@@ -736,6 +739,7 @@ EyeType getEyeTypeEnum(AppState state) {
     case STATE_THINKING: return EYE_THINKING;
     case STATE_PLANNING: return EYE_THINKING;
     case STATE_WORKING: return EYE_FOCUSED;
+    case STATE_PACKING: return EYE_THINKING;
     case STATE_NOTIFICATION: return EYE_ALERT;
     case STATE_DONE: return EYE_HAPPY;
     case STATE_SLEEP: return EYE_SLEEP;
@@ -747,6 +751,7 @@ EyeType getEyeTypeEnum(AppState state) {
 uint16_t getTextColorEnum(AppState state) {
   switch (state) {
     case STATE_START: return TFT_BLACK;
+    case STATE_PACKING: return TFT_BLACK;
     case STATE_NOTIFICATION: return TFT_BLACK;
     default: return COLOR_TEXT_WHITE;
   }
@@ -770,6 +775,9 @@ void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
       break;
     case STATE_WORKING:
       strncpy(buf, "Working", bufSize - 1);
+      break;
+    case STATE_PACKING:
+      strncpy(buf, "Packing", bufSize - 1);
       break;
     case STATE_NOTIFICATION:
       strncpy(buf, "Input?", bufSize - 1);
@@ -796,6 +804,7 @@ uint16_t getBackgroundColor(String state) {
   if (state == "thinking") return COLOR_BG_THINKING;
   if (state == "planning") return COLOR_BG_PLANNING;
   if (state == "working") return COLOR_BG_WORKING;
+  if (state == "packing") return COLOR_BG_PACKING;
   if (state == "notification") return COLOR_BG_NOTIFY;
   if (state == "done") return COLOR_BG_DONE;
   if (state == "sleep") return COLOR_BG_SLEEP;
@@ -808,6 +817,7 @@ EyeType getEyeType(String state) {
   if (state == "thinking") return EYE_THINKING;
   if (state == "planning") return EYE_THINKING;
   if (state == "working") return EYE_FOCUSED;
+  if (state == "packing") return EYE_THINKING;
   if (state == "notification") return EYE_ALERT;
   if (state == "done") return EYE_HAPPY;
   if (state == "sleep") return EYE_SLEEP;
@@ -820,6 +830,7 @@ String getStatusText(String state) {
   if (state == "thinking") return "Thinking";
   if (state == "planning") return "Planning";
   if (state == "working") return "Working";
+  if (state == "packing") return "Packing";
   if (state == "notification") return "Input?";
   if (state == "done") return "Done!";
   if (state == "sleep") return "Zzz...";
@@ -828,6 +839,7 @@ String getStatusText(String state) {
 
 uint16_t getTextColor(String state) {
   if (state == "start") return TFT_BLACK;
+  if (state == "packing") return TFT_BLACK;
   if (state == "notification") return TFT_BLACK;
   return COLOR_TEXT_WHITE;
 }

@@ -15,6 +15,11 @@
         "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
       }
     ],
+    "PreCompact": [
+      {
+        "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]
+      }
+    ],
     "Notification": [
       {
         "hooks": [{ "type": "command", "command": "python3 ~/.claude/hooks/vibe-monitor.py" }]

@@ -118,6 +118,7 @@ AppState parseState(const char* stateStr) {
   if (strcmp(stateStr, "thinking") == 0) return STATE_THINKING;
   if (strcmp(stateStr, "planning") == 0) return STATE_PLANNING;
   if (strcmp(stateStr, "working") == 0) return STATE_WORKING;
+  if (strcmp(stateStr, "packing") == 0) return STATE_PACKING;
   if (strcmp(stateStr, "notification") == 0) return STATE_NOTIFICATION;
   if (strcmp(stateStr, "done") == 0) return STATE_DONE;
   if (strcmp(stateStr, "sleep") == 0) return STATE_SLEEP;
@@ -231,6 +232,7 @@ const char* getStateString(AppState state) {
     case STATE_THINKING: return "thinking";
     case STATE_PLANNING: return "planning";
     case STATE_WORKING: return "working";
+    case STATE_PACKING: return "packing";
     case STATE_NOTIFICATION: return "notification";
     case STATE_DONE: return "done";
     case STATE_SLEEP: return "sleep";
@@ -335,9 +337,10 @@ void checkSleepTimer() {
     }
   }
 
-  // planning/thinking/working/notification -> idle after 5 minutes
+  // planning/thinking/working/notification/packing -> idle after 5 minutes
   if (currentState == STATE_PLANNING || currentState == STATE_THINKING ||
-      currentState == STATE_WORKING || currentState == STATE_NOTIFICATION) {
+      currentState == STATE_WORKING || currentState == STATE_NOTIFICATION ||
+      currentState == STATE_PACKING) {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
       previousState = currentState;
       currentState = STATE_IDLE;
@@ -747,7 +750,7 @@ void updateAnimation() {
   // Determine if we need to redraw character based on state and animation frame
   bool needsCharRedraw = positionChanged;
   if (!needsCharRedraw) {
-    if (currentState == STATE_THINKING || currentState == STATE_PLANNING) {
+    if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
       needsCharRedraw = (animFrame % 12 == 0);  // Thought bubble animation
     } else if (currentState == STATE_WORKING) {
       needsCharRedraw = (animFrame % 2 == 0);   // Matrix rain animation
