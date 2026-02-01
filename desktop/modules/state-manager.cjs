@@ -83,8 +83,18 @@ class StateManager {
         }
       }, IDLE_TIMEOUT);
       this.stateTimeoutTimers.set(projectId, timer);
-    } else if (currentState === 'idle' || currentState === 'notification') {
-      // idle/notification -> sleep after 5 minutes
+    } else if (currentState === 'planning' || currentState === 'thinking' ||
+               currentState === 'working' || currentState === 'notification') {
+      // planning/thinking/working/notification -> idle after 5 minutes
+      const timer = setTimeout(() => {
+        this.stateTimeoutTimers.delete(projectId);
+        if (this.onStateTimeout) {
+          this.onStateTimeout(projectId, 'idle');
+        }
+      }, SLEEP_TIMEOUT);
+      this.stateTimeoutTimers.set(projectId, timer);
+    } else if (currentState === 'idle') {
+      // idle -> sleep after 5 minutes
       const timer = setTimeout(() => {
         this.stateTimeoutTimers.delete(projectId);
         if (this.onStateTimeout) {

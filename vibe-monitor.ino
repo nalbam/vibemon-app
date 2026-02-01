@@ -320,8 +320,23 @@ void checkSleepTimer() {
     }
   }
 
-  // idle/notification -> sleep after 5 minutes
-  if (currentState == STATE_IDLE || currentState == STATE_NOTIFICATION) {
+  // planning/thinking/working/notification -> idle after 5 minutes
+  if (currentState == STATE_PLANNING || currentState == STATE_THINKING ||
+      currentState == STATE_WORKING || currentState == STATE_NOTIFICATION) {
+    if (now - lastActivityTime >= SLEEP_TIMEOUT) {
+      previousState = currentState;
+      currentState = STATE_IDLE;
+      lastActivityTime = now;
+      needsRedraw = true;
+      dirtyCharacter = true;
+      dirtyStatus = true;
+      drawStatus();
+      return;
+    }
+  }
+
+  // idle -> sleep after 5 minutes
+  if (currentState == STATE_IDLE) {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
       previousState = currentState;
       currentState = STATE_SLEEP;
