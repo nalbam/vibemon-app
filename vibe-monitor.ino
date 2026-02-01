@@ -1008,11 +1008,19 @@ void handleReboot() {
 
 #ifdef USE_WEBSOCKET
 void setupWebSocket() {
+  // Build path with token query parameter for API Gateway authentication
+  char wsPath[256];
+  if (strlen(WS_TOKEN) > 0) {
+    snprintf(wsPath, sizeof(wsPath), "%s?token=%s", WS_PATH, WS_TOKEN);
+  } else {
+    strncpy(wsPath, WS_PATH, sizeof(wsPath));
+  }
+
   // Connect to WebSocket server
 #if WS_USE_SSL
-  webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+  webSocket.beginSSL(WS_HOST, WS_PORT, wsPath);
 #else
-  webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
+  webSocket.begin(WS_HOST, WS_PORT, wsPath);
 #endif
 
   // Set event handler
