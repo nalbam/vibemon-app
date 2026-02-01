@@ -191,7 +191,7 @@ When running Claude Code in multiple terminal tabs, clicking a Vibe Monitor wind
 
 - View active windows and their states
 - Manually change state (per window)
-- Switch character (Clawd/Kiro)
+- Switch character (Clawd/Kiro/Claw)
 - Toggle window mode (Multi/Single)
 - Project lock (in single mode)
 - Toggle Always on Top

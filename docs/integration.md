@@ -99,7 +99,16 @@ export VIBEMON_SERIAL_PORT="/dev/cu.usbmodem*"
 }
 ```
 
-### 4. Statusline Display
+### 4. Skills (Optional)
+
+The installation script also installs Claude Code skills for quick access to lock commands:
+
+| Skill | Description |
+|-------|-------------|
+| `/vibemon-lock` | Lock monitor to current project |
+| `/vibemon-mode` | Change lock mode (first-project or on-thinking) |
+
+### 5. Statusline Display
 
 Claude Code statusline shows project, model, and memory usage:
 
@@ -126,12 +135,13 @@ Kiro uses `.kiro.hook` files that call the `vibe-monitor.py` script.
 ### 1. Copy scripts
 
 ```bash
-mkdir -p ~/.kiro/hooks
+mkdir -p ~/.kiro/hooks ~/.kiro/agents
 
 cp config/kiro/hooks/vibe-monitor.py ~/.kiro/hooks/
 chmod +x ~/.kiro/hooks/vibe-monitor.py
 
 cp config/kiro/hooks/*.kiro.hook ~/.kiro/hooks/
+cp config/kiro/agents/default.json ~/.kiro/agents/
 ```
 
 ### 2. Configure environment (Optional)
@@ -155,6 +165,8 @@ export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 
 ### Kiro Hook Events
 
+**Via `.kiro.hook` files:**
+
 | Hook File | Event | State |
 |-----------|-------|-------|
 | `vibe-monitor-prompt-submit.kiro.hook` | `promptSubmit` | `thinking` |
@@ -162,6 +174,15 @@ export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 | `vibe-monitor-file-edited.kiro.hook` | `fileSaved` | `working` |
 | `vibe-monitor-file-deleted.kiro.hook` | `fileDeleted` | `working` |
 | `vibe-monitor-agent-stop.kiro.hook` | `agentStop` | `done` |
+
+**Via `agents/default.json`:**
+
+| Event | State |
+|-------|-------|
+| `agentSpawn` | `start` |
+| `userPromptSubmit` | `thinking` |
+| `preToolUse` | `working` |
+| `stop` | `done` |
 
 ---
 
