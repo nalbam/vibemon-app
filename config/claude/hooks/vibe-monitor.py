@@ -83,6 +83,8 @@ class Config:
     serial_port: str | None
     cache_path: str
     auto_launch: bool
+    vibemon_url: str | None
+    vibemon_token: str | None
 
 
 # Cached configuration (computed once)
@@ -107,6 +109,8 @@ def get_config() -> Config:
                 os.environ.get("VIBEMON_CACHE_PATH", "~/.claude/statusline-cache.json")
             ),
             auto_launch=os.environ.get("VIBEMON_AUTO_LAUNCH", "0") == "1",
+            vibemon_url=os.environ.get("VIBEMON_URL"),
+            vibemon_token=os.environ.get("VIBEMON_TOKEN"),
         )
     return _config
 
@@ -392,6 +396,52 @@ def send_http_get(url: str, endpoint: str) -> tuple[bool, str | None]:
             return True, response.read().decode("utf-8")
     except (URLError, TimeoutError, OSError):
         return False, None
+
+
+def send_vibemon_api(
+    url: str,
+    token: str,
+    project_id: str,
+    state: str,
+    project: str,
+    tool: str,
+    model: str,
+    memory: int,
+) -> bool:
+    """Send status to Vibemon API with Bearer token authentication.
+
+    API: POST /status
+    Headers: Authorization: Bearer <token>, Content-Type: application/json
+    Body: { projectId, state, project, tool, model, memory }
+    """
+    try:
+        api_url = f"{url.rstrip('/')}/status"
+        payload = json.dumps({
+            "projectId": project_id,
+            "state": state,
+            "project": project,
+            "tool": tool,
+            "model": model,
+            "memory": memory,
+        })
+
+        req = Request(
+            api_url,
+            data=payload.encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+
+        with urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as response:
+            debug_log(f"Vibemon API response: {response.status}")
+            return response.status == 200
+    except (URLError, TimeoutError, OSError) as e:
+        debug_log(f"Vibemon API error: {e}")
+        return False
+
 
 # ============================================================================
 # Target Resolution
@@ -687,6 +737,26 @@ def send_to_all(payload: str, is_start: bool = False) -> None:
         # Capture resolved_port in closure
         port = resolved_port
         tasks.append(("USB serial", lambda p=port: send_serial(p, payload)))
+
+    # Add Vibemon API target if configured
+    if config.vibemon_url and config.vibemon_token:
+        # Parse payload to extract fields for Vibemon API
+        payload_data = parse_json(payload)
+        project = payload_data.get("project", "")
+        if project:
+            tasks.append((
+                "Vibemon API",
+                lambda: send_vibemon_api(
+                    url=config.vibemon_url,
+                    token=config.vibemon_token,
+                    project_id=project,
+                    state=payload_data.get("state", ""),
+                    project=project,
+                    tool=payload_data.get("tool", ""),
+                    model=payload_data.get("model", ""),
+                    memory=payload_data.get("memory", 0),
+                )
+            ))
 
     if not tasks:
         return

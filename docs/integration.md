@@ -69,6 +69,11 @@ export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 # e.g., /dev/cu.usbserial-0001, /dev/ttyUSB0, /dev/cu.usbmodem*
 # Check with: ls /dev/cu.* or ls /dev/tty*
 export VIBEMON_SERIAL_PORT="/dev/cu.usbmodem*"
+
+# Vibemon API (optional) - Send status to vibemon.io
+# Get your token from the Vibemon dashboard
+# export VIBEMON_URL="https://vibemon.io"
+# export VIBEMON_TOKEN="vbm_xxxxxxxxxxxxxxxxxxxx"
 ```
 
 ### 3. Register in `~/.claude/settings.json`

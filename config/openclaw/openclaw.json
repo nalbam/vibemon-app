@@ -10,6 +10,8 @@
           "httpEnabled": true,
           "httpUrls": ["http://127.0.0.1:19280", "http://192.168.0.185"],
           "autoLaunch": true,
+          "vibemonUrl": "",
+          "vibemonToken": "",
           "debug": false
         }
       }

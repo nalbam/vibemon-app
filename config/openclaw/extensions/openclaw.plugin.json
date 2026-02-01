@@ -38,6 +38,16 @@
         "default": false,
         "description": "Auto-launch Desktop App via npx if not running"
       },
+      "vibemonUrl": {
+        "type": "string",
+        "default": null,
+        "description": "Vibemon API URL (e.g., https://vibemon.io)"
+      },
+      "vibemonToken": {
+        "type": "string",
+        "default": null,
+        "description": "Vibemon API access token"
+      },
       "debug": {
         "type": "boolean",
         "default": false,
@@ -70,6 +80,16 @@
     "autoLaunch": {
       "label": "Auto Launch",
       "help": "Auto-launch Desktop App via npx if not running"
+    },
+    "vibemonUrl": {
+      "label": "Vibemon API URL",
+      "help": "URL for Vibemon cloud service (e.g., https://vibemon.io)",
+      "advanced": true
+    },
+    "vibemonToken": {
+      "label": "Vibemon API Token",
+      "help": "Access token from Vibemon dashboard",
+      "advanced": true
     },
     "debug": {
       "label": "Debug Mode",

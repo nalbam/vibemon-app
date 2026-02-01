@@ -37,6 +37,8 @@ let config = {
   httpUrls: ["http://127.0.0.1:19280"],
   autoLaunch: false,
   debug: false,
+  vibemonUrl: null,
+  vibemonToken: null,
 };
 
 let logger = null;
@@ -258,6 +260,46 @@ async function sendHttp(payload) {
 }
 
 /**
+ * Send status to Vibemon API with Bearer token authentication
+ */
+async function sendVibemonApi(payload) {
+  if (!config.vibemonUrl || !config.vibemonToken) return;
+
+  const project = payload.project || config.projectName;
+  if (!project) return;
+
+  const apiPayload = {
+    projectId: project,
+    state: payload.state || "",
+    project: project,
+    tool: payload.tool || "",
+    model: payload.model || "",
+    memory: 0, // OpenClaw doesn't have memory info
+  };
+
+  try {
+    const response = await fetch(`${config.vibemonUrl}/status`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.vibemonToken}`,
+      },
+      body: JSON.stringify(apiPayload),
+    });
+
+    if (!response.ok) {
+      debug(`Vibemon API failed: ${response.status}`);
+      return false;
+    }
+    debug(`Vibemon API sent: ${JSON.stringify(apiPayload)}`);
+    return true;
+  } catch (err) {
+    debug(`Vibemon API error: ${err.message}`);
+    return false;
+  }
+}
+
+/**
  * Build status payload
  */
 function buildPayload(state, extra = {}) {
@@ -290,9 +332,10 @@ function sendStatus(state, extra = {}) {
 
   const payload = buildPayload(state, extra);
 
-  // Send to both serial and HTTP
+  // Send to serial, HTTP, and Vibemon API
   sendSerial(payload);
   sendHttp(payload);
+  sendVibemonApi(payload);
 }
 
 /**
@@ -344,6 +387,8 @@ const plugin = {
       httpUrls: pluginConfig.httpUrls ?? config.httpUrls,
       autoLaunch: pluginConfig.autoLaunch ?? config.autoLaunch,
       debug: pluginConfig.debug ?? config.debug,
+      vibemonUrl: pluginConfig.vibemonUrl ?? process.env.VIBEMON_URL ?? config.vibemonUrl,
+      vibemonToken: pluginConfig.vibemonToken ?? process.env.VIBEMON_TOKEN ?? config.vibemonToken,
     };
 
     api.logger.info(`[vibemon] Plugin loaded`);
@@ -351,6 +396,9 @@ const plugin = {
     api.logger.info(`[vibemon] Serial: ${config.serialEnabled}, HTTP: ${config.httpEnabled} (${config.httpUrls.length} URLs), AutoLaunch: ${config.autoLaunch}`);
     if (config.httpEnabled && config.httpUrls.length > 0) {
       api.logger.info(`[vibemon] HTTP URLs: ${config.httpUrls.join(", ")}`);
+    }
+    if (config.vibemonUrl && config.vibemonToken) {
+      api.logger.info(`[vibemon] Vibemon API: ${config.vibemonUrl}`);
     }
 
     // Find TTY device at startup
