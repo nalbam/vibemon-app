@@ -110,6 +110,7 @@ See [Integration Guide](docs/integration.md) for detailed manual setup instructi
 | `thinking` | Purple | Processing prompt |
 | `planning` | Teal | Plan mode active |
 | `working` | Blue | Tool executing |
+| `packing` | Gray | Context compacting |
 | `notification` | Yellow | User input needed |
 | `done` | Green | Tool completed |
 | `sleep` | Navy | 5min inactivity |
