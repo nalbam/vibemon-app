@@ -784,11 +784,11 @@ void updateAnimation() {
     lastCharY = newCharY;
   }
 
-  // Update loading dots for thinking/planning/working states
-  if (currentState == STATE_THINKING || currentState == STATE_PLANNING) {
-    drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);
+  // Update loading dots for thinking/planning/packing/working states
+  if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
+    drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);  // Slow
   } else if (currentState == STATE_WORKING) {
-    drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);
+    drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Fast
   }
 }
 

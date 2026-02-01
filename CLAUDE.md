@@ -116,7 +116,7 @@ Two modes available (`multi` or `single`):
 | `thinking` | Purple | Processing prompt |
 | `planning` | Teal | Plan mode active |
 | `working` | Blue | Tool executing |
-| `packing` | Orange | Context compacting |
+| `packing` | Gray | Context compacting |
 | `notification` | Yellow | User input needed |
 | `done` | Green | Tool completed |
 | `sleep` | Navy | 5min inactivity |

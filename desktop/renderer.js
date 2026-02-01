@@ -259,6 +259,7 @@ function animationLoop(timestamp) {
     }
 
     if (currentState === 'packing') {
+      updateLoadingDots(true);  // Slow for packing
       drawCharacter('normal', 'thinking', currentState, currentCharacter, animFrame);
     }
 

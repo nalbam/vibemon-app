@@ -152,7 +152,7 @@ bool isValidCharacter(String name) {
 #define COLOR_BG_THINKING 0xA997  // #AA33BB Purple
 #define COLOR_BG_PLANNING 0x0451  // #008888 Teal
 #define COLOR_BG_WORKING  0x0339  // #0066CC Blue
-#define COLOR_BG_PACKING  0xFB20  // #FF6600 Orange
+#define COLOR_BG_PACKING  0xAD55  // #AAAAAA Gray
 #define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
 #define COLOR_BG_DONE     0x0540  // #00AA00 Green
 #define COLOR_BG_SLEEP    0x1088  // #111144 Navy blue

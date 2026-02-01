@@ -79,6 +79,7 @@ body {
 .state-btn.thinking { background: #6633CC; color: white; }
 .state-btn.planning { background: #008888; color: white; }
 .state-btn.working { background: #0066CC; color: white; }
+.state-btn.packing { background: #AAAAAA; color: #000; }
 .state-btn.notification { background: #FFCC00; color: #333; }
 .state-btn.session { background: #00CCCC; color: white; }
 .state-btn.done { background: #00AA00; color: white; }

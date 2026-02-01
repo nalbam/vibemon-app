@@ -40,11 +40,11 @@
     "textColor": "#FFFFFF"
   },
   "packing": {
-    "bgColor": "#FF6600",
+    "bgColor": "#AAAAAA",
     "text": "Packing",
     "eyeType": "normal",
     "effect": "thinking",
-    "showLoading": false,
+    "showLoading": true,
     "textColor": "#000000"
   },
   "notification": {
