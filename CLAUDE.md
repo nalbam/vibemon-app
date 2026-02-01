@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Real-time status monitor for AI coding assistants (Claude Code, Kiro IDE/CLI) with pixel art character.
+Real-time status monitor for AI coding assistants (Claude Code, Kiro, OpenClaw) with pixel art character.
 
 **Platforms:**
 - ESP32 Hardware (172×320 LCD) - Primary, always-on desk companion
