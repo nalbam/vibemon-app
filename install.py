@@ -372,24 +372,30 @@ def install_openclaw(source: FileSource) -> bool:
 
     print(f"\n{colored('OpenClaw installation complete!', 'green')}")
     print(f"\n{colored('Next steps:', 'yellow')}")
-    print("  1. Connect ESP32 via USB or start Desktop App")
-    print("  2. Enable plugin in OpenClaw config (~/.openclaw/openclaw.json):")
+    print("  1. Enable plugin in OpenClaw config (~/.openclaw/openclaw.json):")
     print(f"""     {colored('''"plugins": {
   "entries": {
     "vibemon-bridge": {
       "enabled": true,
       "config": {
-        "serialEnabled": true,
-        "httpEnabled": true,
+        "serialEnabled": false,
+        "httpEnabled": false,
         "httpUrls": ["http://127.0.0.1:19280"],
-        "autoLaunch": true,
+        "autoLaunch": false,
+        "vibemonUrl": "https://vibemon.io",
+        "vibemonToken": "",
         "debug": false
       }
     }
   }
 }''', 'cyan')}""")
-    print("  3. Restart OpenClaw Gateway")
-    print("  4. Check OpenClaw logs for: [vibemon] Plugin loaded")
+    print(f"\n{colored('Config options:', 'yellow')}")
+    print("  • serialEnabled: true to send status to ESP32 via USB")
+    print("  • httpEnabled:   true to send status to Desktop App (localhost)")
+    print("  • vibemonUrl:    VibeMon cloud service URL (https://vibemon.io)")
+    print("  • vibemonToken:  Get your token from https://vibemon.io/dashboard")
+    print("\n  2. Restart OpenClaw Gateway: openclaw gateway restart")
+    print("  3. Check logs for: [vibemon] Plugin loaded")
 
     return True
 

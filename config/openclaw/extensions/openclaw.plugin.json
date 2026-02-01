@@ -39,13 +39,13 @@
         "description": "Auto-launch Desktop App via npx if not running"
       },
       "vibemonUrl": {
-        "type": "string",
-        "default": null,
+        "type": ["string", "null"],
+        "default": "",
         "description": "VibeMon API URL (e.g., https://vibemon.io)"
       },
       "vibemonToken": {
-        "type": "string",
-        "default": null,
+        "type": ["string", "null"],
+        "default": "",
         "description": "VibeMon API access token"
       },
       "debug": {
