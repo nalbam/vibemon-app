@@ -29,7 +29,6 @@ class MultiWindowManager {
   constructor() {
     this.windows = new Map();  // Map<projectId, { window, state }>
     this.snapTimers = new Map();  // Map<projectId, timerId>
-    this.alwaysOnTopTimers = new Map();  // Map<projectId, timerId> for grace period
     this.onWindowClosed = null;  // callback: (projectId) => void
 
     // Persistent settings
@@ -655,11 +654,6 @@ class MultiWindowManager {
       clearTimeout(timerId);
     }
     this.snapTimers.clear();
-
-    for (const [, timerId] of this.alwaysOnTopTimers) {
-      clearTimeout(timerId);
-    }
-    this.alwaysOnTopTimers.clear();
   }
 
   /**
@@ -775,18 +769,6 @@ class MultiWindowManager {
   }
 
   /**
-   * Clear always on top timer for a specific project
-   * @param {string} projectId
-   */
-  clearAlwaysOnTopTimer(projectId) {
-    const timer = this.alwaysOnTopTimers.get(projectId);
-    if (timer) {
-      clearTimeout(timer);
-      this.alwaysOnTopTimers.delete(projectId);
-    }
-  }
-
-  /**
    * Update always on top for a specific window based on state
    * Active states (thinking, planning, working, notification) keep always on top
    * Inactive states immediately disable on top (prevents focus stealing)
@@ -801,9 +783,6 @@ class MultiWindowManager {
     }
 
     const isActiveState = ACTIVE_STATES.includes(state);
-
-    // Always clear any pending timer first
-    this.clearAlwaysOnTopTimer(projectId);
 
     if (this.alwaysOnTopMode === 'active-only') {
       if (isActiveState) {

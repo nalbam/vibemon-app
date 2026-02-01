@@ -45,11 +45,6 @@ describe('Constants', () => {
       expect(constants.SLEEP_TIMEOUT).toBeGreaterThan(constants.IDLE_TIMEOUT);
       expect(constants.WINDOW_CLOSE_TIMEOUT).toBeGreaterThan(constants.SLEEP_TIMEOUT);
     });
-
-    test('ALWAYS_ON_TOP_GRACE_PERIOD is reasonable', () => {
-      expect(constants.ALWAYS_ON_TOP_GRACE_PERIOD).toBe(10 * 1000);
-      expect(constants.ALWAYS_ON_TOP_GRACE_PERIOD).toBeLessThan(constants.IDLE_TIMEOUT);
-    });
   });
 
   describe('Window Modes', () => {
