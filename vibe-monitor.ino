@@ -434,6 +434,39 @@ void processInput(const char* input) {
     }
   }
 
+  // Handle WebSocket message types (server sends {type: "status", data: {...}})
+  const char* msgType = doc["type"] | "";
+  if (strlen(msgType) > 0) {
+    if (strcmp(msgType, "authenticated") == 0) {
+      Serial.println("{\"websocket\":\"authenticated\"}");
+      return;
+    }
+    if (strcmp(msgType, "error") == 0) {
+      const char* errMsg = doc["message"] | "unknown";
+      Serial.print("{\"websocket\":\"error\",\"message\":\"");
+      Serial.print(errMsg);
+      Serial.println("\"}");
+      return;
+    }
+    // For "status" type, use data object; otherwise continue with doc
+    if (strcmp(msgType, "status") == 0 && doc.containsKey("data")) {
+      // Re-parse with data object as root
+      JsonObject data = doc["data"];
+      if (data.isNull()) {
+        Serial.println("{\"error\":\"Invalid status data\"}");
+        return;
+      }
+      // Process data object instead of doc
+      processStatusData(data);
+      return;
+    }
+  }
+
+  // Direct format: {state: "...", project: "...", ...}
+  processStatusData(doc.as<JsonObject>());
+}
+
+void processStatusData(JsonObject doc) {
   // Get incoming project
   const char* incomingProject = doc["project"] | "";
 
