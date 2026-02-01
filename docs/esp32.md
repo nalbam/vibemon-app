@@ -105,6 +105,7 @@ echo '{"state":"idle","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"thinking","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"planning","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"working","tool":"Bash","project":"my-project","model":"Opus 4.5","memory":"55%"}' > /dev/cu.usbmodem1101 && sleep 1
+echo '{"state":"packing","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"notification","project":"my-project"}' > /dev/cu.usbmodem1101 && sleep 1
 echo '{"state":"done","project":"my-project"}' > /dev/cu.usbmodem1101
 ```
@@ -123,6 +124,7 @@ echo '{"state":"idle","project":"my-project"}' > /dev/ttyACM0 && sleep 1
 echo '{"state":"thinking","project":"my-project"}' > /dev/ttyACM0 && sleep 1
 echo '{"state":"planning","project":"my-project"}' > /dev/ttyACM0 && sleep 1
 echo '{"state":"working","tool":"Bash","project":"my-project","model":"Opus 4.5","memory":"55%"}' > /dev/ttyACM0 && sleep 1
+echo '{"state":"packing","project":"my-project"}' > /dev/ttyACM0 && sleep 1
 echo '{"state":"notification","project":"my-project"}' > /dev/ttyACM0 && sleep 1
 echo '{"state":"done","project":"my-project"}' > /dev/ttyACM0
 ```
