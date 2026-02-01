@@ -278,6 +278,8 @@ Commands try targets in order and stop on first success:
 | `VIBEMON_AUTO_LAUNCH` | Auto-launch Desktop App (1: enabled) | `1` |
 | `VIBEMON_HTTP_URLS` | HTTP targets (comma-separated) | `http://127.0.0.1:19280,http://192.168.0.185` |
 | `VIBEMON_SERIAL_PORT` | ESP32 USB Serial port (supports wildcards) | `/dev/cu.usbmodem*` |
+| `VIBEMON_URL` | Vibemon API URL | `https://vibemon.io` |
+| `VIBEMON_TOKEN` | Vibemon API authentication token | `vbm_xxxxxxxxxxxxxxxxxxxx` |
 | `VIBEMON_WS_URL` | WebSocket server URL (Desktop App only) | `wss://your-server.com/ws` |
 | `VIBEMON_WS_TOKEN` | WebSocket authentication token (Desktop App only) | `your-secret-token` |
 
