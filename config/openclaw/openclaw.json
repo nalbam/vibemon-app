@@ -8,6 +8,7 @@
           "character": "claw",
           "serialEnabled": true,
           "httpEnabled": true,
+          "autoLaunch": true,
           "debug": false
         }
       }

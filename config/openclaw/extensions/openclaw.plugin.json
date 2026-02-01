@@ -24,13 +24,18 @@
       },
       "httpEnabled": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Enable HTTP output to VibeMon Desktop"
       },
       "httpUrl": {
         "type": "string",
-        "default": "http://127.0.0.1:19280/status",
-        "description": "VibeMon Desktop HTTP endpoint"
+        "default": "http://127.0.0.1:19280",
+        "description": "VibeMon Desktop base URL"
+      },
+      "autoLaunch": {
+        "type": "boolean",
+        "default": true,
+        "description": "Auto-launch Desktop App via npx if not running"
       },
       "debug": {
         "type": "boolean",
@@ -58,8 +63,12 @@
     },
     "httpUrl": {
       "label": "HTTP URL",
-      "help": "VibeMon Desktop HTTP endpoint",
+      "help": "VibeMon Desktop base URL (e.g., http://127.0.0.1:19280)",
       "advanced": true
+    },
+    "autoLaunch": {
+      "label": "Auto Launch",
+      "help": "Auto-launch Desktop App via npx if not running"
     },
     "debug": {
       "label": "Debug Mode",

@@ -189,6 +189,7 @@ cp config/openclaw/extensions/* ~/.openclaw/extensions/vibemon-bridge/
           "character": "claw",
           "serialEnabled": true,
           "httpEnabled": true,
+          "autoLaunch": true,
           "debug": false
         }
       }
@@ -210,8 +211,9 @@ systemctl --user restart openclaw-gateway
 | `projectName` | `OpenClaw` | Project name on display |
 | `character` | `claw` | Character: `clawd`, `kiro`, `claw` |
 | `serialEnabled` | `true` | Send to ESP32 via USB serial |
-| `httpEnabled` | `false` | Send to Desktop app |
-| `httpUrl` | `http://127.0.0.1:19280/status` | Desktop app endpoint |
+| `httpEnabled` | `true` | Send to Desktop app |
+| `httpUrl` | `http://127.0.0.1:19280` | Desktop app base URL |
+| `autoLaunch` | `true` | Auto-launch Desktop App via npx |
 | `debug` | `false` | Enable verbose logging |
 
 ### OpenClaw Hook Events

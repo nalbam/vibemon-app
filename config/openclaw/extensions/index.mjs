@@ -19,6 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { spawn } from "node:child_process";
 
 // State management
 let currentState = "idle";
@@ -32,8 +33,9 @@ let config = {
   projectName: "OpenClaw",
   character: "claw",
   serialEnabled: true,
-  httpEnabled: false,
-  httpUrl: "http://127.0.0.1:19280/status",
+  httpEnabled: true,
+  httpUrl: "http://127.0.0.1:19280",
+  autoLaunch: true,
   debug: false,
 };
 
@@ -162,13 +164,59 @@ function sendSerial(payload) {
 }
 
 /**
+ * Check if Desktop App is running
+ */
+async function isDesktopRunning() {
+  try {
+    const response = await fetch(`${config.httpUrl}/health`, { method: "GET" });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Launch Desktop App via npx
+ */
+function launchDesktop() {
+  debug("Launching Desktop App via npx...");
+
+  try {
+    const shell = process.env.SHELL || "/bin/sh";
+    const child = spawn(shell, ["-l", "-c", "npx vibe-monitor@latest"], {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    debug("Desktop App launch command sent");
+  } catch (err) {
+    debug(`Failed to launch Desktop App: ${err.message}`);
+  }
+}
+
+/**
+ * Auto-launch Desktop App if not running
+ */
+async function autoLaunchDesktop() {
+  if (!config.autoLaunch || !config.httpEnabled) return;
+
+  const running = await isDesktopRunning();
+  if (!running) {
+    debug("Desktop App not running, launching...");
+    launchDesktop();
+    // Wait for Desktop App to start
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+}
+
+/**
  * Send status to VibeMon Desktop via HTTP
  */
 async function sendHttp(payload) {
   if (!config.httpEnabled) return;
 
   try {
-    const response = await fetch(config.httpUrl, {
+    const response = await fetch(`${config.httpUrl}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -268,12 +316,13 @@ const plugin = {
       serialEnabled: pluginConfig.serialEnabled ?? config.serialEnabled,
       httpEnabled: pluginConfig.httpEnabled ?? config.httpEnabled,
       httpUrl: pluginConfig.httpUrl ?? config.httpUrl,
+      autoLaunch: pluginConfig.autoLaunch ?? config.autoLaunch,
       debug: pluginConfig.debug ?? config.debug,
     };
 
     api.logger.info(`[vibemon] Plugin loaded`);
     api.logger.info(`[vibemon] Project: ${config.projectName}, Character: ${config.character}`);
-    api.logger.info(`[vibemon] Serial: ${config.serialEnabled}, HTTP: ${config.httpEnabled}`);
+    api.logger.info(`[vibemon] Serial: ${config.serialEnabled}, HTTP: ${config.httpEnabled}, AutoLaunch: ${config.autoLaunch}`);
 
     // Find TTY device at startup
     if (config.serialEnabled) {
@@ -286,8 +335,9 @@ const plugin = {
     }
 
     // Send start state on gateway start
-    api.on("gateway_start", () => {
+    api.on("gateway_start", async () => {
       debug("Gateway started -> start");
+      await autoLaunchDesktop();
       sendStatus("start", { note: "gateway_started" });
     });
 
