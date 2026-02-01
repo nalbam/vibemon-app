@@ -292,7 +292,6 @@ class MultiWindowManager {
         const [oldProjectId, entry] = this.windows.entries().next().value;
 
         // Clear timers for the old project
-        this.clearAlwaysOnTopTimer(oldProjectId);
         const snapTimer = this.snapTimers.get(oldProjectId);
         if (snapTimer) {
           clearTimeout(snapTimer);
@@ -402,9 +401,6 @@ class MultiWindowManager {
         clearTimeout(snapTimer);
         this.snapTimers.delete(currentProjectId);
       }
-
-      // Clear alwaysOnTop timer if exists
-      this.clearAlwaysOnTopTimer(currentProjectId);
 
       // Remove from windows map
       this.windows.delete(currentProjectId);

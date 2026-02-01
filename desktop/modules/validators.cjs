@@ -8,7 +8,11 @@ const { VALID_STATES, CHARACTER_NAMES } = require('../shared/config.cjs');
 const PROJECT_MAX_LENGTH = 100;
 const TOOL_MAX_LENGTH = 50;
 const MODEL_MAX_LENGTH = 50;
+const TERMINAL_ID_MAX_LENGTH = 100;
 const MEMORY_PATTERN = /^(100|[1-9]?\d)%$/;  // 0-100 only
+// iTerm2: w0t0p0:UUID format, Ghostty: numeric PID
+const ITERM2_SESSION_PATTERN = /^w\d+t\d+p\d+:[0-9A-Fa-f-]{36}$/;
+const GHOSTTY_PID_PATTERN = /^\d{1,10}$/;
 
 /**
  * Validate state value
@@ -113,6 +117,28 @@ function validateModel(model) {
 }
 
 /**
+ * Validate terminal ID (iTerm2 session or Ghostty PID)
+ * @param {string} terminalId
+ * @returns {{valid: boolean, error: string|null}}
+ */
+function validateTerminalId(terminalId) {
+  if (terminalId === undefined || terminalId === null || terminalId === '') {
+    return { valid: true, error: null };
+  }
+  if (typeof terminalId !== 'string') {
+    return { valid: false, error: 'terminalId must be a string' };
+  }
+  if (terminalId.length > TERMINAL_ID_MAX_LENGTH) {
+    return { valid: false, error: `terminalId exceeds ${TERMINAL_ID_MAX_LENGTH} characters` };
+  }
+  // Accept iTerm2 session format or Ghostty PID format
+  if (!ITERM2_SESSION_PATTERN.test(terminalId) && !GHOSTTY_PID_PATTERN.test(terminalId)) {
+    return { valid: false, error: 'terminalId must be a valid iTerm2 session ID or Ghostty PID' };
+  }
+  return { valid: true, error: null };
+}
+
+/**
  * Validate status payload
  * @param {object} data
  * @returns {{valid: boolean, error: string|null}}
@@ -136,6 +162,9 @@ function validateStatusPayload(data) {
   const modelResult = validateModel(data.model);
   if (!modelResult.valid) return modelResult;
 
+  const terminalIdResult = validateTerminalId(data.terminalId);
+  if (!terminalIdResult.valid) return terminalIdResult;
+
   return { valid: true, error: null };
 }
 
@@ -146,5 +175,6 @@ module.exports = {
   validateMemory,
   validateTool,
   validateModel,
+  validateTerminalId,
   validateStatusPayload
 };

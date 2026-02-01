@@ -3,7 +3,7 @@
  */
 
 const http = require('http');
-const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const { HTTP_PORT, MAX_PAYLOAD_SIZE, MAX_WINDOWS, STATS_CACHE_PATH } = require('../shared/config.cjs');
 const { setCorsHeaders, sendJson, sendError, parseJsonBody } = require('./http-utils.cjs');
@@ -12,6 +12,7 @@ const { validateStatusPayload } = require('./validators.cjs');
 // Rate limiting configuration
 const RATE_LIMIT = 100;       // Max requests per window
 const RATE_WINDOW_MS = 60000; // 1 minute window
+const RATE_CLEANUP_THRESHOLD = 100;  // Cleanup when map exceeds this size
 
 class HttpServer {
   constructor(stateManager, windowManager, app) {
@@ -27,11 +28,28 @@ class HttpServer {
   }
 
   /**
+   * Cleanup expired rate limit entries to prevent memory leak
+   */
+  cleanupExpiredRateLimits() {
+    const now = Date.now();
+    for (const [ip, record] of this.requestCounts) {
+      if (now > record.resetTime) {
+        this.requestCounts.delete(ip);
+      }
+    }
+  }
+
+  /**
    * Check rate limit for an IP address
    * @param {string} ip
    * @returns {boolean} true if allowed, false if rate limited
    */
   checkRateLimit(ip) {
+    // Cleanup expired entries when map gets large
+    if (this.requestCounts.size > RATE_CLEANUP_THRESHOLD) {
+      this.cleanupExpiredRateLimits();
+    }
+
     const now = Date.now();
     const record = this.requestCounts.get(ip);
 
@@ -71,13 +89,29 @@ class HttpServer {
   }
 
   stop() {
-    if (this.server) {
+    return new Promise((resolve) => {
+      // Clear rate limiting state
+      this.requestCounts.clear();
+
+      if (!this.server) {
+        resolve();
+        return;
+      }
+
+      const forceCloseTimeout = setTimeout(() => {
+        console.warn('HTTP server close timeout, forcing shutdown');
+        resolve();
+      }, 5000);
+
       this.server.close((err) => {
-        if (err) {
+        clearTimeout(forceCloseTimeout);
+        if (err && err.code !== 'ERR_SERVER_NOT_RUNNING') {
           console.error('HTTP server close error:', err.message);
         }
+        this.server = null;
+        resolve();
       });
-    }
+    });
   }
 
   async handleRequest(req, res) {
@@ -142,10 +176,10 @@ class HttpServer {
         await this.handlePostWindowMode(req, res);
         break;
       case 'GET /stats':
-        this.handleGetStatsPage(res);
+        await this.handleGetStatsPage(res);
         break;
       case 'GET /stats/data':
-        this.handleGetStatsData(res);
+        await this.handleGetStatsData(res);
         break;
       default:
         res.writeHead(404);
@@ -518,37 +552,32 @@ class HttpServer {
     });
   }
 
-  handleGetStatsPage(res) {
+  async handleGetStatsPage(res) {
     const statsHtmlPath = path.join(__dirname, '..', 'stats.html');
 
-    fs.readFile(statsHtmlPath, 'utf8', (err, html) => {
-      if (err) {
-        sendError(res, 500, 'Failed to load stats page');
-        return;
-      }
+    try {
+      const html = await fsPromises.readFile(statsHtmlPath, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
-    });
+    } catch {
+      sendError(res, 500, 'Failed to load stats page');
+    }
   }
 
-  handleGetStatsData(res) {
-    fs.readFile(STATS_CACHE_PATH, 'utf8', (err, data) => {
-      if (err) {
-        if (err.code === 'ENOENT') {
-          sendError(res, 404, 'Stats file not found: ~/.claude/stats-cache.json');
-        } else {
-          sendError(res, 500, `Failed to read stats file: ${err.message}`);
-        }
-        return;
+  async handleGetStatsData(res) {
+    try {
+      const data = await fsPromises.readFile(STATS_CACHE_PATH, 'utf8');
+      const stats = JSON.parse(data);
+      sendJson(res, 200, stats);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        sendError(res, 404, 'Stats file not found: ~/.claude/stats-cache.json');
+      } else if (err instanceof SyntaxError) {
+        sendError(res, 500, `Failed to parse stats file: ${err.message}`);
+      } else {
+        sendError(res, 500, `Failed to read stats file: ${err.message}`);
       }
-
-      try {
-        const stats = JSON.parse(data);
-        sendJson(res, 200, stats);
-      } catch (parseErr) {
-        sendError(res, 500, `Failed to parse stats file: ${parseErr.message}`);
-      }
-    });
+    }
   }
 }
 
