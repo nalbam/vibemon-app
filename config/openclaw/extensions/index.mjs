@@ -32,10 +32,10 @@ let cachedModel = null;
 let config = {
   projectName: "OpenClaw",
   character: "claw",
-  serialEnabled: true,
-  httpEnabled: true,
+  serialEnabled: false,
+  httpEnabled: false,
   httpUrls: ["http://127.0.0.1:19280"],
-  autoLaunch: true,
+  autoLaunch: false,
   debug: false,
 };
 

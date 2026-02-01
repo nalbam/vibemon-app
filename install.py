@@ -379,8 +379,6 @@ def install_openclaw(source: FileSource) -> bool:
     "vibemon-bridge": {
       "enabled": true,
       "config": {
-        "projectName": "OpenClaw",
-        "character": "claw",
         "serialEnabled": true,
         "httpEnabled": true,
         "httpUrls": ["http://127.0.0.1:19280"],

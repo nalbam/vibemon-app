@@ -19,12 +19,12 @@
       },
       "serialEnabled": {
         "type": "boolean",
-        "default": true,
+        "default": false,
         "description": "Enable serial output to ESP32"
       },
       "httpEnabled": {
         "type": "boolean",
-        "default": true,
+        "default": false,
         "description": "Enable HTTP output to VibeMon Desktop"
       },
       "httpUrls": {
@@ -35,7 +35,7 @@
       },
       "autoLaunch": {
         "type": "boolean",
-        "default": true,
+        "default": false,
         "description": "Auto-launch Desktop App via npx if not running"
       },
       "debug": {
