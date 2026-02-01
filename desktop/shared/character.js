@@ -17,7 +17,7 @@ let imagesLoaded = false;
 const CHARACTER_IMAGES = {
   clawd: new URL('../assets/characters/clawd-128.png', import.meta.url).href,
   kiro: new URL('../assets/characters/kiro-128.png', import.meta.url).href,
-  claw: new URL('../assets/characters/claw-128.png', import.meta.url).href,
+  claw: new URL('../assets/characters/claw-128.png', import.meta.url).href
 };
 
 // Preload character images
