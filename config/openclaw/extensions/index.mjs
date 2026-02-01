@@ -13,7 +13,7 @@
  *
  * Output:
  * - Serial: /dev/ttyACM* (Linux) or /dev/cu.usbmodem* (macOS)
- * - HTTP: POST to VibeMon Desktop (http://127.0.0.1:19280/status)
+ * - HTTP: POST to multiple URLs (array in config)
  */
 
 import fs from "node:fs";
@@ -34,7 +34,7 @@ let config = {
   character: "claw",
   serialEnabled: true,
   httpEnabled: true,
-  httpUrl: "http://127.0.0.1:19280",
+  httpUrls: ["http://127.0.0.1:19280"],
   autoLaunch: true,
   debug: false,
 };
@@ -164,11 +164,21 @@ function sendSerial(payload) {
 }
 
 /**
+ * Check if localhost URL exists in config
+ */
+function getLocalhostUrl() {
+  return config.httpUrls.find((url) => url.includes("127.0.0.1") || url.includes("localhost"));
+}
+
+/**
  * Check if Desktop App is running
  */
 async function isDesktopRunning() {
+  const localhostUrl = getLocalhostUrl();
+  if (!localhostUrl) return false;
+
   try {
-    const response = await fetch(`${config.httpUrl}/health`, { method: "GET" });
+    const response = await fetch(`${localhostUrl}/health`, { method: "GET" });
     return response.ok;
   } catch {
     return false;
@@ -200,6 +210,10 @@ function launchDesktop() {
 async function autoLaunchDesktop() {
   if (!config.autoLaunch || !config.httpEnabled) return;
 
+  // Only auto-launch if localhost URL is configured
+  const localhostUrl = getLocalhostUrl();
+  if (!localhostUrl) return;
+
   const running = await isDesktopRunning();
   if (!running) {
     debug("Desktop App not running, launching...");
@@ -210,26 +224,37 @@ async function autoLaunchDesktop() {
 }
 
 /**
- * Send status to VibeMon Desktop via HTTP
+ * Send status to a single HTTP URL
  */
-async function sendHttp(payload) {
-  if (!config.httpEnabled) return;
-
+async function sendHttpToUrl(url, payload) {
   try {
-    const response = await fetch(`${config.httpUrl}/status`, {
+    const response = await fetch(`${url}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      debug(`HTTP failed: ${response.status}`);
-    } else {
-      debug(`HTTP sent: ${JSON.stringify(payload)}`);
+      debug(`HTTP failed (${url}): ${response.status}`);
+      return false;
     }
+    debug(`HTTP sent (${url}): ${JSON.stringify(payload)}`);
+    return true;
   } catch (err) {
-    debug(`HTTP error: ${err.message}`);
+    debug(`HTTP error (${url}): ${err.message}`);
+    return false;
   }
+}
+
+/**
+ * Send status to all VibeMon targets via HTTP (parallel)
+ */
+async function sendHttp(payload) {
+  if (!config.httpEnabled || config.httpUrls.length === 0) return;
+
+  // Send to all URLs in parallel
+  const promises = config.httpUrls.map((url) => sendHttpToUrl(url, payload));
+  await Promise.allSettled(promises);
 }
 
 /**
@@ -309,20 +334,24 @@ const plugin = {
 
     // Merge plugin config
     const pluginConfig = api.pluginConfig || {};
+
     config = {
       ...config,
       projectName: pluginConfig.projectName ?? config.projectName,
       character: pluginConfig.character ?? config.character,
       serialEnabled: pluginConfig.serialEnabled ?? config.serialEnabled,
       httpEnabled: pluginConfig.httpEnabled ?? config.httpEnabled,
-      httpUrl: pluginConfig.httpUrl ?? config.httpUrl,
+      httpUrls: pluginConfig.httpUrls ?? config.httpUrls,
       autoLaunch: pluginConfig.autoLaunch ?? config.autoLaunch,
       debug: pluginConfig.debug ?? config.debug,
     };
 
     api.logger.info(`[vibemon] Plugin loaded`);
     api.logger.info(`[vibemon] Project: ${config.projectName}, Character: ${config.character}`);
-    api.logger.info(`[vibemon] Serial: ${config.serialEnabled}, HTTP: ${config.httpEnabled}, AutoLaunch: ${config.autoLaunch}`);
+    api.logger.info(`[vibemon] Serial: ${config.serialEnabled}, HTTP: ${config.httpEnabled} (${config.httpUrls.length} URLs), AutoLaunch: ${config.autoLaunch}`);
+    if (config.httpEnabled && config.httpUrls.length > 0) {
+      api.logger.info(`[vibemon] HTTP URLs: ${config.httpUrls.join(", ")}`);
+    }
 
     // Find TTY device at startup
     if (config.serialEnabled) {

@@ -60,7 +60,7 @@ export VIBEMON_AUTO_LAUNCH=1
 
 # HTTP URLs (comma-separated)
 # - Desktop App: http://127.0.0.1:19280
-# - ESP32 WiFi: http://192.168.1.100
+# - ESP32 WiFi: http://192.168.0.185
 # Multiple targets supported (sends to all in parallel)
 export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 
@@ -250,7 +250,7 @@ Commands try targets in order and stop on first success:
 | `DEBUG` | Enable debug logging | `1` |
 | `VIBEMON_CACHE_PATH` | Cache file path (Claude only) | `~/.claude/statusline-cache.json` |
 | `VIBEMON_AUTO_LAUNCH` | Auto-launch Desktop App (1: enabled) | `1` |
-| `VIBEMON_HTTP_URLS` | HTTP targets (comma-separated) | `http://127.0.0.1:19280,http://192.168.1.100` |
+| `VIBEMON_HTTP_URLS` | HTTP targets (comma-separated) | `http://127.0.0.1:19280,http://192.168.0.185` |
 | `VIBEMON_SERIAL_PORT` | ESP32 USB Serial port (supports wildcards) | `/dev/cu.usbmodem*` |
 
 ---

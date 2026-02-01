@@ -27,10 +27,11 @@
         "default": true,
         "description": "Enable HTTP output to VibeMon Desktop"
       },
-      "httpUrl": {
-        "type": "string",
-        "default": "http://127.0.0.1:19280",
-        "description": "VibeMon Desktop base URL"
+      "httpUrls": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["http://127.0.0.1:19280"],
+        "description": "VibeMon HTTP URLs (multiple targets supported)"
       },
       "autoLaunch": {
         "type": "boolean",
@@ -61,9 +62,9 @@
       "label": "HTTP Output",
       "help": "Send status to VibeMon Desktop app"
     },
-    "httpUrl": {
-      "label": "HTTP URL",
-      "help": "VibeMon Desktop base URL (e.g., http://127.0.0.1:19280)",
+    "httpUrls": {
+      "label": "HTTP URLs",
+      "help": "List of VibeMon HTTP URLs (e.g., http://127.0.0.1:19280)",
       "advanced": true
     },
     "autoLaunch": {

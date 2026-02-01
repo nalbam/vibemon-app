@@ -8,7 +8,7 @@
           "character": "claw",
           "serialEnabled": true,
           "httpEnabled": true,
-          "httpUrl": "http://127.0.0.1:19280,http://192.168.0.185",
+          "httpUrls": ["http://127.0.0.1:19280", "http://192.168.0.185"],
           "autoLaunch": true,
           "debug": false
         }

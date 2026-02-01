@@ -68,12 +68,12 @@ Example:
 
 ```bash
 # Update status
-curl -X POST http://192.168.1.100/status \
+curl -X POST http://192.168.0.185/status \
   -H "Content-Type: application/json" \
   -d '{"state":"working","tool":"Bash","project":"my-project"}'
 
 # Get current status
-curl http://192.168.1.100/status
+curl http://192.168.0.185/status
 ```
 
 ## Serial Port Check

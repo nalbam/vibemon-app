@@ -320,7 +320,7 @@ curl -X POST http://127.0.0.1:19280/quit
 Reboot the ESP32 device.
 
 ```bash
-curl -X POST http://192.168.1.100/reboot
+curl -X POST http://192.168.0.185/reboot
 ```
 
 ---
