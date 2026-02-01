@@ -53,19 +53,22 @@ Edit `~/.claude/.env.local`:
 # Default: ~/.claude/statusline-cache.json
 export VIBEMON_CACHE_PATH="~/.claude/statusline-cache.json"
 
-# Desktop App URL (auto-launches via npx if not running)
-# e.g., http://127.0.0.1:19280
-export VIBEMON_DESKTOP_URL=""
+# Auto-launch Desktop App (1: enabled, 0: disabled)
+# When enabled, launches Desktop App via npx if not running
+# Default: 0 (disabled)
+export VIBEMON_AUTO_LAUNCH=1
+
+# HTTP URLs (comma-separated)
+# - Desktop App: http://127.0.0.1:19280
+# - ESP32 WiFi: http://192.168.1.100
+# Multiple targets supported (sends to all in parallel)
+export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 
 # ESP32 USB Serial port (optional)
 # Supports wildcard patterns (e.g., /dev/cu.usbmodem*) - uses first match
 # e.g., /dev/cu.usbserial-0001, /dev/ttyUSB0, /dev/cu.usbmodem*
 # Check with: ls /dev/cu.* or ls /dev/tty*
 export VIBEMON_SERIAL_PORT="/dev/cu.usbmodem*"
-
-# ESP32 HTTP URL (optional)
-# e.g., http://192.168.1.100
-export VIBEMON_ESP32_URL=""
 ```
 
 ### 3. Register in `~/.claude/settings.json`
@@ -140,11 +143,14 @@ cp config/kiro/.env.example ~/.kiro/.env.local
 Edit `~/.kiro/.env.local`:
 
 ```bash
-# Desktop App URL (auto-launches via npx if not running)
-export VIBEMON_DESKTOP_URL="http://127.0.0.1:19280"
+# Auto-launch Desktop App (1: enabled, 0: disabled)
+export VIBEMON_AUTO_LAUNCH=1
+
+# HTTP URLs (comma-separated)
+export VIBEMON_HTTP_URLS="http://127.0.0.1:19280"
 
 # ESP32 USB Serial port (optional)
-# export VIBEMON_SERIAL_PORT="/dev/cu.usbmodem1101"
+# export VIBEMON_SERIAL_PORT="/dev/cu.usbmodem*"
 ```
 
 ### Kiro Hook Events
@@ -182,7 +188,7 @@ cp config/openclaw/extensions/* ~/.openclaw/extensions/vibemon-bridge/
           "projectName": "OpenClaw",
           "character": "claw",
           "serialEnabled": true,
-          "httpEnabled": false,
+          "httpEnabled": true,
           "debug": false
         }
       }
@@ -225,17 +231,25 @@ systemctl --user restart openclaw-gateway
 
 ### Status Updates
 
-Status updates are sent to **all configured targets** (not priority-based):
-- Desktop App (HTTP) - if `VIBEMON_DESKTOP_URL` is set
+Status updates are sent to **all configured targets** in parallel:
+- HTTP targets - all URLs in `VIBEMON_HTTP_URLS` (comma-separated)
 - ESP32 USB Serial - if `VIBEMON_SERIAL_PORT` is set
-- ESP32 HTTP - if `VIBEMON_ESP32_URL` is set
 
 ### Commands (lock, unlock, etc.)
 
 Commands try targets in order and stop on first success:
-1. **Desktop App** - if `VIBEMON_DESKTOP_URL` is set
-2. **ESP32 HTTP** - if `VIBEMON_ESP32_URL` is set
-3. **ESP32 USB Serial** - if `VIBEMON_SERIAL_PORT` is set
+1. **HTTP targets** - URLs in `VIBEMON_HTTP_URLS`
+2. **ESP32 USB Serial** - if `VIBEMON_SERIAL_PORT` is set
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DEBUG` | Enable debug logging | `1` |
+| `VIBEMON_CACHE_PATH` | Cache file path (Claude only) | `~/.claude/statusline-cache.json` |
+| `VIBEMON_AUTO_LAUNCH` | Auto-launch Desktop App (1: enabled) | `1` |
+| `VIBEMON_HTTP_URLS` | HTTP targets (comma-separated) | `http://127.0.0.1:19280,http://192.168.1.100` |
+| `VIBEMON_SERIAL_PORT` | ESP32 USB Serial port (supports wildcards) | `/dev/cu.usbmodem*` |
 
 ---
 
