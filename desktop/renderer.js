@@ -1,4 +1,4 @@
-import { createVibeMonEngine } from './shared/vibemon-engine.js';
+import { createVibeMonEngine } from './shared/vibemon-engine-standalone.js';
 
 // VibeMon engine instance
 let vibeMonEngine = null;

@@ -1,5 +1,4 @@
-import { CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER, states } from '../desktop/shared/config.js';
-import { createVibeMonEngine } from '../desktop/shared/vibemon-engine.js';
+import { CHARACTER_CONFIG, CHARACTER_NAMES, DEFAULT_CHARACTER, states, createVibeMonEngine } from '../desktop/shared/vibemon-engine-standalone.js';
 
 // VibeMon engine instance
 let vibeMonEngine = null;

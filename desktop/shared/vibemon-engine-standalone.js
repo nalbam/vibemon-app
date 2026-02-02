@@ -617,7 +617,7 @@ class CharacterRenderer {
 }
 
 // =============================================================================
-// VIBEMON ENGINE CLASS
+// EXPORTS
 // =============================================================================
 
 export class VibeMonEngine {
@@ -626,7 +626,15 @@ export class VibeMonEngine {
     this.ctx = canvas?.getContext('2d');
     this.dom = domElements;
     this.useEmoji = options.useEmoji || false;
-    this.characterImageUrls = options.characterImageUrls || null;
+    
+    // Default character image URLs (relative to this module)
+    // Can be overridden by options.characterImageUrls
+    const defaultImageUrls = options.characterImageUrls || {
+      clawd: new URL('../assets/characters/clawd-128.png', import.meta.url).href,
+      kiro: new URL('../assets/characters/kiro-128.png', import.meta.url).href,
+      claw: new URL('../assets/characters/claw-128.png', import.meta.url).href
+    };
+    this.characterImageUrls = defaultImageUrls;
 
     this.currentState = 'start';
     this.currentCharacter = 'clawd';
@@ -900,9 +908,14 @@ export class VibeMonEngine {
 }
 
 // =============================================================================
-// FACTORY FUNCTION
+// FACTORY FUNCTION AND ADDITIONAL EXPORTS
 // =============================================================================
 
 export function createVibeMonEngine(canvas, domElements, options = {}) {
   return new VibeMonEngine(canvas, domElements, options);
 }
+
+// Export constants for external use (e.g., simulator)
+export { STATES as states, CHARACTER_CONFIG, CONSTANTS };
+export const CHARACTER_NAMES = Object.keys(CHARACTER_CONFIG);
+export const DEFAULT_CHARACTER = CONSTANTS.DEFAULT_CHARACTER;
