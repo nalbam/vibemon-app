@@ -130,18 +130,20 @@ engine.cleanup();  // Stop animation and free resources
 
 ## Character Images
 
-The engine loads character images automatically from:
-- `../assets/characters/clawd-128.png`
-- `../assets/characters/kiro-128.png`
-- `../assets/characters/claw-128.png`
+The engine loads character images automatically from the VibeMon static server:
+- `https://static.vibemon.io/characters/clawd.png` (Orange cat)
+- `https://static.vibemon.io/characters/kiro.png` (White ghost)
+- `https://static.vibemon.io/characters/claw.png` (Red cat)
 
-To use custom paths:
+These images are loaded by default, so the engine works out of the box with no local files needed.
+
+To use custom paths or local images:
 ```javascript
 const engine = createVibeMonEngine(canvas, domElements, {
   characterImageUrls: {
-    clawd: './path/to/clawd-128.png',
-    kiro: './path/to/kiro-128.png',
-    claw: './path/to/claw-128.png'
+    clawd: './path/to/clawd.png',
+    kiro: './path/to/kiro.png',
+    claw: './path/to/claw.png'
   }
 });
 ```
@@ -287,9 +289,8 @@ The memory bar changes color based on usage:
 This file is completely standalone! To use VibeMon Engine in another project:
 
 1. Copy `vibemon-engine-standalone.js`
-2. Copy character images (128x128 PNG)
-3. Create the required HTML structure
-4. Import and initialize:
+2. Create the required HTML structure
+3. Import and initialize:
 
 ```javascript
 import { createVibeMonEngine } from './vibemon-engine-standalone.js';
@@ -300,7 +301,7 @@ engine.render();
 engine.startAnimation();
 ```
 
-That's it! No other dependencies needed.
+That's it! The engine loads character images from `https://static.vibemon.io/characters/` by default, so no local files needed. If you want to use custom images, pass `characterImageUrls` in options.
 
 ## File Size
 
@@ -383,8 +384,10 @@ socket.on('status', (data) => {
 ## Troubleshooting
 
 **Images not loading?**
-- Check the `characterImageUrls` paths
-- Ensure images are 128x128 PNG
+- Default images load from `https://static.vibemon.io/characters/`
+- Check network connectivity if images fail to load
+- For custom images, verify the `characterImageUrls` paths
+- Ensure custom images are accessible (CORS, network, etc.)
 - Check browser console for errors
 
 **Animation not working?**

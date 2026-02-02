@@ -627,12 +627,12 @@ export class VibeMonEngine {
     this.dom = domElements;
     this.useEmoji = options.useEmoji || false;
     
-    // Default character image URLs (relative to this module)
+    // Default character image URLs from static server
     // Can be overridden by options.characterImageUrls
     const defaultImageUrls = options.characterImageUrls || {
-      clawd: new URL('../assets/characters/clawd-128.png', import.meta.url).href,
-      kiro: new URL('../assets/characters/kiro-128.png', import.meta.url).href,
-      claw: new URL('../assets/characters/claw-128.png', import.meta.url).href
+      clawd: 'https://static.vibemon.io/characters/clawd.png',
+      kiro: 'https://static.vibemon.io/characters/kiro.png',
+      claw: 'https://static.vibemon.io/characters/claw.png'
     };
     this.characterImageUrls = defaultImageUrls;
 
