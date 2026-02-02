@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Vibe Monitor Installation Script
-Installs hooks and configuration for Claude Code, Kiro IDE, or OpenClaw.
+Vibe Monitor Installation Script (Python Version)
+Installs Python script hooks (.py) and configuration for Claude Code, Kiro IDE, or OpenClaw.
+
+For Shell version, use: install.sh
 
 Usage:
   # Online install (recommended)
@@ -32,22 +34,17 @@ def setup_tty_input():
 # GitHub raw content base URL
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/nalbam/vibe-monitor/main"
 
-# Files to download for each platform
+# Files to download for each platform (Python version)
 CLAUDE_FILES = [
-    "config/claude/statusline.sh",
-    "config/claude/hooks/vibe-monitor.sh",
+    "config/claude/statusline.py",
+    "config/claude/hooks/vibe-monitor.py",
     "config/claude/settings.json",
     "config/claude/skills/vibemon-lock/SKILL.md",
     "config/claude/skills/vibemon-mode/SKILL.md",
 ]
 
 KIRO_FILES = [
-    "config/kiro/hooks/vibe-monitor.sh",
-    "config/kiro/hooks/vibe-monitor-prompt-submit.kiro.hook",
-    "config/kiro/hooks/vibe-monitor-file-created.kiro.hook",
-    "config/kiro/hooks/vibe-monitor-file-edited.kiro.hook",
-    "config/kiro/hooks/vibe-monitor-file-deleted.kiro.hook",
-    "config/kiro/hooks/vibe-monitor-agent-stop.kiro.hook",
+    "config/kiro/hooks/vibe-monitor.py",
     "config/kiro/agents/default.json",
 ]
 
@@ -231,7 +228,7 @@ class FileSource:
 
 
 def install_claude(source: FileSource) -> bool:
-    """Install Vibe Monitor for Claude Code."""
+    """Install Vibe Monitor for Claude Code (Python version)."""
     print(f"\n{colored('Installing Vibe Monitor for Claude Code...', 'cyan')}\n")
 
     claude_home = Path.home() / ".claude"
@@ -241,13 +238,13 @@ def install_claude(source: FileSource) -> bool:
 
     print("Copying files:")
 
-    # statusline.sh
-    content = source.get_file("config/claude/statusline.sh")
-    write_file_with_diff(claude_home / "statusline.sh", content, "statusline.sh", executable=True)
+    # statusline.py
+    content = source.get_file("config/claude/statusline.py")
+    write_file_with_diff(claude_home / "statusline.py", content, "statusline.py", executable=True)
 
-    # hooks/vibe-monitor.sh
-    content = source.get_file("config/claude/hooks/vibe-monitor.sh")
-    write_file_with_diff(claude_home / "hooks" / "vibe-monitor.sh", content, "hooks/vibe-monitor.sh", executable=True)
+    # hooks/vibe-monitor.py
+    content = source.get_file("config/claude/hooks/vibe-monitor.py")
+    write_file_with_diff(claude_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py", executable=True)
 
     # skills
     for skill in ["vibemon-lock", "vibemon-mode"]:
@@ -313,7 +310,7 @@ def install_claude(source: FileSource) -> bool:
 
 
 def install_kiro(source: FileSource) -> bool:
-    """Install Vibe Monitor for Kiro IDE."""
+    """Install Vibe Monitor for Kiro IDE (Python version)."""
     print(f"\n{colored('Installing Vibe Monitor for Kiro IDE...', 'cyan')}\n")
 
     kiro_home = Path.home() / ".kiro"
@@ -323,23 +320,11 @@ def install_kiro(source: FileSource) -> bool:
 
     print("Copying files:")
 
-    # Hook files
-    hook_files = [
-        "vibe-monitor-prompt-submit.kiro.hook",
-        "vibe-monitor-file-created.kiro.hook",
-        "vibe-monitor-file-edited.kiro.hook",
-        "vibe-monitor-file-deleted.kiro.hook",
-        "vibe-monitor-agent-stop.kiro.hook",
-    ]
-    for hook_file in hook_files:
-        content = source.get_file(f"config/kiro/hooks/{hook_file}")
-        write_file(kiro_home / "hooks" / hook_file, content, f"hooks/{hook_file}")
+    # vibe-monitor.py
+    content = source.get_file("config/kiro/hooks/vibe-monitor.py")
+    write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py", executable=True)
 
-    # vibe-monitor.sh
-    content = source.get_file("config/kiro/hooks/vibe-monitor.sh")
-    write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.sh", content, "hooks/vibe-monitor.sh", executable=True)
-
-    # agents/default.json
+    # agents/default.json (Python version - uses python3 command)
     content = source.get_file("config/kiro/agents/default.json")
     write_file_with_diff(kiro_home / "agents" / "default.json", content, "agents/default.json")
 

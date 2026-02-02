@@ -1,0 +1,30 @@
+{
+  "name": "default",
+  "description": "Default agent with Vibe Monitor hooks",
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "bash",
+        "args": ["~/.kiro/hooks/vibe-monitor.sh", "agentSpawn"]
+      }
+    ],
+    "userPromptSubmit": [
+      {
+        "command": "bash",
+        "args": ["~/.kiro/hooks/vibe-monitor.sh", "promptSubmit"]
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "bash",
+        "args": ["~/.kiro/hooks/vibe-monitor.sh", "preToolUse"]
+      }
+    ],
+    "stop": [
+      {
+        "command": "bash",
+        "args": ["~/.kiro/hooks/vibe-monitor.sh", "agentStop"]
+      }
+    ]
+  }
+}

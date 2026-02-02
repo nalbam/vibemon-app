@@ -63,8 +63,14 @@ vibe-monitor
 
 ### Quick Install (Recommended)
 
+**Python version** (requires Python 3):
 ```bash
 curl -fsSL https://nalbam.github.io/vibe-monitor/install.py | python3
+```
+
+**Shell version** (requires Bash):
+```bash
+curl -fsSL https://nalbam.github.io/vibe-monitor/install.sh | bash
 ```
 
 The script configures hooks for Claude Code, Kiro, or OpenClaw automatically.

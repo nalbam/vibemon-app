@@ -4,8 +4,14 @@ Vibe Monitor receives status updates from AI assistants through their hook syste
 
 ## Quick Install (Recommended)
 
+**Python version** (installs `.py` hook scripts):
 ```bash
 curl -fsSL https://nalbam.github.io/vibe-monitor/install.py | python3
+```
+
+**Shell version** (installs `.sh` hook scripts):
+```bash
+curl -fsSL https://nalbam.github.io/vibe-monitor/install.sh | bash
 ```
 
 The script will:

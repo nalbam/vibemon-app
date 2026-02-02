@@ -1,7 +1,9 @@
 #!/bin/bash
 #
-# Vibe Monitor Installation Script
-# Installs hooks and configuration for Claude Code, Kiro IDE, or OpenClaw.
+# Vibe Monitor Installation Script (Shell Version)
+# Installs shell script hooks (.sh) and configuration for Claude Code, Kiro IDE, or OpenClaw.
+#
+# For Python version, use: install.py
 #
 # Usage:
 #   # Online install (recommended)
@@ -144,6 +146,7 @@ write_file_with_diff() {
 # ============================================================================
 
 install_claude() {
+    # Install Vibe Monitor for Claude Code (Shell version)
     echo -e "\n$(colored 'Installing Vibe Monitor for Claude Code...' cyan)\n"
 
     local claude_home="$HOME/.claude"
@@ -167,11 +170,11 @@ install_claude() {
         write_file "$claude_home/skills/$skill/SKILL.md" "$content" "skills/$skill/SKILL.md"
     done
 
-    # settings.json
+    # settings.json (shell version)
     echo -e "\nConfiguring settings.json:"
     local settings_file="$claude_home/settings.json"
     local new_settings
-    new_settings=$(get_file "config/claude/settings.json")
+    new_settings=$(get_file "config/claude/settings-sh.json")
 
     if [[ -f "$settings_file" ]]; then
         echo -e "  $(colored '!' yellow) settings.json exists - manual merge may be needed"
@@ -207,6 +210,7 @@ install_claude() {
 }
 
 install_kiro() {
+    # Install Vibe Monitor for Kiro IDE (Shell version)
     echo -e "\n$(colored 'Installing Vibe Monitor for Kiro IDE...' cyan)\n"
 
     local kiro_home="$HOME/.kiro"
@@ -233,8 +237,8 @@ install_kiro() {
     content=$(get_file "config/kiro/hooks/vibe-monitor.sh")
     write_file_with_diff "$kiro_home/hooks/vibe-monitor.sh" "$content" "hooks/vibe-monitor.sh" "true"
 
-    # agents/default.json
-    content=$(get_file "config/kiro/agents/default.json")
+    # agents/default.json (shell version)
+    content=$(get_file "config/kiro/agents/default-sh.json")
     write_file_with_diff "$kiro_home/agents/default.json" "$content" "agents/default.json"
 
     # .env.local
