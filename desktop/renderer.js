@@ -1,7 +1,7 @@
-import { createRendererEngine } from './shared/renderer-engine.js';
+import { createVibeMonEngine } from './shared/vibemon-engine.js';
 
-// Renderer engine instance
-let rendererEngine = null;
+// VibeMon engine instance
+let vibeMonEngine = null;
 
 // IPC cleanup function
 let cleanupStateListener = null;
@@ -49,13 +49,13 @@ async function init() {
     useEmoji = platform === 'darwin';
   }
 
-  // Create and initialize renderer engine
-  rendererEngine = createRendererEngine(canvas, domCache, { useEmoji });
-  await rendererEngine.init();
+  // Create and initialize VibeMon engine
+  vibeMonEngine = createVibeMonEngine(canvas, domCache, { useEmoji });
+  await vibeMonEngine.init();
 
   // Initial render and start animation
-  rendererEngine.render();
-  rendererEngine.startAnimation();
+  vibeMonEngine.render();
+  vibeMonEngine.startAnimation();
 
   // Listen for state updates from main process
   if (window.electronAPI) {
@@ -63,9 +63,9 @@ async function init() {
       // Validate incoming data
       if (!data || typeof data !== 'object') return;
 
-      // Update state in renderer engine
-      rendererEngine.setState(data);
-      rendererEngine.render();
+      // Update state in VibeMon engine
+      vibeMonEngine.setState(data);
+      vibeMonEngine.render();
     });
   }
 
@@ -89,9 +89,9 @@ async function init() {
 
 // Cleanup on unload
 function cleanup() {
-  if (rendererEngine) {
-    rendererEngine.cleanup();
-    rendererEngine = null;
+  if (vibeMonEngine) {
+    vibeMonEngine.cleanup();
+    vibeMonEngine = null;
   }
   if (cleanupStateListener) {
     cleanupStateListener();

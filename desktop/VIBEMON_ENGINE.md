@@ -1,8 +1,8 @@
-# Renderer Engine Documentation
+# VibeMon Engine Documentation
 
 ## Overview
 
-The Renderer Engine is a complete abstraction of all rendering logic for the Vibe Monitor desktop application. It separates all character, animation, and status rendering into a single, reusable module.
+The VibeMon Engine is a complete abstraction of all rendering logic for the Vibe Monitor desktop application. It separates all character, animation, and status rendering into a single, reusable module.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Previously, all rendering logic was embedded in `renderer.js`. This made it diff
 - Understand the separation between state management and display
 - Modify rendering behavior without touching the main renderer
 
-The new `RendererEngine` class completely encapsulates:
+The new `VibeMonEngine` class completely encapsulates:
 - **Character rendering** (canvas, images, animations)
 - **Animation system** (floating effects, blinking, loading dots)
 - **State display** (background colors, state text)
@@ -35,13 +35,13 @@ renderer.js (299 lines)
 ### After
 ```
 renderer.js (106 lines)
-├── Import RendererEngine
+├── Import VibeMonEngine
 ├── Create engine instance
 ├── Pass state updates to engine
 └── Engine handles ALL rendering
 
-shared/renderer-engine.js (380 lines)
-├── RendererEngine class
+shared/vibemon-engine.js (380 lines)
+├── VibeMonEngine class
 ├── Complete rendering abstraction
 ├── State management
 ├── Animation control
@@ -53,7 +53,7 @@ shared/renderer-engine.js (380 lines)
 ### Basic Setup
 
 ```javascript
-import { createRendererEngine } from './shared/renderer-engine.js';
+import { createVibeMonEngine } from './shared/vibemon-engine.js';
 
 // 1. Get DOM elements
 const canvas = document.getElementById('character-canvas');
@@ -65,7 +65,7 @@ const domElements = {
 };
 
 // 2. Create engine
-const engine = createRendererEngine(canvas, domElements, {
+const engine = createVibeMonEngine(canvas, domElements, {
   useEmoji: true // Platform-specific option
 });
 
@@ -110,7 +110,7 @@ engine.cleanup();
 ### Constructor
 
 ```javascript
-new RendererEngine(canvas, domElements, options)
+new VibeMonEngine(canvas, domElements, options)
 ```
 
 **Parameters:**
@@ -224,7 +224,7 @@ function animationLoop(timestamp) {
 ### New Code
 ```javascript
 // Create engine
-const engine = createRendererEngine(canvas, domElements, options);
+const engine = createVibeMonEngine(canvas, domElements, options);
 await engine.init();
 
 // Update state
@@ -241,19 +241,19 @@ engine.startAnimation();
 desktop/
 ├── renderer.js                    # Main renderer (simplified)
 ├── shared/
-│   ├── renderer-engine.js         # NEW: Complete rendering engine
+│   ├── vibemon-engine.js         # NEW: Complete rendering engine
 │   ├── character.js               # Character rendering (used by engine)
 │   ├── animation.js               # Animation utilities (used by engine)
 │   ├── effects.js                 # Visual effects (used by engine)
 │   ├── icons.js                   # Icon rendering (used by engine)
 │   ├── utils.js                   # Text utilities (used by engine)
 │   └── config.js                  # Configuration (used by engine)
-└── RENDERER_ENGINE_EXAMPLES.js    # Usage examples
+└── VIBEMON_ENGINE_EXAMPLES.js    # Usage examples
 ```
 
 ## Examples
 
-See `RENDERER_ENGINE_EXAMPLES.js` for complete working examples including:
+See `VIBEMON_ENGINE_EXAMPLES.js` for complete working examples including:
 1. Basic usage
 2. State updates
 3. Character changes
@@ -275,7 +275,7 @@ Example:
 ```javascript
 const mockCanvas = { getContext: () => mockCtx, style: {} };
 const mockDom = { /* mock elements */ };
-const engine = new RendererEngine(mockCanvas, mockDom);
+const engine = new VibeMonEngine(mockCanvas, mockDom);
 
 engine.setState({ state: 'working' });
 expect(engine.currentState).toBe('working');
@@ -296,4 +296,4 @@ Potential improvements:
 
 ## Conclusion
 
-The Renderer Engine provides a clean, simple, and powerful abstraction for all rendering in Vibe Monitor. It makes the codebase more maintainable, testable, and extensible while keeping the API simple and intuitive.
+The VibeMon Engine provides a clean, simple, and powerful abstraction for all rendering in Vibe Monitor. It makes the codebase more maintainable, testable, and extensible while keeping the API simple and intuitive.

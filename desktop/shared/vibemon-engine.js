@@ -1,5 +1,5 @@
 /**
- * Renderer Engine - Complete rendering abstraction for Vibe Monitor
+ * VibeMon Engine - Complete rendering abstraction for Vibe Monitor
  *
  * This module encapsulates ALL rendering logic:
  * - Character rendering (canvas, images, animations)
@@ -9,7 +9,7 @@
  * - Icon rendering
  *
  * Usage:
- *   const engine = new RendererEngine(canvasElement, domElements);
+ *   const engine = new VibeMonEngine(canvasElement, domElements);
  *   await engine.init();
  *   engine.render(state);
  *   engine.startAnimation();
@@ -29,9 +29,9 @@ import { drawInfoIcons } from './icons.js';
 import { getFloatOffsetX, getFloatOffsetY, needsAnimationRedraw } from './animation.js';
 
 /**
- * RendererEngine class - Complete rendering system
+ * VibeMonEngine class - Complete rendering system
  */
-export class RendererEngine {
+export class VibeMonEngine {
   constructor(canvas, domElements, options = {}) {
     // Canvas and context
     this.canvas = canvas;
@@ -374,8 +374,8 @@ export class RendererEngine {
 }
 
 /**
- * Factory function for creating a renderer engine
+ * Factory function for creating a VibeMon engine
  */
-export function createRendererEngine(canvas, domElements, options = {}) {
-  return new RendererEngine(canvas, domElements, options);
+export function createVibeMonEngine(canvas, domElements, options = {}) {
+  return new VibeMonEngine(canvas, domElements, options);
 }

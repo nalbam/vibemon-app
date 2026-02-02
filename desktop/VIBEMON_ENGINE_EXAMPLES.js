@@ -1,15 +1,15 @@
 /**
- * RendererEngine Usage Examples
+ * VibeMonEngine Usage Examples
  *
- * This file demonstrates how to use the RendererEngine module
+ * This file demonstrates how to use the VibeMonEngine module
  * to render character and status in the Vibe Monitor desktop app.
  *
- * The RendererEngine completely separates rendering logic from the main renderer.
+ * The VibeMonEngine completely separates rendering logic from the main renderer.
  * You can declare it, initialize it, and call render() to immediately update the display.
  */
 
 // Import the renderer engine
-import { createRendererEngine } from './shared/renderer-engine.js';
+import { createVibeMonEngine } from './shared/vibemon-engine.js';
 
 // Example 1: Basic Usage
 // ----------------------
@@ -38,7 +38,7 @@ async function basicExample() {
   };
 
   // Create renderer engine
-  const engine = createRendererEngine(canvas, domElements, {
+  const engine = createVibeMonEngine(canvas, domElements, {
     useEmoji: true // Use emoji icons on macOS
   });
 
@@ -173,7 +173,7 @@ async function completeIntegrationExample() {
   const useEmoji = getPlatform() === 'darwin';
 
   // Create and initialize
-  const engine = createRendererEngine(canvas, domElements, { useEmoji });
+  const engine = createVibeMonEngine(canvas, domElements, { useEmoji });
   await engine.init();
 
   // Initial render and animation

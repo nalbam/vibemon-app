@@ -1,4 +1,4 @@
-# Renderer Engine Visual Guide
+# VibeMon Engine Visual Guide
 
 ## How It Works
 
@@ -200,7 +200,7 @@ const dom = {
 };
 
 // 2. Create engine
-const engine = createRendererEngine(canvas, dom, {
+const engine = createVibeMonEngine(canvas, dom, {
   useEmoji: platform === 'darwin'
 });
 
@@ -252,7 +252,7 @@ Before Refactoring:
 
 After Refactoring:
 ┌──────────────────────┐  ┌───────────────────────────┐
-│   renderer.js        │  │  renderer-engine.js       │
+│   renderer.js        │  │  vibemon-engine.js       │
 │  ┌────────────────┐  │  │  ┌─────────────────────┐  │
 │  │ ✅ Clean       │  │  │  │ ✅ Encapsulated     │  │
 │  │ ✅ Simple      │  │  │  │ ✅ Testable         │  │
@@ -284,7 +284,7 @@ Animation States:
 
 ## Summary
 
-The Renderer Engine provides:
+The VibeMon Engine provides:
 
 1. **Simple API**: `setState()` → `render()` → Done
 2. **Complete Abstraction**: All rendering in one place
