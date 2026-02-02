@@ -21,6 +21,7 @@ const browserGlobals = {
   window: 'readonly',
   document: 'readonly',
   requestAnimationFrame: 'readonly',
+  cancelAnimationFrame: 'readonly',
   URL: 'readonly',
   Image: 'readonly'
 };
