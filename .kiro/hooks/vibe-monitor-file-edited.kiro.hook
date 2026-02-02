@@ -8,6 +8,6 @@
   },
   "then": {
     "type": "runCommand",
-    "command": "python3 ~/.kiro/hooks/vibe-monitor.py fileEdited"
+    "command": "~/.kiro/hooks/vibe-monitor.sh fileEdited"
   }
 }
