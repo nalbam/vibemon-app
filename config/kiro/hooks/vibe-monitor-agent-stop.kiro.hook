@@ -7,6 +7,6 @@
   },
   "then": {
     "type": "runCommand",
-    "command": "python3 ~/.kiro/hooks/vibe-monitor.py agentStop"
+    "command": "~/.kiro/hooks/vibe-monitor.sh agentStop"
   }
 }
