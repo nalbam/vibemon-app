@@ -90,7 +90,7 @@ const STATES = {
     "bgColor": "#0066CC",
     "text": "Working",
     "eyeType": "focused",
-    "effect": "matrix",
+    "effect": "sparkle",
     "showLoading": true,
     "textColor": "#FFFFFF"
   },
@@ -886,7 +886,7 @@ export class VibeMonEngine {
 
       if (this.currentState === 'working') {
         this.updateLoadingDots(false);
-        this.characterRenderer?.drawCharacter('focused', 'matrix', this.currentState, this.currentCharacter, this.animFrame);
+        this.characterRenderer?.drawCharacter('focused', 'sparkle', this.currentState, this.currentCharacter, this.animFrame);
       }
 
       if (this.currentState === 'packing') {
