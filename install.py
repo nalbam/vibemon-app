@@ -34,15 +34,15 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/nalbam/vibe-monitor/main"
 
 # Files to download for each platform
 CLAUDE_FILES = [
-    "config/claude/statusline.py",
-    "config/claude/hooks/vibe-monitor.py",
+    "config/claude/statusline.sh",
+    "config/claude/hooks/vibe-monitor.sh",
     "config/claude/settings.json",
     "config/claude/skills/vibemon-lock/SKILL.md",
     "config/claude/skills/vibemon-mode/SKILL.md",
 ]
 
 KIRO_FILES = [
-    "config/kiro/hooks/vibe-monitor.py",
+    "config/kiro/hooks/vibe-monitor.sh",
     "config/kiro/hooks/vibe-monitor-prompt-submit.kiro.hook",
     "config/kiro/hooks/vibe-monitor-file-created.kiro.hook",
     "config/kiro/hooks/vibe-monitor-file-edited.kiro.hook",
@@ -126,11 +126,13 @@ def show_diff(old_content: str, new_content: str, filename: str) -> bool:
     return True
 
 
-def write_file(dst: Path, content: str, description: str) -> bool:
+def write_file(dst: Path, content: str, description: str, executable: bool = False) -> bool:
     """Write content to a file."""
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(content)
+        if executable:
+            dst.chmod(dst.stat().st_mode | 0o111)
         print(f"  {colored('✓', 'green')} {description}")
         return True
     except Exception as e:
@@ -138,7 +140,7 @@ def write_file(dst: Path, content: str, description: str) -> bool:
         return False
 
 
-def write_file_with_diff(dst: Path, content: str, description: str) -> bool:
+def write_file_with_diff(dst: Path, content: str, description: str, executable: bool = False) -> bool:
     """Write content to a file, showing diff if it already exists."""
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -156,6 +158,8 @@ def write_file_with_diff(dst: Path, content: str, description: str) -> bool:
             if has_diff:
                 if ask_yes_no(f"  Overwrite {description}?"):
                     dst.write_text(content)
+                    if executable:
+                        dst.chmod(dst.stat().st_mode | 0o111)
                     print(f"  {colored('✓', 'green')} {description} (updated)")
                     return True
                 else:
@@ -163,6 +167,8 @@ def write_file_with_diff(dst: Path, content: str, description: str) -> bool:
                     return False
         else:
             dst.write_text(content)
+            if executable:
+                dst.chmod(dst.stat().st_mode | 0o111)
             print(f"  {colored('✓', 'green')} {description}")
             return True
 
@@ -235,13 +241,13 @@ def install_claude(source: FileSource) -> bool:
 
     print("Copying files:")
 
-    # statusline.py
-    content = source.get_file("config/claude/statusline.py")
-    write_file_with_diff(claude_home / "statusline.py", content, "statusline.py")
+    # statusline.sh
+    content = source.get_file("config/claude/statusline.sh")
+    write_file_with_diff(claude_home / "statusline.sh", content, "statusline.sh", executable=True)
 
-    # hooks/vibe-monitor.py
-    content = source.get_file("config/claude/hooks/vibe-monitor.py")
-    write_file_with_diff(claude_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py")
+    # hooks/vibe-monitor.sh
+    content = source.get_file("config/claude/hooks/vibe-monitor.sh")
+    write_file_with_diff(claude_home / "hooks" / "vibe-monitor.sh", content, "hooks/vibe-monitor.sh", executable=True)
 
     # skills
     for skill in ["vibemon-lock", "vibemon-mode"]:
@@ -329,9 +335,9 @@ def install_kiro(source: FileSource) -> bool:
         content = source.get_file(f"config/kiro/hooks/{hook_file}")
         write_file(kiro_home / "hooks" / hook_file, content, f"hooks/{hook_file}")
 
-    # vibe-monitor.py
-    content = source.get_file("config/kiro/hooks/vibe-monitor.py")
-    write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.py", content, "hooks/vibe-monitor.py")
+    # vibe-monitor.sh
+    content = source.get_file("config/kiro/hooks/vibe-monitor.sh")
+    write_file_with_diff(kiro_home / "hooks" / "vibe-monitor.sh", content, "hooks/vibe-monitor.sh", executable=True)
 
     # agents/default.json
     content = source.get_file("config/kiro/agents/default.json")
