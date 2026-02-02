@@ -11,5 +11,4 @@
 ## Quick Links
 
 - [Main README](../README.md)
-- [Web Simulator](https://nalbam.github.io/vibe-monitor/simulator/)
 - [npm Package](https://www.npmjs.com/package/vibe-monitor)

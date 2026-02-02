@@ -32,7 +32,6 @@ See at a glance what your AI assistant is doing — thinking, working, or waitin
 |----------|-------------|----------|
 | **ESP32 Hardware** | Dedicated LCD display (172×320) | Primary, always-on desk companion |
 | **Desktop App** | Electron app with system tray | Alternative for non-hardware users |
-| **Web Simulator** | Browser-based preview | Testing, no installation |
 
 ## Preview
 
@@ -59,33 +58,6 @@ Or install globally:
 npm install -g vibe-monitor
 vibe-monitor
 ```
-
-### Web Simulator
-
-No installation required:
-
-**Online**: https://nalbam.github.io/vibe-monitor/simulator/
-
-**Local**:
-```bash
-open simulator/index.html
-```
-
-**URL Parameters**: Open with specific state/character:
-
-```
-?character=kiro&state=working&project=my-app&tool=Bash&memory=75
-```
-
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `character` | `clawd`, `kiro`, `claw` | Character to display |
-| `state` | `start`, `idle`, `thinking`, `planning`, `working`, `packing`, `notification`, `done`, `sleep` | Initial state |
-| `project` | string | Project name |
-| `tool` | string | Tool name |
-| `model` | string | Model name |
-| `memory` | `0-100` | Memory usage % |
-| `icon` | `emoji`, `pixel` | Icon type |
 
 ## Integration
 

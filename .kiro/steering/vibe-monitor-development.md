@@ -202,10 +202,6 @@ vibe-monitor/
 │   │   ├── characters/        # 캐릭터 이미지 (128×128 PNG)
 │   │   └── generators/        # 아이콘 생성 도구
 │   └── tests/                 # 테스트 파일
-├── simulator/                 # 웹 시뮬레이터
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
 ├── config/                    # IDE 통합 설정
 │   ├── claude/                # Claude Code 훅
 │   │   ├── hooks/
@@ -346,9 +342,6 @@ curl -X POST http://127.0.0.1:19280/quit
 
 ### 4. 테스트 방법
 ```bash
-# 웹 시뮬레이터 (하드웨어 불필요)
-open simulator/index.html
-
 # 데스크톱 앱 개발 모드
 cd desktop && npm start
 

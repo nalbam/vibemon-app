@@ -9,7 +9,6 @@ Real-time status monitor for AI assistants (Claude Code, Kiro, OpenClaw) with pi
 **Platforms:**
 - ESP32 Hardware (172×320 LCD) - Primary, always-on desk companion
 - Desktop App (Electron) - Alternative for non-hardware users
-- Web Simulator - Browser-based testing/debugging only (not for production)
 
 ## Development Environment
 
@@ -18,11 +17,6 @@ Real-time status monitor for AI assistants (Claude Code, Kiro, OpenClaw) with pi
 cd desktop
 npm install
 npm start
-```
-
-### Web Simulator
-```bash
-open simulator/index.html
 ```
 
 ## Architecture
@@ -43,13 +37,9 @@ open simulator/index.html
 
 ### Key Files
 - **ESP32**: `vibe-monitor.ino` (main), `sprites.h` (rendering)
-- **Desktop**: `main.js` (entry point), `modules/*.cjs` (http-server, multi-window-manager, tray-manager, state-manager, validators, http-utils), `renderer.js` + `index.html` (renderer)
-- **Shared**: `desktop/shared/` folder (config, character, animation, effects)
-- **Config Data**: `desktop/shared/data/` folder (JSON files - single source of truth)
-  - `constants.json`: Window dimensions, animation settings, limits
-  - `states.json`: State colors, text, eyeType definitions
-  - `characters.json`: Character eyes/effect configuration (image-based rendering)
-  - `texts.json`: Thinking/planning/tool status texts
+- **Desktop**: `main.js` (entry point), `modules/*.cjs` (http-server, http-utils, multi-window-manager, state-manager, tray-manager, validators, ws-client), `renderer.js` + `index.html` (renderer)
+- **Shared**: `desktop/shared/` folder (config, constants)
+- **Config Data**: `desktop/shared/data/constants.json` (single source of truth - window dimensions, animation settings, limits)
 - **Documentation**: `README.md`, `CLAUDE.md`, `docs/*`, `desktop/README.md` (npm package)
 
 ## Key Patterns

@@ -64,7 +64,6 @@ curl -X POST http://127.0.0.1:19280/quit
 
 - [Homepage](https://nalbam.github.io/vibe-monitor/)
 - [GitHub Repository](https://github.com/nalbam/vibe-monitor)
-- [Web Simulator](https://nalbam.github.io/vibe-monitor/simulator/)
 - [Full Documentation](https://github.com/nalbam/vibe-monitor#readme)
 
 ## License

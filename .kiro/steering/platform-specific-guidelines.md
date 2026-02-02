@@ -1,6 +1,6 @@
 ---
 inclusion: fileMatch
-fileMatchPattern: "*.ino|*.h|desktop/*|shared/*|simulator/*|hooks/*"
+fileMatchPattern: "*.ino|*.h|desktop/*|shared/*|hooks/*"
 ---
 
 # 플랫폼별 개발 가이드라인
@@ -169,48 +169,6 @@ ipcMain.on('update-state', (event, data) => {
 
   updateState(data);
 });
-```
-
-## 웹 시뮬레이터
-
-### 1. Canvas 최적화
-```javascript
-// ✅ 오프스크린 캔버스 사용
-const offscreenCanvas = new OffscreenCanvas(CHAR_SIZE, CHAR_SIZE);
-const offscreenCtx = offscreenCanvas.getContext('2d');
-
-function renderCharacter() {
-  // 오프스크린에서 렌더링
-  drawCharacter(offscreenCtx, eyeType, currentState, currentCharacter, animFrame);
-
-  // 메인 캔버스에 복사
-  mainCtx.drawImage(offscreenCanvas, 0, 0);
-}
-
-// ✅ requestAnimationFrame 사용
-function animate() {
-  updateAnimation();
-  renderCharacter();
-  requestAnimationFrame(animate);
-}
-```
-
-### 2. 반응형 디자인
-```css
-/* ✅ 다양한 화면 크기 지원 */
-.monitor-container {
-  width: 172px;
-  height: 348px;
-  max-width: 90vw;
-  max-height: 90vh;
-  margin: 0 auto;
-}
-
-@media (max-width: 480px) {
-  .monitor-container {
-    transform: scale(0.8);
-  }
-}
 ```
 
 ## 훅 스크립트 (Shell)
