@@ -1,4 +1,7 @@
-import { createVibeMonEngine } from './shared/vibemon-engine-standalone.js';
+import { createVibeMonEngine } from 'https://static.vibemon.toast.sh/js/vibemon-engine-standalone.js';
+
+// Static server base URL
+const STATIC_BASE = 'https://static.vibemon.toast.sh';
 
 // VibeMon engine instance
 let vibeMonEngine = null;
@@ -17,13 +20,13 @@ async function init() {
     useEmoji = platform === 'darwin';
   }
 
-  // Create and initialize VibeMon engine with local character images
+  // Create and initialize VibeMon engine with static server images
   vibeMonEngine = createVibeMonEngine(container, {
     useEmoji,
     characterImageUrls: {
-      clawd: './assets/characters/clawd-128.png',
-      kiro: './assets/characters/kiro-128.png',
-      claw: './assets/characters/claw-128.png'
+      clawd: `${STATIC_BASE}/characters/clawd.png`,
+      kiro: `${STATIC_BASE}/characters/kiro.png`,
+      claw: `${STATIC_BASE}/characters/claw.png`
     }
   });
   await vibeMonEngine.init();
