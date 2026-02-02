@@ -53,6 +53,131 @@ const CONSTANTS = {
   MATRIX_TAIL_LENGTH_SLOW: 6
 };
 
+// =============================================================================
+// EMBEDDED STYLES
+// =============================================================================
+
+const ENGINE_STYLES = `
+.vibemon-display {
+  width: 172px;
+  height: 320px;
+  background: #000;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.vibemon-display #character-canvas {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  width: 128px;
+  height: 128px;
+  image-rendering: pixelated;
+  transition: top 0.1s ease-out, left 0.1s ease-out;
+}
+
+.vibemon-display .status-text {
+  position: absolute;
+  top: 160px;
+  width: 100%;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+}
+
+.vibemon-display .loading-dots {
+  position: absolute;
+  top: 190px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.vibemon-display .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7BEF7B;
+  transition: background 0.1s;
+}
+
+.vibemon-display .dot.dim {
+  background: #3a3a3a;
+}
+
+.vibemon-display .info-text {
+  position: absolute;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: white;
+  left: 10px;
+}
+
+.vibemon-display .project-text { top: 220px; }
+.vibemon-display .tool-text { top: 235px; }
+.vibemon-display .model-text { top: 250px; }
+.vibemon-display .memory-text { top: 265px; }
+
+.vibemon-display .memory-bar-container {
+  position: absolute;
+  top: 285px;
+  left: 10px;
+  width: 152px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+
+.vibemon-display .memory-bar {
+  height: 100%;
+  border-radius: 0px;
+  transition: width 0.3s, background 0.3s;
+}
+
+.vibemon-display .info-label {
+  color: white;
+  display: inline-flex;
+  align-items: center;
+}
+
+.vibemon-display .info-value {
+  color: #aaa;
+}
+
+.vibemon-display .pixel-icon {
+  width: 8px;
+  height: 8px;
+  margin-right: 2px;
+  image-rendering: pixelated;
+  vertical-align: middle;
+  display: none;
+}
+
+.vibemon-display .emoji-icon {
+  display: inline;
+}
+`;
+
+let stylesInjected = false;
+
+function injectStyles() {
+  if (stylesInjected) return;
+  if (typeof document === 'undefined') return;
+
+  const style = document.createElement('style');
+  style.id = 'vibemon-engine-styles';
+  style.textContent = ENGINE_STYLES;
+  document.head.appendChild(style);
+  stylesInjected = true;
+}
+
 const STATES = {
   "start": {
     "bgColor": "#00CCCC",
@@ -675,6 +800,9 @@ export class VibeMonEngine {
   }
 
   async init() {
+    // Inject styles automatically
+    injectStyles();
+
     if (this.ctx) {
       this.characterRenderer = new CharacterRenderer(this.ctx);
       if (this.characterImageUrls) {

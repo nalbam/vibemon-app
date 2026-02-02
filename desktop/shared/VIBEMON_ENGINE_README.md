@@ -2,9 +2,45 @@
 
 Vibe Monitor 캐릭터 렌더링 엔진. `vibemon-engine-standalone.js` 하나로 모든 렌더링 가능.
 
+**CSS 포함** - 별도 CSS 파일 불필요.
+
 ## 사용법
 
-### 1. 초기화
+### 1. HTML 구조
+
+```html
+<div id="display" class="vibemon-display">
+  <canvas id="character-canvas" width="128" height="128"></canvas>
+  <div id="status-text" class="status-text"></div>
+  <div id="loading-dots" class="loading-dots">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+  <div class="info-text project-text">
+    <span class="info-label"><span class="emoji-icon">📂</span></span>
+    <span id="project-value" class="info-value"></span>
+  </div>
+  <div class="info-text tool-text">
+    <span class="info-label"><span class="emoji-icon">🛠️</span></span>
+    <span id="tool-value" class="info-value"></span>
+  </div>
+  <div class="info-text model-text">
+    <span class="info-label"><span class="emoji-icon">🤖</span></span>
+    <span id="model-value" class="info-value"></span>
+  </div>
+  <div class="info-text memory-text">
+    <span class="info-label"><span class="emoji-icon">🧠</span></span>
+    <span id="memory-value" class="info-value"></span>
+  </div>
+  <div id="memory-bar-container" class="memory-bar-container">
+    <div id="memory-bar" class="memory-bar"></div>
+  </div>
+</div>
+```
+
+### 2. 초기화
 
 ```javascript
 import { createVibeMonEngine } from './vibemon-engine-standalone.js';
@@ -23,11 +59,11 @@ const domElements = {
 };
 
 const engine = createVibeMonEngine(canvas, domElements);
-await engine.init();
+await engine.init();  // CSS 자동 주입
 engine.startAnimation();
 ```
 
-### 2. 상태 업데이트
+### 3. 상태 업데이트
 
 ```javascript
 engine.setState({
@@ -41,7 +77,7 @@ engine.setState({
 engine.render();
 ```
 
-### 3. 종료
+### 4. 종료
 
 ```javascript
 engine.cleanup();
