@@ -1,7 +1,7 @@
-import { createVibeMonEngine } from 'https://static.vibemon.toast.sh/js/vibemon-engine-standalone.js';
+import { createVibeMonEngine } from 'https://static.vibemon.io/js/vibemon-engine-standalone.js';
 
 // Static server base URL
-const STATIC_BASE = 'https://static.vibemon.toast.sh';
+const STATIC_BASE = 'https://static.vibemon.io';
 
 // VibeMon engine instance
 let vibeMonEngine = null;
