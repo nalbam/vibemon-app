@@ -517,35 +517,60 @@ function drawEffect(effect, char, animFrame, drawRect) {
   const effectX = char.effect.x;
   const effectY = char.effect.y;
   const isWhiteChar = char.color === CONSTANTS.COLOR_WHITE;
-  const effectColor = isWhiteChar ? COLOR_EFFECT_ALT : char.color;
+  const effectColor = isWhiteChar ? COLOR_EFFECT_ALT : CONSTANTS.COLOR_WHITE;
 
   if (effect === 'sparkle') {
+    // 4-point star sparkle (matches ESP32)
     const frame = animFrame % 4;
-    if (frame === 0) {
+    // Center dot (always visible)
+    drawRect(effectX + 2, effectY + 2, 2, 2, effectColor);
+    if (frame === 0 || frame === 2) {
+      // Vertical and horizontal rays
+      drawRect(effectX + 2, effectY, 2, 2, effectColor);
+      drawRect(effectX + 2, effectY + 4, 2, 2, effectColor);
+      drawRect(effectX, effectY + 2, 2, 2, effectColor);
+      drawRect(effectX + 4, effectY + 2, 2, 2, effectColor);
+    } else {
+      // Diagonal rays
       drawRect(effectX, effectY, 2, 2, effectColor);
-      drawRect(effectX + 4, effectY + 5, 2, 2, effectColor);
-    } else if (frame === 1) {
-      drawRect(effectX - 1, effectY + 1, 2, 2, effectColor);
-      drawRect(effectX + 5, effectY + 4, 2, 2, effectColor);
-    } else if (frame === 2) {
-      drawRect(effectX + 1, effectY, 2, 2, effectColor);
-      drawRect(effectX + 3, effectY + 6, 2, 2, effectColor);
+      drawRect(effectX + 4, effectY, 2, 2, effectColor);
+      drawRect(effectX, effectY + 4, 2, 2, effectColor);
+      drawRect(effectX + 4, effectY + 4, 2, 2, effectColor);
     }
   } else if (effect === 'thinking') {
-    drawRect(effectX, effectY + 2, 4, 4, CONSTANTS.COLOR_WHITE);
-    drawRect(effectX - 2, effectY + 7, 2, 2, CONSTANTS.COLOR_WHITE);
-    drawRect(effectX + 2, effectY, 2, 2, CONSTANTS.COLOR_WHITE);
-  } else if (effect === 'alert') {
-    const frame = animFrame % 2;
-    if (frame === 0) {
-      drawRect(effectX, effectY, 3, 7, effectColor);
-      drawRect(effectX, effectY + 9, 3, 2, effectColor);
+    // Thought bubble with animation (matches ESP32)
+    // Small dots leading to bubble (always visible)
+    drawRect(effectX, effectY + 6, 2, 2, effectColor);
+    drawRect(effectX + 2, effectY + 3, 2, 2, effectColor);
+    // Main bubble (animated size)
+    if ((animFrame % 12) < 6) {
+      // Larger bubble
+      drawRect(effectX + 3, effectY - 2, 6, 2, effectColor);
+      drawRect(effectX + 2, effectY, 8, 3, effectColor);
+      drawRect(effectX + 3, effectY + 3, 6, 1, effectColor);
+    } else {
+      // Smaller bubble
+      drawRect(effectX + 4, effectY - 1, 4, 2, effectColor);
+      drawRect(effectX + 3, effectY + 1, 6, 2, effectColor);
     }
+  } else if (effect === 'alert') {
+    // Question mark (matches ESP32)
+    const color = '#000000'; // Dark on yellow background
+    drawRect(effectX + 1, effectY, 4, 2, color);
+    drawRect(effectX + 4, effectY + 2, 2, 2, color);
+    drawRect(effectX + 2, effectY + 4, 2, 2, color);
+    drawRect(effectX + 2, effectY + 6, 2, 2, color);
+    drawRect(effectX + 2, effectY + 10, 2, 2, color);
   } else if (effect === 'zzz') {
-    const offset = Math.floor(animFrame / 4) % 3;
-    drawRect(effectX, effectY + offset * 2, 6, 1, CONSTANTS.COLOR_WHITE);
-    drawRect(effectX + 1, effectY + 1 + offset * 2, 6, 1, CONSTANTS.COLOR_WHITE);
-    drawRect(effectX + 5, effectY + 3 + offset * 2, 2, 1, CONSTANTS.COLOR_WHITE);
+    // Z with blink effect (matches ESP32)
+    if ((animFrame % 20) < 10) {
+      drawRect(effectX, effectY, 6, 1, effectColor);
+      drawRect(effectX + 4, effectY + 1, 2, 1, effectColor);
+      drawRect(effectX + 3, effectY + 2, 2, 1, effectColor);
+      drawRect(effectX + 2, effectY + 3, 2, 1, effectColor);
+      drawRect(effectX + 1, effectY + 4, 2, 1, effectColor);
+      drawRect(effectX, effectY + 5, 6, 1, effectColor);
+    }
   }
 }
 
