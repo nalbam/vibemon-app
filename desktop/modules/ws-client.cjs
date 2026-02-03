@@ -4,6 +4,7 @@
  */
 
 const WebSocket = require('ws');
+const Store = require('electron-store');
 const { WS_URL, WS_TOKEN } = require('../shared/config.cjs');
 
 // Reconnection configuration
@@ -15,16 +16,80 @@ class WsClient {
   constructor() {
     this.ws = null;
     this.url = WS_URL;
-    this.token = WS_TOKEN;
     this.reconnectDelay = RECONNECT_INITIAL_DELAY;
     this.reconnectTimer = null;
     this.isConnecting = false;
     this.isConnected = false;
     this.shouldReconnect = true;
 
+    // Persistent storage for token
+    this.store = new Store({
+      name: 'ws-settings',
+      defaults: {
+        token: null
+      }
+    });
+
+    // Load token: stored value > environment variable
+    const storedToken = this.store.get('token');
+    this.token = storedToken || WS_TOKEN || null;
+
     // Callbacks
     this.onStatusUpdate = null;  // Called when status message received
     this.onConnectionChange = null;  // Called when connection state changes
+  }
+
+  /**
+   * Get current token
+   * @returns {string|null}
+   */
+  getToken() {
+    return this.token;
+  }
+
+  /**
+   * Set token and save to store
+   * @param {string|null} token
+   */
+  setToken(token) {
+    this.token = token || null;
+    this.store.set('token', this.token);
+
+    // Reconnect with new token (token is passed via URL query parameter)
+    if (this.isConnected || this.isConnecting) {
+      this.reconnect();
+    }
+  }
+
+  /**
+   * Reconnect to WebSocket server
+   */
+  reconnect() {
+    // Close current connection
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.isConnecting = false;
+    this.isConnected = false;
+
+    // Clear any pending reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    // Reconnect immediately
+    this.reconnectDelay = RECONNECT_INITIAL_DELAY;
+    this.connect();
+  }
+
+  /**
+   * Clear token from store
+   */
+  clearToken() {
+    this.token = null;
+    this.store.delete('token');
   }
 
   /**
@@ -53,6 +118,20 @@ class WsClient {
   }
 
   /**
+   * Build connection URL with token as query parameter (like ESP32)
+   * @returns {string}
+   */
+  buildConnectionUrl() {
+    if (!this.token) {
+      return this.url;
+    }
+
+    // Add token as query parameter (same as ESP32: /?token=xxx)
+    const separator = this.url.includes('?') ? '&' : '?';
+    return `${this.url}${separator}token=${encodeURIComponent(this.token)}`;
+  }
+
+  /**
    * Start WebSocket connection
    */
   connect() {
@@ -68,10 +147,11 @@ class WsClient {
     this.isConnecting = true;
     this.notifyConnectionChange();
 
+    const connectionUrl = this.buildConnectionUrl();
     console.log(`WebSocket connecting to ${this.url}...`);
 
     try {
-      this.ws = new WebSocket(this.url);
+      this.ws = new WebSocket(connectionUrl);
 
       this.ws.on('open', () => {
         console.log('WebSocket connected');
@@ -79,11 +159,6 @@ class WsClient {
         this.isConnected = true;
         this.reconnectDelay = RECONNECT_INITIAL_DELAY;
         this.notifyConnectionChange();
-
-        // Send authentication message if token is configured
-        if (this.token) {
-          this.sendAuth();
-        }
       });
 
       this.ws.on('message', (data) => {
