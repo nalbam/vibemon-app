@@ -19,7 +19,6 @@
 #define COLOR_KIRO        0xFFFF  // #FFFFFF White ghost
 #define COLOR_CLAW        0xDA28  // #DD4444 Claw red (221,68,68)
 #define COLOR_EYE         0x0000  // #000000 Black
-#define COLOR_TRANSPARENT 0x0000  // Transparent (same as background)
 #define COLOR_EFFECT_ALT  0xFD20  // #FFA500 Orange for white character effects
 
 // Transparent color marker for pushImage (magenta 0xF81F is common convention)
@@ -135,15 +134,9 @@ bool isValidCharacter(const char* name) {
   return false;
 }
 
-// Legacy String versions for compatibility
-// DEPRECATED: Use getCharacterByName(const char*) to avoid heap allocation
+// Legacy String version for compatibility (used by vibe-monitor.ino)
 const CharacterGeometry* getCharacter(String name) {
   return getCharacterByName(name.c_str());
-}
-
-// DEPRECATED: Use isValidCharacter(const char*) to avoid heap allocation
-bool isValidCharacter(String name) {
-  return isValidCharacter(name.c_str());
 }
 
 // Background colors by state (RGB565)
@@ -177,25 +170,16 @@ enum EyeType {
 // Effect types (visual effects around character)
 enum EffectType {
   EFFECT_NONE,     // No effect
-  EFFECT_SPARKLE,  // Sparkle effect (start state)
+  EFFECT_SPARKLE,  // Sparkle effect (start/working state)
   EFFECT_THINKING, // Thought bubble (thinking/planning state)
   EFFECT_ALERT,    // Question mark (notification state)
-  EFFECT_MATRIX,   // Matrix rain background (working state)
   EFFECT_ZZZ       // Zzz animation (sleep state)
 };
-
-// Legacy EyeType values for backward compatibility
-// DEPRECATED: Use EyeType + EffectType separately
-#define EYE_SPARKLE_LEGACY  100  // Maps to EYE_NORMAL + EFFECT_SPARKLE
-#define EYE_THINKING_LEGACY 101  // Maps to EYE_NORMAL + EFFECT_THINKING
-#define EYE_ALERT_LEGACY    102  // Maps to EYE_NORMAL + EFFECT_ALERT
-#define EYE_SLEEP_LEGACY    103  // Maps to EYE_BLINK + EFFECT_ZZZ
 
 // Animation frame counter
 extern int animFrame;
 
 // Forward declarations for functions called before definition
-void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size);
 void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character);
 void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character);
 void drawQuestionMark(TFT_eSPI &tft, int x, int y);
@@ -222,7 +206,6 @@ void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
  */
 
 // Forward declarations for sprite versions
-void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size);
 void drawEyeTypeToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character);
 void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const CharacterGeometry* character);
 
@@ -231,11 +214,6 @@ void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const Ch
 void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Clear sprite with background color
   sprite.fillSprite(bgColor);
-
-  // Draw matrix background for matrix effect (behind character)
-  if (effectType == EFFECT_MATRIX) {
-    drawMatrixBackgroundToSprite(sprite, animFrame, CHAR_WIDTH / SCALE);
-  }
 
   // Draw body using images
   if (character == &CHAR_CLAWD) {
@@ -259,11 +237,6 @@ void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effe
 void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
   // Clear background area
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
-
-  // Draw matrix background for matrix effect (behind character)
-  if (effectType == EFFECT_MATRIX) {
-    drawMatrixBackground(tft, x, y, animFrame, CHAR_WIDTH / SCALE);
-  }
 
   // Draw character image
   if (character == &CHAR_CLAWD) {
@@ -425,7 +398,6 @@ void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGe
 }
 
 // Draw effect only (sparkle, thinking, alert, zzz)
-// EffectType: EFFECT_NONE | EFFECT_SPARKLE | EFFECT_THINKING | EFFECT_ALERT | EFFECT_MATRIX | EFFECT_ZZZ
 void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
   bool isKiro = (character == &CHAR_KIRO);
   uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
@@ -436,32 +408,23 @@ void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const Ch
 
   switch (effectType) {
     case EFFECT_SPARKLE:
-      // Sparkle effect
       drawSparkle(tft, effectX, effectY + (2 * SCALE), effectColor);
       break;
 
     case EFFECT_THINKING:
-      // Thought bubble effect
       drawThoughtBubble(tft, effectX, effectY, animFrame, effectColor);
       break;
 
     case EFFECT_ALERT:
-      // Question mark effect
       drawQuestionMark(tft, effectX, effectY);
       break;
 
     case EFFECT_ZZZ:
-      // Zzz sleep effect
       drawZzz(tft, effectX, effectY, animFrame, effectColor);
-      break;
-
-    case EFFECT_MATRIX:
-      // Matrix rain - handled separately in drawCharacter (background effect)
       break;
 
     case EFFECT_NONE:
     default:
-      // No effect
       break;
   }
 }
@@ -550,73 +513,6 @@ void drawThoughtBubbleT(T &canvas, int x, int y, int frame, uint16_t color = COL
 
 inline void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
   drawThoughtBubbleT(tft, x, y, frame, color);
-}
-
-// Matrix rain colors (green shades - movie style)
-#define COLOR_MATRIX_WHITE  0xCFF9  // #CCFFCC
-#define COLOR_MATRIX_BRIGHT 0x07E0  // #00FF00
-#define COLOR_MATRIX_MID    0x05E0  // #00BB00
-#define COLOR_MATRIX_DIM    0x0440  // #008800
-#define COLOR_MATRIX_DARK   0x0220  // #004400
-
-// Fast integer-based pseudo-random (5-10x faster than sin-based)
-// Returns 0-255 for consistent randomness without floating point
-uint8_t fastRandom(uint16_t seed) {
-  uint16_t x = seed * 0x9E37;
-  x ^= x >> 8;
-  x *= 0x5851;
-  return (uint8_t)(x >> 8);
-}
-
-// Legacy: floating point version for compatibility (if needed)
-float pseudoRandom(int seed) {
-  return fastRandom((uint16_t)seed) / 255.0f;
-}
-
-// Draw matrix stream with movie-style effect
-template<typename T>
-void drawMatrixStreamMovieT(T &canvas, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
-  if (height < 4) return;
-  int pos = (frame * speed + offset) % height;
-
-  // Head: bright white/green (flicker effect)
-  bool flicker = ((frame + seed) % 3) == 0;
-  uint16_t headColor = flicker ? COLOR_MATRIX_WHITE : COLOR_MATRIX_BRIGHT;
-  canvas.fillRect(x, y + (pos * SCALE), 2 * SCALE, 2 * SCALE, headColor);
-
-  // Tail with gradient
-  if (pos >= 2) canvas.fillRect(x, y + ((pos - 2) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_BRIGHT);
-  if (pos >= 4) canvas.fillRect(x, y + ((pos - 4) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (pos >= 6) canvas.fillRect(x, y + ((pos - 6) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_MID);
-  if (tailLen >= 8 && pos >= 8) canvas.fillRect(x, y + ((pos - 8) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DIM);
-  if (tailLen >= 8 && pos >= 10) canvas.fillRect(x, y + ((pos - 10) * SCALE), 2 * SCALE, 2 * SCALE, COLOR_MATRIX_DARK);
-}
-
-inline void drawMatrixStreamMovie(TFT_eSPI &tft, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
-  drawMatrixStreamMovieT(tft, x, y, frame, offset, height, speed, tailLen, seed);
-}
-
-// Draw matrix background effect (full area, movie style)
-// Template version with x, y offset support
-template<typename T>
-void drawMatrixBackgroundT(T &canvas, int x, int y, int frame, int size) {
-  // Draw streams across entire area (character will be drawn on top)
-  for (int i = 0; i < size / 4; i++) {
-    uint16_t seed = i * 23 + 7;
-    // Show ~70% of streams for dense matrix look (178/255 ≈ 0.70)
-    if (fastRandom(seed + 100) > 178) continue;
-    int colX = x + (i * 4 * SCALE);
-    int offset = (fastRandom(seed) * size) >> 8;  // divide by 256
-    // Variable speed: some fast, some slow (1-6)
-    int speed = 1 + ((fastRandom(seed + 1) * 6) >> 8);
-    // Variable tail length based on speed
-    int tailLen = speed > 3 ? 8 : 6;
-    drawMatrixStreamMovieT(canvas, colX, y, frame, offset, size, speed, tailLen, seed);
-  }
-}
-
-inline void drawMatrixBackground(TFT_eSPI &tft, int x, int y, int frame, int size) {
-  drawMatrixBackgroundT(tft, x, y, frame, size);
 }
 
 // Draw loading dots animation (slow = true for thinking state)
@@ -725,21 +621,6 @@ void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int perce
   }
 }
 
-// Draw blink animation (for idle state)
-// Note: With image-based rendering, blinking redraws character image (eyes are in image)
-void drawBlinkEyes(TFT_eSPI &tft, int x, int y, int frame, const CharacterGeometry* character = &CHAR_CLAWD) {
-  // Calculate eye positions from character position
-  int leftEyeX = x + (character->eyeLeftX * SCALE);
-  int rightEyeX = x + (character->eyeRightX * SCALE);
-  int eyeY = y + (character->eyeY * SCALE);
-  int ew = character->eyeW * SCALE;
-  int eh = character->eyeH * SCALE;
-  bool isKiro = (character == &CHAR_KIRO);
-
-  // Use drawSleepEyes to close the eyes (same effect, no Zzz)
-  drawSleepEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-}
-
 // Forward declaration of AppState enum (defined in main .ino)
 enum AppState {
   STATE_START,
@@ -782,14 +663,13 @@ EyeType getEyeTypeEnum(AppState state) {
 }
 
 // Get effect type for state (new API)
-// EffectType: EFFECT_NONE | EFFECT_SPARKLE | EFFECT_THINKING | EFFECT_ALERT | EFFECT_MATRIX | EFFECT_ZZZ
 EffectType getEffectTypeEnum(AppState state) {
   switch (state) {
     case STATE_START: return EFFECT_SPARKLE;
     case STATE_THINKING: return EFFECT_THINKING;
     case STATE_PLANNING: return EFFECT_THINKING;
     case STATE_PACKING: return EFFECT_THINKING;
-    case STATE_WORKING: return EFFECT_MATRIX;
+    case STATE_WORKING: return EFFECT_SPARKLE;
     case STATE_NOTIFICATION: return EFFECT_ALERT;
     case STATE_SLEEP: return EFFECT_ZZZ;
     default: return EFFECT_NONE;
@@ -806,8 +686,33 @@ uint16_t getTextColorEnum(AppState state) {
   }
 }
 
+// Get working text based on tool (matches Desktop TOOL_TEXTS)
+void getWorkingText(const char* tool, char* buf, size_t bufSize) {
+  if (strlen(tool) == 0) {
+    strncpy(buf, "Working", bufSize - 1);
+  } else if (strcasecmp(tool, "bash") == 0) {
+    strncpy(buf, "Running", bufSize - 1);
+  } else if (strcasecmp(tool, "read") == 0) {
+    strncpy(buf, "Reading", bufSize - 1);
+  } else if (strcasecmp(tool, "edit") == 0) {
+    strncpy(buf, "Editing", bufSize - 1);
+  } else if (strcasecmp(tool, "write") == 0) {
+    strncpy(buf, "Writing", bufSize - 1);
+  } else if (strcasecmp(tool, "grep") == 0 || strcasecmp(tool, "websearch") == 0) {
+    strncpy(buf, "Searching", bufSize - 1);
+  } else if (strcasecmp(tool, "glob") == 0) {
+    strncpy(buf, "Scanning", bufSize - 1);
+  } else if (strcasecmp(tool, "webfetch") == 0) {
+    strncpy(buf, "Fetching", bufSize - 1);
+  } else if (strcasecmp(tool, "task") == 0) {
+    strncpy(buf, "Tasking", bufSize - 1);
+  } else {
+    strncpy(buf, "Working", bufSize - 1);
+  }
+  buf[bufSize - 1] = '\0';
+}
+
 // Get status text for state (enum version, writes to buffer)
-// Uses fixed text (no random) to match Desktop states.json
 void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
   switch (state) {
     case STATE_START:
@@ -842,62 +747,6 @@ void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
       break;
   }
   buf[bufSize - 1] = '\0';
-}
-
-// Legacy String versions for compatibility
-// DEPRECATED: Use enum versions (getBackgroundColorEnum, etc.) to avoid heap allocation
-// These functions allocate memory on heap via String parameter - avoid in production
-uint16_t getBackgroundColor(String state) {
-  if (state == "start") return COLOR_BG_SESSION;
-  if (state == "idle") return COLOR_BG_IDLE;
-  if (state == "thinking") return COLOR_BG_THINKING;
-  if (state == "planning") return COLOR_BG_PLANNING;
-  if (state == "working") return COLOR_BG_WORKING;
-  if (state == "packing") return COLOR_BG_PACKING;
-  if (state == "notification") return COLOR_BG_NOTIFY;
-  if (state == "done") return COLOR_BG_DONE;
-  if (state == "sleep") return COLOR_BG_SLEEP;
-  return COLOR_BG_IDLE;
-}
-
-// Get eye type for state (legacy String version)
-EyeType getEyeType(String state) {
-  if (state == "working") return EYE_FOCUSED;
-  if (state == "done") return EYE_HAPPY;
-  if (state == "sleep") return EYE_BLINK;
-  return EYE_NORMAL;
-}
-
-// Get effect type for state (legacy String version)
-EffectType getEffectType(String state) {
-  if (state == "start") return EFFECT_SPARKLE;
-  if (state == "thinking") return EFFECT_THINKING;
-  if (state == "planning") return EFFECT_THINKING;
-  if (state == "packing") return EFFECT_THINKING;
-  if (state == "working") return EFFECT_MATRIX;
-  if (state == "notification") return EFFECT_ALERT;
-  if (state == "sleep") return EFFECT_ZZZ;
-  return EFFECT_NONE;
-}
-
-String getStatusText(String state) {
-  if (state == "start") return "Hello!";
-  if (state == "idle") return "Ready";
-  if (state == "thinking") return "Thinking";
-  if (state == "planning") return "Planning";
-  if (state == "working") return "Working";
-  if (state == "packing") return "Packing";
-  if (state == "notification") return "Input?";
-  if (state == "done") return "Done!";
-  if (state == "sleep") return "Zzz...";
-  return state;
-}
-
-uint16_t getTextColor(String state) {
-  if (state == "start") return TFT_BLACK;
-  if (state == "packing") return TFT_BLACK;
-  if (state == "notification") return TFT_BLACK;
-  return COLOR_TEXT_WHITE;
 }
 
 // Draw folder icon (📂) - 8x7 pixels
@@ -945,47 +794,6 @@ void drawBrainIcon(TFT_eSPI &tft, int x, int y, uint16_t color) {
   // Top bumps
   tft.fillRect(x + 2, y, 1, 1, 0x0000);
   tft.fillRect(x + 5, y, 1, 1, 0x0000);
-}
-
-// =============================================================================
-// Sprite versions - inline wrappers calling template functions
-// =============================================================================
-
-inline void drawMatrixStreamMovieToSprite(TFT_eSprite &sprite, int x, int y, int frame, int offset, int height, int speed, int tailLen, int seed) {
-  drawMatrixStreamMovieT(sprite, x, y, frame, offset, height, speed, tailLen, seed);
-}
-
-// Sprite version with no x,y offset (draws at 0,0)
-inline void drawMatrixBackgroundToSprite(TFT_eSprite &sprite, int frame, int size) {
-  drawMatrixBackgroundT(sprite, 0, 0, frame, size);
-}
-
-inline void drawSleepEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
-  drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
-}
-
-inline void drawHappyEyesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
-  drawHappyEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
-}
-
-inline void drawSunglassesToSprite(TFT_eSprite &sprite, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro = false) {
-  drawSunglassesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
-}
-
-inline void drawSparkleToSprite(TFT_eSprite &sprite, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
-  drawSparkleT(sprite, x, y, sparkleColor);
-}
-
-inline void drawQuestionMarkToSprite(TFT_eSprite &sprite, int x, int y) {
-  drawQuestionMarkT(sprite, x, y);
-}
-
-inline void drawZzzToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-  drawZzzT(sprite, x, y, frame, color);
-}
-
-inline void drawThoughtBubbleToSprite(TFT_eSprite &sprite, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-  drawThoughtBubbleT(sprite, x, y, frame, color);
 }
 
 // Draw eyes to sprite based on eye type
@@ -1036,9 +844,6 @@ void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const Ch
       break;
     case EFFECT_ZZZ:
       drawZzzT(sprite, effectX, effectY, animFrame, effectColor);
-      break;
-    case EFFECT_MATRIX:
-      // Matrix rain - handled separately in drawCharacterToSprite
       break;
     case EFFECT_NONE:
     default:

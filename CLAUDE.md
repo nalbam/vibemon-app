@@ -52,8 +52,8 @@ npm start
 - **Characters**: `clawd` (orange), `kiro` (white ghost), `claw` (red)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
-- **Matrix rain (working)**: Movie-style effect with flicker head, gradient tail, variable speed (1-6)
-- **Sunglasses (working)**: Matrix-style dark green sunglasses with frame and shine
+- **Sparkle effect (start, working)**: Animated 4-point star sparkle
+- **Sunglasses (working)**: Dark green sunglasses with frame and shine (EYE_FOCUSED)
 - **Loading dots speed**: Thinking state uses 3x slower animation than working state
 - **Snap to corner**: Window snaps to screen corners when dragged within 30px of edges (150ms debounce)
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status

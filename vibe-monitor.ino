@@ -533,6 +533,10 @@ void processStatusData(JsonObject doc) {
     strncpy(currentTool, toolStr, sizeof(currentTool) - 1);
     currentTool[sizeof(currentTool) - 1] = '\0';
     infoChanged = true;
+    // Tool change affects status text in working state
+    if (currentState == STATE_WORKING) {
+      dirtyStatus = true;
+    }
   }
 
   // Parse model
@@ -651,7 +655,11 @@ void drawStatus() {
   // Status text (color based on background)
   if (dirtyStatus || needsRedraw) {
     char statusText[32];
-    getStatusTextEnum(currentState, statusText, sizeof(statusText));
+    if (currentState == STATE_WORKING) {
+      getWorkingText(currentTool, statusText, sizeof(statusText));
+    } else {
+      getStatusTextEnum(currentState, statusText, sizeof(statusText));
+    }
 
     tft.setTextColor(textColor);
     tft.setTextSize(3);
@@ -786,9 +794,7 @@ void updateAnimation() {
   if (!needsCharRedraw) {
     if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
       needsCharRedraw = (animFrame % 12 == 0);  // Thought bubble animation
-    } else if (currentState == STATE_WORKING) {
-      needsCharRedraw = (animFrame % 2 == 0);   // Matrix rain animation
-    } else if (currentState == STATE_START) {
+    } else if (currentState == STATE_START || currentState == STATE_WORKING) {
       needsCharRedraw = (animFrame % 4 == 0);   // Sparkle animation
     } else if (currentState == STATE_SLEEP) {
       needsCharRedraw = (animFrame % 20 == 0);  // Zzz animation
