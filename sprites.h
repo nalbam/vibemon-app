@@ -134,11 +134,6 @@ bool isValidCharacter(const char* name) {
   return false;
 }
 
-// Legacy String version for compatibility (used by vibe-monitor.ino)
-const CharacterGeometry* getCharacter(String name) {
-  return getCharacterByName(name.c_str());
-}
-
 // Background colors by state (RGB565)
 #define COLOR_BG_SESSION  0x0679  // #00CCCC Cyan
 #define COLOR_BG_IDLE     0x0540  // #00AA00 Green
@@ -228,7 +223,6 @@ void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effe
   drawEyeTypeToSprite(sprite, eyeType, character);
 
   // Draw effect (sparkle, thinking, alert, zzz)
-  // Note: matrix effect is drawn above as background
   drawEffectTypeToSprite(sprite, effectType, character);
 }
 
@@ -650,8 +644,7 @@ uint16_t getBackgroundColorEnum(AppState state) {
   }
 }
 
-// Get eye type for state (enum version - efficient)
-// Get eye type for state (new API)
+// Get eye type for state
 // EyeType: EYE_NORMAL | EYE_BLINK | EYE_HAPPY | EYE_FOCUSED
 EyeType getEyeTypeEnum(AppState state) {
   switch (state) {

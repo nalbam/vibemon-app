@@ -111,6 +111,9 @@ unsigned long lastActivityTime = 0;
 // Increased from 256 to 512 for complex payloads with all fields
 #define JSON_BUFFER_SIZE 512
 
+// Version string
+#define VERSION "v1.4.0"
+
 // Helper: Parse state string to enum
 AppState parseState(const char* stateStr) {
   if (strcmp(stateStr, "start") == 0) return STATE_START;
@@ -599,7 +602,7 @@ void drawStartScreen() {
   tft.fillScreen(bgColor);
 
   // Draw character in idle state (128x128) using sprite buffer
-  const CharacterGeometry* character = getCharacter(currentCharacter);
+  const CharacterGeometry* character = getCharacterByName(currentCharacter);
   if (spriteInitialized) {
     drawCharacterToSprite(charSprite, EYE_NORMAL, EFFECT_NONE, bgColor, character);
     charSprite.pushSprite(CHAR_X_BASE, CHAR_Y_BASE);
@@ -620,7 +623,7 @@ void drawStartScreen() {
 
   // Brand
   tft.setCursor(40, BRAND_Y);
-  tft.println("v1.4.0");
+  tft.println(VERSION);
 }
 
 void drawStatus() {
@@ -669,8 +672,8 @@ void drawStatus() {
     tft.println(statusText);
   }
 
-  // Loading dots (thinking, planning and working states)
-  if (currentState == STATE_THINKING || currentState == STATE_PLANNING) {
+  // Loading dots (thinking, planning, packing and working states)
+  if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);  // Slow
   } else if (currentState == STATE_WORKING) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Normal
