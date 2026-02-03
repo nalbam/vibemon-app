@@ -657,6 +657,12 @@ void drawStatus() {
 
   // Status text (color based on background)
   if (dirtyStatus || needsRedraw) {
+    // Clear status text region when only status changed (not full redraw)
+    // This prevents text overlap/ghosting
+    if (dirtyStatus && !needsRedraw) {
+      tft.fillRect(0, STATUS_TEXT_Y, SCREEN_WIDTH, LOADING_Y - STATUS_TEXT_Y, bgColor);
+    }
+
     char statusText[32];
     if (currentState == STATE_WORKING) {
       getWorkingText(currentTool, statusText, sizeof(statusText));
