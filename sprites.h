@@ -10,11 +10,13 @@
 #include <Arduino.h>
 
 // Character image data (RGB565 format)
+#include "img_apto.h"
 #include "img_clawd.h"
 #include "img_kiro.h"
 #include "img_claw.h"
 
 // Character colors (RGB565)
+#define COLOR_APTO        0x7BF3  // #797C98 Apto blue-gray (121,124,152)
 #define COLOR_CLAUDE      0xDBAA  // #D97757 Claude orange (217,119,87)
 #define COLOR_KIRO        0xFFFF  // #FFFFFF White ghost
 #define COLOR_CLAW        0xDA28  // #DD4444 Claw red (221,68,68)
@@ -33,6 +35,10 @@ void drawImageToTFT(TFT_eSPI &tft, int offsetX, int offsetY, const uint16_t* img
 }
 
 // Draw character image from RGB565 array (128x128) with transparency
+void drawAptoImage(TFT_eSPI &tft, int x, int y) {
+  drawImageToTFT(tft, x, y, IMG_APTO, IMG_APTO_WIDTH, IMG_APTO_HEIGHT, COLOR_TRANSPARENT_MARKER);
+}
+
 void drawClawdImage(TFT_eSPI &tft, int x, int y) {
   drawImageToTFT(tft, x, y, IMG_CLAWD, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
@@ -54,6 +60,10 @@ void drawImageWithTransparency(TFT_eSprite &sprite, const uint16_t* img, int wid
 }
 
 // Sprite versions for double buffering
+void drawAptoImageToSprite(TFT_eSprite &sprite) {
+  drawImageWithTransparency(sprite, IMG_APTO, IMG_APTO_WIDTH, IMG_APTO_HEIGHT, COLOR_TRANSPARENT_MARKER);
+}
+
 void drawClawdImageToSprite(TFT_eSprite &sprite) {
   drawImageWithTransparency(sprite, IMG_CLAWD, IMG_CLAWD_WIDTH, IMG_CLAWD_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
@@ -77,6 +87,15 @@ typedef struct {
 } CharacterGeometry;
 
 // Character definitions
+const CharacterGeometry CHAR_APTO = {
+  "apto",
+  COLOR_APTO,
+  // Eyes (leftX, rightX, y, w, h)
+  22, 37, 22, 6, 6,
+  // Effect position (effectX, effectY)
+  46, 6
+};
+
 const CharacterGeometry CHAR_CLAWD = {
   "clawd",
   COLOR_CLAUDE,
@@ -107,6 +126,7 @@ const CharacterGeometry CHAR_CLAW = {
 // Character array for dynamic lookup
 // To add a new character, add to this array and define the CharacterGeometry above
 const CharacterGeometry* ALL_CHARACTERS[] = {
+  &CHAR_APTO,
   &CHAR_CLAWD,
   &CHAR_KIRO,
   &CHAR_CLAW
@@ -211,7 +231,9 @@ void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effe
   sprite.fillSprite(bgColor);
 
   // Draw body using images
-  if (character == &CHAR_CLAWD) {
+  if (character == &CHAR_APTO) {
+    drawAptoImageToSprite(sprite);
+  } else if (character == &CHAR_CLAWD) {
     drawClawdImageToSprite(sprite);
   } else if (character == &CHAR_KIRO) {
     drawKiroImageToSprite(sprite);
@@ -233,7 +255,9 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effe
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
 
   // Draw character image
-  if (character == &CHAR_CLAWD) {
+  if (character == &CHAR_APTO) {
+    drawAptoImage(tft, x, y);
+  } else if (character == &CHAR_CLAWD) {
     drawClawdImage(tft, x, y);
   } else if (character == &CHAR_KIRO) {
     drawKiroImage(tft, x, y);
