@@ -151,6 +151,7 @@ See [Features](docs/features.md) for lock modes and CLI commands.
 
 ## Version History
 
+- **v1.5**: WebSocket support, new apto character, static engine CDN
 - **v1.4**: New claw character, ESP32 claw support, image-based character rendering
 - **v1.3**: Multi-window mode, window mode API, enhanced lock modes
 - **v1.2**: Project lock, modular architecture, npx support
