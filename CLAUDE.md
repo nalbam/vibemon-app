@@ -49,7 +49,7 @@ npm start
 - **Floating**: Cosine/Sine wave offset (X: ±3px, Y: ±5px, ~3.2s cycle)
 - **Working text**: Tool-based random selection via `getWorkingText(tool)`
 - **JSON fields**: `{"state", "tool", "project", "model", "memory", "character", "terminalId"}`
-- **Characters**: `clawd` (orange), `kiro` (white ghost), `claw` (red)
+- **Characters**: `apto` (gray-purple), `clawd` (orange), `kiro` (white ghost), `claw` (red)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
 - **Sparkle effect (start, working)**: Animated 4-point star sparkle

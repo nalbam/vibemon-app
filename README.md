@@ -61,6 +61,7 @@ See [Features](docs/features.md) for animations, working state text, and more.
 
 | Character | Color | Auto-selected for |
 |-----------|-------|-------------------|
+| `apto` | Gray-Purple | Apto (future) |
 | `clawd` | Orange | Claude Code |
 | `kiro` | White | Kiro |
 | `claw` | Red | OpenClaw |
