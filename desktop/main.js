@@ -287,6 +287,11 @@ ipcMain.handle('focus-terminal', async (event) => {
 
 // App lifecycle
 app.whenReady().then(() => {
+  // Hide Dock icon on macOS (tray-only app)
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.hide();
+  }
+
   // Create tray (windows are created on demand via HTTP /status endpoint)
   trayManager = new TrayManager(windowManager, app);
   trayManager.createTray();
