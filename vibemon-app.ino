@@ -620,6 +620,27 @@ int getFloatOffsetY() {
   return FLOAT_TABLE_Y[animFrame % 32];
 }
 
+// Draw server connection indicator (green dot at top center)
+void drawConnectionIndicator() {
+#ifdef USE_WIFI
+  uint16_t bgColor = getBackgroundColorEnum(currentState);
+  bool connected = false;
+#ifdef USE_WEBSOCKET
+  connected = wsConnected;
+#else
+  connected = (WiFi.status() == WL_CONNECTED);
+#endif
+  int cx = SCREEN_WIDTH / 2;
+  int cy = 5;
+  int r = 3;
+  if (connected) {
+    tft.fillCircle(cx, cy, r, 0x07E0);  // Green
+  } else {
+    tft.fillCircle(cx, cy, r, bgColor);  // Clear with background
+  }
+#endif
+}
+
 void drawStartScreen() {
   uint16_t bgColor = TFT_BLACK;
   tft.fillScreen(bgColor);
@@ -647,6 +668,9 @@ void drawStartScreen() {
   // Brand
   tft.setCursor(40, BRAND_Y);
   tft.println(VERSION);
+
+  // Connection indicator
+  drawConnectionIndicator();
 }
 
 void drawStatus() {
@@ -777,6 +801,9 @@ void drawStatus() {
       drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, currentMemory, bgColor);
     }
   }
+
+  // Connection indicator
+  drawConnectionIndicator();
 
   needsRedraw = false;
   dirtyCharacter = false;
@@ -1061,12 +1088,14 @@ void checkWiFiConnection() {
   if (!currentlyConnected && wifiWasConnected) {
     // WiFi just dropped
     wifiWasConnected = false;
+    drawConnectionIndicator();
     Serial.print("{\"wifi\":\"disconnected\",\"heap\":");
     Serial.print(ESP.getFreeHeap());
     Serial.println("}");
   } else if (currentlyConnected && !wifiWasConnected) {
     // WiFi recovered
     wifiWasConnected = true;
+    drawConnectionIndicator();
     Serial.print("{\"wifi\":\"reconnected\",\"ip\":\"");
     Serial.print(WiFi.localIP());
     Serial.print("\",\"heap\":");
@@ -1117,6 +1146,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
     case WStype_DISCONNECTED:
       wsConnected = false;
+      drawConnectionIndicator();
       // Exponential backoff: increase delay for next reconnection
       {
         unsigned long newDelay = (unsigned long)(wsReconnectDelay * WS_RECONNECT_MULTIPLIER);
@@ -1132,6 +1162,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
     case WStype_CONNECTED:
       wsConnected = true;
+      drawConnectionIndicator();
       // Reset backoff on successful connection
       wsReconnectDelay = WS_RECONNECT_INITIAL;
       webSocket.setReconnectInterval(wsReconnectDelay);
