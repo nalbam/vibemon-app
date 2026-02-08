@@ -62,22 +62,22 @@ bool spriteInitialized = false;
 #define SCREEN_WIDTH  172
 #define SCREEN_HEIGHT 320
 
-// Layout positions (adjusted for 128x128 character)
+// Layout positions (adjusted for 128x128 character on 172x320 screen)
 #define CHAR_X_BASE   22   // (172 - 128) / 2 = 22
-#define CHAR_Y_BASE   20   // Base Y position
+#define CHAR_Y_BASE   18   // Base Y position (float ±5px → 13~23)
 #define FLOAT_AMPLITUDE_X 3  // Floating animation amplitude X (pixels)
 #define FLOAT_AMPLITUDE_Y 5  // Floating animation amplitude Y (pixels)
 #define STATUS_TEXT_Y 160
-#define LOADING_Y     190
-#define PROJECT_Y     224
-#define TOOL_Y        240
-#define MODEL_Y       256
-#define MEMORY_Y      272
+#define LOADING_Y     192
+#define PROJECT_Y     212
+#define TOOL_Y        228
+#define MODEL_Y       244
+#define MEMORY_Y      260
 #define MEMORY_BAR_X  10
-#define MEMORY_BAR_Y  288
+#define MEMORY_BAR_Y  276
 #define MEMORY_BAR_W  152
 #define MEMORY_BAR_H  8
-#define BRAND_Y       300
+#define BRAND_Y       298
 
 // State variables (char arrays instead of String for memory efficiency)
 // Note: AppState enum is defined in sprites.h
@@ -661,13 +661,15 @@ void drawStartScreen() {
   tft.setCursor(titleX, STATUS_TEXT_Y);
   tft.println("VibeMon");
 
+  // "Waiting..." centered between title bottom and brand
   tft.setTextSize(1);
   tft.setTextColor(COLOR_TEXT_DIM);
+  int waitY = (STATUS_TEXT_Y + 16 + BRAND_Y) / 2 - 4;
   int waitX = (SCREEN_WIDTH - 10 * 6) / 2;  // "Waiting..." = 10 chars * 6px (size 1)
-  tft.setCursor(waitX, PROJECT_Y);
+  tft.setCursor(waitX, waitY);
   tft.println("Waiting...");
 
-  // Brand (centered)
+  // Brand (centered at bottom)
   int verX = (SCREEN_WIDTH - strlen(VERSION) * 6) / 2;
   tft.setCursor(verX, BRAND_Y);
   tft.println(VERSION);
