@@ -654,10 +654,11 @@ void drawStartScreen() {
     drawCharacter(tft, CHAR_X_BASE, CHAR_Y_BASE, EYE_NORMAL, EFFECT_NONE, bgColor, character);
   }
 
-  // Title
+  // Title (centered)
   tft.setTextColor(COLOR_TEXT_WHITE);
   tft.setTextSize(2);
-  tft.setCursor(30, STATUS_TEXT_Y);
+  int titleX = (SCREEN_WIDTH - 7 * 12) / 2;  // "VibeMon" = 7 chars * 12px (size 2)
+  tft.setCursor(titleX, STATUS_TEXT_Y);
   tft.println("VibeMon");
 
   tft.setTextSize(1);
