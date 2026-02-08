@@ -663,11 +663,13 @@ void drawStartScreen() {
 
   tft.setTextSize(1);
   tft.setTextColor(COLOR_TEXT_DIM);
-  tft.setCursor(30, PROJECT_Y);
+  int waitX = (SCREEN_WIDTH - 10 * 6) / 2;  // "Waiting..." = 10 chars * 6px (size 1)
+  tft.setCursor(waitX, PROJECT_Y);
   tft.println("Waiting...");
 
-  // Brand
-  tft.setCursor(40, BRAND_Y);
+  // Brand (centered)
+  int verX = (SCREEN_WIDTH - strlen(VERSION) * 6) / 2;
+  tft.setCursor(verX, BRAND_Y);
   tft.println(VERSION);
 
   // Connection indicator
