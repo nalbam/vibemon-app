@@ -4,7 +4,7 @@
 
 | Character | Color | Description | Auto-selected for |
 |-----------|-------|-------------|-------------------|
-| `apto` | Gray-Purple | Default character | Apto |
+| `apto` | Gray-Purple | Rounded character | Apto |
 | `clawd` | Orange | Default character | Claude Code |
 | `kiro` | White | Ghost character | Kiro |
 | `claw` | Red | Antenna character | OpenClaw |
