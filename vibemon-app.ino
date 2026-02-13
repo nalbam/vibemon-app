@@ -1254,12 +1254,12 @@ String getConfigPage() {
 
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" required placeholder="Enter WiFi password">
+        <input type="password" id="password" required placeholder="Enter WiFi password" autocapitalize="none" autocorrect="off" spellcheck="false">
       </div>
 
       <div class="form-group">
         <label for="token">VibeMon Token (Optional)</label>
-        <input type="text" id="token" placeholder="Enter WebSocket token (leave empty if not needed)">
+        <input type="text" id="token" placeholder="Enter WebSocket token (leave empty if not needed)" autocapitalize="none" autocorrect="off" spellcheck="false">
       </div>
 
       <button type="submit" id="save-btn">💾 Save & Connect</button>
