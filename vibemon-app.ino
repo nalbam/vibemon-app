@@ -1235,7 +1235,7 @@ String getConfigPage() {
           data.networks.forEach(network => {
             const option = document.createElement('option');
             option.value = network.ssid;
-            const signal = network.rssi > -60 ? '📶' : network.rssi > -70 ? '📶' : '📶';
+            const signal = network.rssi > -50 ? '▰▰▰▰' : network.rssi > -60 ? '▰▰▰▱' : network.rssi > -70 ? '▰▰▱▱' : '▰▱▱▱';
             const lock = network.secure ? '🔒' : '';
             option.textContent = `${signal} ${network.ssid} ${lock}`;
             select.appendChild(option);
