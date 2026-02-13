@@ -24,8 +24,28 @@ Preferences preferences;
 #ifdef USE_WIFI
 #include <WiFi.h>
 #include <WebServer.h>
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+#include <DNSServer.h>
+
+// WiFi provisioning mode
+bool provisioningMode = false;
+const char* AP_SSID = "VibeMon-Setup";
+const char* AP_PASSWORD = "vibemon123";
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
+
+// WiFi credentials storage
+char wifiSSID[64] = "";
+char wifiPassword[64] = "";
+
+// Fallback to credentials.h if defined
+#ifdef WIFI_SSID
+const char* defaultSSID = WIFI_SSID;
+const char* defaultPassword = WIFI_PASSWORD;
+#else
+const char* defaultSSID = "";
+const char* defaultPassword = "";
+#endif
+
 WebServer server(80);
 
 // WiFi connection monitoring
@@ -323,6 +343,9 @@ void loop() {
   }
 
 #ifdef USE_WIFI
+  if (provisioningMode) {
+    dnsServer.processNextRequest();
+  }
   checkWiFiConnection();
   server.handleClient();
 #ifdef USE_WEBSOCKET
@@ -944,10 +967,356 @@ void updateBlink() {
 }
 
 #ifdef USE_WIFI
+
+// Load WiFi credentials from Preferences
+void loadWiFiCredentials() {
+  preferences.begin("vibemon", true);  // Read-only
+  preferences.getString("wifiSSID", wifiSSID, sizeof(wifiSSID));
+  preferences.getString("wifiPassword", wifiPassword, sizeof(wifiPassword));
+  preferences.end();
+
+  // If no saved credentials, try using default from credentials.h
+  if (strlen(wifiSSID) == 0 && strlen(defaultSSID) > 0) {
+    strncpy(wifiSSID, defaultSSID, sizeof(wifiSSID) - 1);
+    strncpy(wifiPassword, defaultPassword, sizeof(wifiPassword) - 1);
+  }
+}
+
+// Save WiFi credentials to Preferences
+void saveWiFiCredentials(const char* ssid, const char* password) {
+  preferences.begin("vibemon", false);  // Read-write
+  preferences.putString("wifiSSID", ssid);
+  preferences.putString("wifiPassword", password);
+  preferences.end();
+
+  strncpy(wifiSSID, ssid, sizeof(wifiSSID) - 1);
+  strncpy(wifiPassword, password, sizeof(wifiPassword) - 1);
+}
+
+// Start Access Point for WiFi provisioning
+void startProvisioningMode() {
+  provisioningMode = true;
+
+  tft.setCursor(10, BRAND_Y - 60);
+  tft.setTextColor(COLOR_TEXT_DIM);
+  tft.setTextSize(1.3);
+  tft.println("Setup Mode");
+
+  // Start Access Point
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+
+  tft.setCursor(10, BRAND_Y - 45);
+  tft.print("SSID: ");
+  tft.println(AP_SSID);
+  tft.setCursor(10, BRAND_Y - 30);
+  tft.print("Password: ");
+  tft.println(AP_PASSWORD);
+  tft.setCursor(10, BRAND_Y - 15);
+  tft.print("IP: ");
+  tft.println(WiFi.softAPIP());
+
+  // Start DNS server for captive portal
+  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+
+  // Setup web server for configuration
+  setupProvisioningServer();
+
+  Serial.println("{\"wifi\":\"provisioning_mode\",\"ssid\":\"" + String(AP_SSID) + "\"}");
+}
+
+// Setup web server endpoints for provisioning
+void setupProvisioningServer() {
+  // Captive portal - serve config page for all requests
+  server.onNotFound([]() {
+    server.send(200, "text/html", getConfigPage());
+  });
+
+  // WiFi scan endpoint
+  server.on("/scan", HTTP_GET, []() {
+    String json = "{\"networks\":[";
+    int n = WiFi.scanNetworks();
+    for (int i = 0; i < n; i++) {
+      if (i > 0) json += ",";
+      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + String(WiFi.RSSI(i)) + ",\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
+    }
+    json += "]}";
+    server.send(200, "application/json", json);
+  });
+
+  // Save credentials endpoint
+  server.on("/save", HTTP_POST, []() {
+    if (server.hasArg("ssid") && server.hasArg("password")) {
+      String ssid = server.arg("ssid");
+      String password = server.arg("password");
+
+      saveWiFiCredentials(ssid.c_str(), password.c_str());
+
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Credentials saved. Rebooting...\"}");
+
+      delay(1000);
+      ESP.restart();
+    } else {
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing SSID or password\"}");
+    }
+  });
+
+  server.begin();
+}
+
+// HTML page for WiFi configuration
+String getConfigPage() {
+  String html = R"(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VibeMon WiFi Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      color: #555;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    select, input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .scan-btn {
+      background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
+      margin-bottom: 15px;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .loading {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌐 VibeMon WiFi Setup</h1>
+    <p class="subtitle">Connect your VibeMon to WiFi</p>
+
+    <button class="scan-btn" onclick="scanNetworks()">
+      <span id="scan-text">🔍 Scan Networks</span>
+    </button>
+
+    <form onsubmit="saveCredentials(event)">
+      <div class="form-group">
+        <label for="ssid">WiFi Network</label>
+        <select id="ssid" required>
+          <option value="">Select a network...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Enter WiFi password">
+      </div>
+
+      <button type="submit" id="save-btn">💾 Save & Connect</button>
+    </form>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    function showStatus(message, isError = false) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + (isError ? 'error' : 'success');
+      status.style.display = 'block';
+    }
+
+    function scanNetworks() {
+      const scanBtn = document.querySelector('.scan-btn');
+      const scanText = document.getElementById('scan-text');
+      scanBtn.disabled = true;
+      scanText.innerHTML = '<span class="loading"></span>Scanning...';
+
+      fetch('/scan')
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById('ssid');
+          select.innerHTML = '<option value="">Select a network...</option>';
+
+          data.networks.forEach(network => {
+            const option = document.createElement('option');
+            option.value = network.ssid;
+            const signal = network.rssi > -60 ? '📶' : network.rssi > -70 ? '📶' : '📶';
+            const lock = network.secure ? '🔒' : '';
+            option.textContent = `${signal} ${network.ssid} ${lock}`;
+            select.appendChild(option);
+          });
+
+          showStatus('Found ' + data.networks.length + ' networks');
+          setTimeout(() => {
+            document.getElementById('status').style.display = 'none';
+          }, 3000);
+        })
+        .catch(err => {
+          showStatus('Scan failed: ' + err.message, true);
+        })
+        .finally(() => {
+          scanBtn.disabled = false;
+          scanText.innerHTML = '🔍 Scan Networks';
+        });
+    }
+
+    function saveCredentials(e) {
+      e.preventDefault();
+
+      const ssid = document.getElementById('ssid').value;
+      const password = document.getElementById('password').value;
+      const saveBtn = document.getElementById('save-btn');
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="loading"></span>Connecting...';
+
+      const formData = new URLSearchParams();
+      formData.append('ssid', ssid);
+      formData.append('password', password);
+
+      fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showStatus(data.message);
+          } else {
+            showStatus(data.message, true);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '💾 Save & Connect';
+          }
+        })
+        .catch(err => {
+          showStatus('Failed: ' + err.message, true);
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '💾 Save & Connect';
+        });
+    }
+
+    // Auto-scan on load
+    window.addEventListener('load', () => {
+      setTimeout(scanNetworks, 500);
+    });
+  </script>
+</body>
+</html>
+)";
+  return html;
+}
+
 void setupWiFi() {
+  // Load saved WiFi credentials
+  loadWiFiCredentials();
+
+  // Check if we have credentials
+  if (strlen(wifiSSID) == 0) {
+    // No credentials - start provisioning mode
+    startProvisioningMode();
+    return;
+  }
+
+  // Try to connect to WiFi
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  WiFi.begin(ssid, password);
+  WiFi.begin(wifiSSID, wifiPassword);
 
   tft.setCursor(10, BRAND_Y - 35);
   tft.setTextColor(COLOR_TEXT_DIM);
@@ -980,9 +1349,33 @@ void setupWiFi() {
     server.on("/lock-mode", HTTP_GET, handleLockModeGet);
     server.on("/lock-mode", HTTP_POST, handleLockModePost);
     server.on("/reboot", HTTP_POST, handleReboot);
+    
+    // Add WiFi reset endpoint
+    server.on("/wifi-reset", HTTP_POST, []() {
+      preferences.begin("vibemon", false);
+      preferences.remove("wifiSSID");
+      preferences.remove("wifiPassword");
+      preferences.end();
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"WiFi credentials cleared. Rebooting...\"}");
+      delay(1000);
+      ESP.restart();
+    });
+    
     server.begin();
   } else {
     tft.println("Failed");
+    
+    // Connection failed - clear credentials and start provisioning
+    tft.setCursor(10, BRAND_Y - 20);
+    tft.println("Starting setup...");
+    delay(2000);
+    
+    preferences.begin("vibemon", false);
+    preferences.remove("wifiSSID");
+    preferences.remove("wifiPassword");
+    preferences.end();
+    
+    ESP.restart();
   }
 }
 

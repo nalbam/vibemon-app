@@ -148,6 +148,7 @@ See [Features](docs/features.md) for lock modes and CLI commands.
 
 - [Features](docs/features.md) - States, animations, window modes
 - [API Reference](docs/api.md) - All HTTP endpoints
+- [WiFi Provisioning](docs/wifi-provisioning.md) - ESP32 WiFi setup guide
 - [Desktop App (npm)](desktop/README.md) - npm package README
 
 ## Version History
