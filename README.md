@@ -33,13 +33,30 @@ See at a glance what your AI assistant is doing — thinking, working, or waitin
 | **ESP32 Hardware** | Dedicated LCD display (172×320) | Primary, always-on desk companion |
 | **Desktop App** | Electron app with system tray | Alternative for non-hardware users |
 
+### ESP32 Quick Start
+
+1. Flash firmware to ESP32-C6-LCD-1.47
+2. Device creates WiFi AP: `VibeMon-Setup` (password: `vibemon123`)
+3. Connect and configure WiFi + WebSocket token via web interface
+4. Device connects and displays AI assistant status
+
+See [ESP32 Setup Guide](docs/esp32-setup.md) for detailed instructions.
+
 ## Preview
 
 ![VibeMon Demo](screenshots/demo.gif)
 
 ## Documentation
 
-For installation and setup instructions, visit **[vibemon.io/docs](https://vibemon.io/docs)**.
+**Setup & Configuration:**
+- [ESP32 Setup Guide](docs/esp32-setup.md) - WiFi provisioning, WebSocket token configuration
+- [Desktop App](desktop/README.md) - npm package installation and usage
+
+**Reference:**
+- [Features](docs/features.md) - States, animations, window modes
+- [API Reference](docs/api.md) - Complete HTTP API documentation
+
+For detailed installation instructions, visit **[vibemon.io/docs](https://vibemon.io/docs)**.
 
 ## States
 
@@ -138,18 +155,33 @@ See [Features](docs/features.md) for lock modes and CLI commands.
 
 ## Troubleshooting
 
+### Desktop App
+
 | Issue | Solution |
 |-------|----------|
 | Window not appearing | Check system tray, or run `curl -X POST http://127.0.0.1:19280/show` |
 | Port already in use | Check with `lsof -i :19280` |
 | Hook not working | Verify Python 3: `python3 --version` |
 
+### ESP32 Hardware
+
+| Issue | Solution |
+|-------|----------|
+| Captive portal doesn't open | Navigate to `http://192.168.4.1` manually |
+| WiFi connection fails | Check password, ensure 2.4GHz network |
+| Device won't enter setup mode | Send `POST /wifi-reset` to clear credentials |
+
+See [ESP32 Setup Guide](docs/esp32-setup.md) for detailed troubleshooting.
+
 ## Documentation
 
+**Setup & Configuration:**
+- [ESP32 Setup Guide](docs/esp32-setup.md) - WiFi provisioning & WebSocket token
+- [Desktop App](desktop/README.md) - npm package installation
+
+**Reference:**
 - [Features](docs/features.md) - States, animations, window modes
-- [API Reference](docs/api.md) - All HTTP endpoints
-- [WiFi Provisioning](docs/wifi-provisioning.md) - ESP32 WiFi setup guide
-- [Desktop App (npm)](desktop/README.md) - npm package README
+- [API Reference](docs/api.md) - Complete HTTP API documentation
 
 ## Version History
 
