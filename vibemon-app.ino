@@ -1038,7 +1038,11 @@ void setupProvisioningServer() {
     int n = WiFi.scanNetworks();
     for (int i = 0; i < n; i++) {
       if (i > 0) json += ",";
-      json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + String(WiFi.RSSI(i)) + ",\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
+      // Escape SSID for JSON (replace " with \")
+      String ssid = WiFi.SSID(i);
+      ssid.replace("\\", "\\\\");  // Escape backslashes first
+      ssid.replace("\"", "\\\"");  // Escape quotes
+      json += "{\"ssid\":\"" + ssid + "\",\"rssi\":" + String(WiFi.RSSI(i)) + ",\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
     }
     json += "]}";
     server.send(200, "application/json", json);
