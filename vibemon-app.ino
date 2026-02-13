@@ -1026,10 +1026,6 @@ void saveWebSocketToken(const char* token) {
 }
 #endif
 
-  strncpy(wifiSSID, ssid, sizeof(wifiSSID) - 1);
-  strncpy(wifiPassword, password, sizeof(wifiPassword) - 1);
-}
-
 // Start Access Point for WiFi provisioning
 void startProvisioningMode() {
   provisioningMode = true;
