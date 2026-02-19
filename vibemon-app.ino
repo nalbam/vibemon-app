@@ -156,7 +156,7 @@ unsigned long lastActivityTime = 0;
 #define JSON_BUFFER_SIZE 512
 
 // Version string
-#define VERSION "v1.6.0"
+#define VERSION "v1.6.1"
 
 // Safe string copy: always null-terminates, requires array (not pointer) as dst
 #define safeCopyStr(dst, src) do { strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]='\0'; } while(0)
