@@ -158,6 +158,18 @@ unsigned long lastActivityTime = 0;
 // Version string
 #define VERSION "v1.6.0"
 
+// Safe string copy: always null-terminates, requires array (not pointer) as dst
+#define safeCopyStr(dst, src) do { strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]='\0'; } while(0)
+
+// Animation timing
+#define BLINK_INTERVAL       3200  // Blink interval in idle state (ms)
+#define BLINK_DURATION        100  // Blink closed-eye hold duration (ms)
+
+// WiFi connection
+#define WIFI_CONNECT_ATTEMPTS  20  // Max connection attempts before giving up
+#define WIFI_CONNECT_DELAY_MS 500  // Delay between each attempt (ms)
+#define WIFI_FAIL_RESTART_MS 2000  // Delay before reboot on connection failure (ms)
+
 // Helper: Parse state string to enum
 AppState parseState(const char* stateStr) {
   if (strcmp(stateStr, "start") == 0) return STATE_START;
@@ -193,8 +205,7 @@ void addProjectToList(const char* project) {
     }
     projectCount = MAX_PROJECTS - 1;
   }
-  strncpy(projectList[projectCount], project, sizeof(projectList[0]) - 1);
-  projectList[projectCount][sizeof(projectList[0]) - 1] = '\0';
+  safeCopyStr(projectList[projectCount], project);
   projectCount++;
 }
 
@@ -203,15 +214,13 @@ void lockProject(const char* project) {
   if (strlen(project) > 0) {
     bool changed = (strcmp(lockedProject, project) != 0);
     addProjectToList(project);
-    strncpy(lockedProject, project, sizeof(lockedProject) - 1);
-    lockedProject[sizeof(lockedProject) - 1] = '\0';
+    safeCopyStr(lockedProject, project);
 
     // Transition to idle state when lock changes
     if (changed) {
       previousState = currentState;
       currentState = STATE_IDLE;
-      strncpy(currentProject, project, sizeof(currentProject) - 1);
-      currentProject[sizeof(currentProject) - 1] = '\0';
+      safeCopyStr(currentProject, project);
       currentTool[0] = '\0';
       currentModel[0] = '\0';
       currentMemory = 0;
@@ -378,6 +387,29 @@ void loop() {
   checkSleepTimer();
 }
 
+// Helper: True for states that show slow loading dots (thought bubble)
+bool isLoadingState(AppState state) {
+  return state == STATE_THINKING || state == STATE_PLANNING || state == STATE_PACKING;
+}
+
+// Helper: True for all active states that auto-timeout to idle after 5 minutes
+bool isActiveState(AppState state) {
+  return state == STATE_THINKING || state == STATE_PLANNING || state == STATE_WORKING ||
+         state == STATE_NOTIFICATION || state == STATE_PACKING;
+}
+
+// Helper: Transition to newState and trigger full redraw
+// resetTimer: reset lastActivityTime (false only for idle->sleep transition)
+void transitionToState(AppState newState, bool resetTimer = true) {
+  previousState = currentState;
+  currentState = newState;
+  if (resetTimer) lastActivityTime = millis();
+  needsRedraw = true;
+  dirtyCharacter = true;
+  dirtyStatus = true;
+  drawStatus();
+}
+
 // Check state timeouts for auto-transitions
 void checkSleepTimer() {
   unsigned long now = millis();
@@ -385,29 +417,15 @@ void checkSleepTimer() {
   // start/done -> idle after 1 minute
   if (currentState == STATE_START || currentState == STATE_DONE) {
     if (now - lastActivityTime >= IDLE_TIMEOUT) {
-      previousState = currentState;
-      currentState = STATE_IDLE;
-      lastActivityTime = now;
-      needsRedraw = true;
-      dirtyCharacter = true;
-      dirtyStatus = true;
-      drawStatus();
+      transitionToState(STATE_IDLE);
       return;
     }
   }
 
-  // planning/thinking/working/notification/packing -> idle after 5 minutes
-  if (currentState == STATE_PLANNING || currentState == STATE_THINKING ||
-      currentState == STATE_WORKING || currentState == STATE_NOTIFICATION ||
-      currentState == STATE_PACKING) {
+  // active states -> idle after 5 minutes
+  if (isActiveState(currentState)) {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
-      previousState = currentState;
-      currentState = STATE_IDLE;
-      lastActivityTime = now;
-      needsRedraw = true;
-      dirtyCharacter = true;
-      dirtyStatus = true;
-      drawStatus();
+      transitionToState(STATE_IDLE);
       return;
     }
   }
@@ -415,14 +433,95 @@ void checkSleepTimer() {
   // idle -> sleep after 5 minutes
   if (currentState == STATE_IDLE) {
     if (now - lastActivityTime >= SLEEP_TIMEOUT) {
-      previousState = currentState;
-      currentState = STATE_SLEEP;
-      needsRedraw = true;
-      dirtyCharacter = true;
-      dirtyStatus = true;
-      drawStatus();
+      transitionToState(STATE_SLEEP, false);
     }
   }
+}
+
+// Build status JSON into buffer (shared by Serial command handler and HTTP handler)
+void buildStatusJson(char* buf, size_t size) {
+  if (strlen(lockedProject) > 0) {
+    snprintf(buf, size,
+      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":\"%s\",\"lockMode\":\"%s\",\"projectCount\":%d}",
+      getStateString(currentState), currentProject, lockedProject, getLockModeString(), projectCount);
+  } else {
+    snprintf(buf, size,
+      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":null,\"lockMode\":\"%s\",\"projectCount\":%d}",
+      getStateString(currentState), currentProject, getLockModeString(), projectCount);
+  }
+}
+
+// Handle command-type input (lock/unlock/reboot/status/lock-mode)
+// Returns true if the command was handled
+bool handleCommand(const char* command, JsonObject doc) {
+  if (strcmp(command, "lock") == 0) {
+    const char* projectToLock = doc["project"] | currentProject;
+    if (strlen(projectToLock) > 0) {
+      lockProject(projectToLock);
+    } else {
+      Serial.println("{\"error\":\"No project to lock\"}");
+    }
+    return true;
+  }
+  if (strcmp(command, "unlock") == 0) {
+    unlockProject();
+    return true;
+  }
+  if (strcmp(command, "reboot") == 0) {
+    Serial.println("{\"ok\":true,\"rebooting\":true}");
+    delay(100);  // Allow serial output to complete
+    ESP.restart();
+    return true;
+  }
+  if (strcmp(command, "status") == 0) {
+    char buf[256];
+    buildStatusJson(buf, sizeof(buf));
+    Serial.println(buf);
+    return true;
+  }
+  if (strcmp(command, "lock-mode") == 0) {
+    const char* modeStr = doc["mode"] | "";
+    if (strlen(modeStr) > 0) {
+      int newMode = parseLockMode(modeStr);
+      if (newMode >= 0) {
+        setLockMode(newMode);
+      } else {
+        Serial.println("{\"error\":\"Invalid mode. Valid modes: first-project, on-thinking\"}");
+      }
+    } else {
+      Serial.print("{\"lockMode\":\"");
+      Serial.print(getLockModeString());
+      Serial.println("\"}");
+    }
+    return true;
+  }
+  return false;
+}
+
+// Handle WebSocket message-type input (authenticated/error/status)
+// Returns true if the message was handled
+bool handleWebSocketMessage(const char* msgType, JsonObject doc) {
+  if (strcmp(msgType, "authenticated") == 0) {
+    Serial.println("{\"websocket\":\"authenticated\"}");
+    return true;
+  }
+  if (strcmp(msgType, "error") == 0) {
+    const char* errMsg = doc["message"] | "unknown";
+    Serial.print("{\"websocket\":\"error\",\"message\":\"");
+    Serial.print(errMsg);
+    Serial.println("\"}");
+    return true;
+  }
+  if (strcmp(msgType, "status") == 0 && doc.containsKey("data")) {
+    JsonObject data = doc["data"];
+    if (data.isNull()) {
+      Serial.println("{\"error\":\"Invalid status data\"}");
+      return true;
+    }
+    processStatusData(data);
+    return true;
+  }
+  return false;
 }
 
 void processInput(const char* input) {
@@ -434,95 +533,18 @@ void processInput(const char* input) {
     return;
   }
 
-  // Handle command (lock/unlock)
+  JsonObject obj = doc.as<JsonObject>();
+
+  // Handle command (lock/unlock/reboot/status/lock-mode)
   const char* command = doc["command"] | "";
-  if (strlen(command) > 0) {
-    if (strcmp(command, "lock") == 0) {
-      const char* projectToLock = doc["project"] | currentProject;
-      if (strlen(projectToLock) > 0) {
-        lockProject(projectToLock);
-      } else {
-        Serial.println("{\"error\":\"No project to lock\"}");
-      }
-      return;
-    } else if (strcmp(command, "unlock") == 0) {
-      unlockProject();
-      return;
-    } else if (strcmp(command, "reboot") == 0) {
-      Serial.println("{\"ok\":true,\"rebooting\":true}");
-      delay(100);  // Allow serial output to complete
-      ESP.restart();
-      return;
-    } else if (strcmp(command, "status") == 0) {
-      // Return current status
-      Serial.print("{\"state\":\"");
-      Serial.print(getStateString(currentState));
-      Serial.print("\",\"project\":\"");
-      Serial.print(currentProject);
-      Serial.print("\",\"locked\":");
-      if (strlen(lockedProject) > 0) {
-        Serial.print("\"");
-        Serial.print(lockedProject);
-        Serial.print("\"");
-      } else {
-        Serial.print("null");
-      }
-      Serial.print(",\"lockMode\":\"");
-      Serial.print(getLockModeString());
-      Serial.print("\",\"projectCount\":");
-      Serial.print(projectCount);
-      Serial.println("}");
-      return;
-    } else if (strcmp(command, "lock-mode") == 0) {
-      // Get or set lock mode
-      const char* modeStr = doc["mode"] | "";
-      if (strlen(modeStr) > 0) {
-        int newMode = parseLockMode(modeStr);
-        if (newMode >= 0) {
-          setLockMode(newMode);
-        } else {
-          Serial.println("{\"error\":\"Invalid mode. Valid modes: first-project, on-thinking\"}");
-        }
-      } else {
-        // Return current lock mode
-        Serial.print("{\"lockMode\":\"");
-        Serial.print(getLockModeString());
-        Serial.println("\"}");
-      }
-      return;
-    }
-  }
+  if (strlen(command) > 0 && handleCommand(command, obj)) return;
 
   // Handle WebSocket message types (server sends {type: "status", data: {...}})
   const char* msgType = doc["type"] | "";
-  if (strlen(msgType) > 0) {
-    if (strcmp(msgType, "authenticated") == 0) {
-      Serial.println("{\"websocket\":\"authenticated\"}");
-      return;
-    }
-    if (strcmp(msgType, "error") == 0) {
-      const char* errMsg = doc["message"] | "unknown";
-      Serial.print("{\"websocket\":\"error\",\"message\":\"");
-      Serial.print(errMsg);
-      Serial.println("\"}");
-      return;
-    }
-    // For "status" type, use data object; otherwise continue with doc
-    if (strcmp(msgType, "status") == 0 && doc.containsKey("data")) {
-      // Re-parse with data object as root
-      JsonObject data = doc["data"];
-      if (data.isNull()) {
-        Serial.println("{\"error\":\"Invalid status data\"}");
-        return;
-      }
-      // Process data object instead of doc
-      processStatusData(data);
-      return;
-    }
-  }
+  if (strlen(msgType) > 0 && handleWebSocketMessage(msgType, obj)) return;
 
   // Direct format: {state: "...", project: "...", ...}
-  processStatusData(doc.as<JsonObject>());
+  processStatusData(obj);
 }
 
 void processStatusData(JsonObject doc) {
@@ -538,15 +560,13 @@ void processStatusData(JsonObject doc) {
   if (lockMode == LOCK_MODE_FIRST_PROJECT) {
     // First project gets locked automatically
     if (strlen(incomingProject) > 0 && projectCount == 1 && strlen(lockedProject) == 0) {
-      strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
-      lockedProject[sizeof(lockedProject) - 1] = '\0';
+      safeCopyStr(lockedProject, incomingProject);
     }
   } else if (lockMode == LOCK_MODE_ON_THINKING) {
     // Lock on thinking state
     const char* stateStr = doc["state"] | "";
     if (strcmp(stateStr, "thinking") == 0 && strlen(incomingProject) > 0) {
-      strncpy(lockedProject, incomingProject, sizeof(lockedProject) - 1);
-      lockedProject[sizeof(lockedProject) - 1] = '\0';
+      safeCopyStr(lockedProject, incomingProject);
     }
   }
 
@@ -582,15 +602,13 @@ void processStatusData(JsonObject doc) {
     currentMemory = 0;
     currentTool[0] = '\0';
     infoChanged = true;
-    strncpy(currentProject, newProject, sizeof(currentProject) - 1);
-    currentProject[sizeof(currentProject) - 1] = '\0';
+    safeCopyStr(currentProject, newProject);
   }
 
   // Parse tool
   const char* toolStr = doc["tool"] | "";
   if (strlen(toolStr) > 0 && strcmp(toolStr, currentTool) != 0) {
-    strncpy(currentTool, toolStr, sizeof(currentTool) - 1);
-    currentTool[sizeof(currentTool) - 1] = '\0';
+    safeCopyStr(currentTool, toolStr);
     infoChanged = true;
     // Tool change affects status text in working state
     if (currentState == STATE_WORKING) {
@@ -601,8 +619,7 @@ void processStatusData(JsonObject doc) {
   // Parse model
   const char* modelStr = doc["model"] | "";
   if (strlen(modelStr) > 0 && strcmp(modelStr, currentModel) != 0) {
-    strncpy(currentModel, modelStr, sizeof(currentModel) - 1);
-    currentModel[sizeof(currentModel) - 1] = '\0';
+    safeCopyStr(currentModel, modelStr);
     infoChanged = true;
   }
 
@@ -616,8 +633,7 @@ void processStatusData(JsonObject doc) {
   // Parse character (use isValidCharacter() for dynamic validation)
   const char* charInput = doc["character"] | "";
   if (strlen(charInput) > 0 && isValidCharacter(charInput) && strcmp(charInput, currentCharacter) != 0) {
-    strncpy(currentCharacter, charInput, sizeof(currentCharacter) - 1);
-    currentCharacter[sizeof(currentCharacter) - 1] = '\0';
+    safeCopyStr(currentCharacter, charInput);
     infoChanged = true;
   }
 
@@ -680,8 +696,7 @@ void drawStartScreen() {
 
   // Set random character for start screen (esp_random: hardware RNG)
   const CharacterGeometry* character = ALL_CHARACTERS[esp_random() % CHARACTER_COUNT];
-  strncpy(currentCharacter, character->name, sizeof(currentCharacter) - 1);
-  currentCharacter[sizeof(currentCharacter) - 1] = '\0';
+  safeCopyStr(currentCharacter, character->name);
 
   // Draw character slightly higher for better balance
   int startCharY = 15;
@@ -730,8 +745,7 @@ void truncateText(const char* src, char* dst, size_t dstSize, int maxLen, int tr
 }
 
 // Helper: Draw icon + truncated text as a single info row
-typedef void (*IconDrawFunc)(TFT_eSPI&, int, int, uint16_t);
-void drawInfoRow(int y, IconDrawFunc iconFn, const char* text, uint16_t textColor) {
+void drawInfoRow(int y, void (*iconFn)(TFT_eSPI&, int, int, uint16_t), const char* text, uint16_t textColor) {
   tft.setTextColor(textColor);
   tft.setTextSize(1.5);
   iconFn(tft, 10, y + 1, textColor);
@@ -794,7 +808,7 @@ void drawStatus() {
   }
 
   // Loading dots (thinking, planning, packing and working states)
-  if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
+  if (isLoadingState(currentState)) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);  // Slow
   } else if (currentState == STATE_WORKING) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Normal
@@ -885,7 +899,7 @@ void updateAnimation() {
   // Determine if we need to redraw character based on state and animation frame
   bool needsCharRedraw = positionChanged;
   if (!needsCharRedraw) {
-    if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
+    if (isLoadingState(currentState)) {
       needsCharRedraw = (animFrame % 12 == 0);  // Thought bubble animation
     } else if (currentState == STATE_START || currentState == STATE_WORKING) {
       needsCharRedraw = (animFrame % 4 == 0);   // Sparkle animation
@@ -916,7 +930,7 @@ void updateAnimation() {
   }
 
   // Update loading dots for thinking/planning/packing/working states
-  if (currentState == STATE_THINKING || currentState == STATE_PLANNING || currentState == STATE_PACKING) {
+  if (isLoadingState(currentState)) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, true);  // Slow
   } else if (currentState == STATE_WORKING) {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Fast
@@ -939,8 +953,8 @@ void updateBlink() {
 
   switch (blinkPhase) {
     case BLINK_NONE:
-      // Check if it's time to blink (every 3.2 seconds)
-      if (now - lastBlink > 3200) {
+      // Check if it's time to blink
+      if (now - lastBlink > BLINK_INTERVAL) {
         // Start blink: draw closed eyes
         if (spriteInitialized) {
           drawCharacterToSprite(charSprite, EYE_BLINK, EFFECT_NONE, bgColor, character);
@@ -954,8 +968,8 @@ void updateBlink() {
       break;
 
     case BLINK_CLOSED:
-      // Check if blink duration (100ms) has elapsed
-      if (now - blinkPhaseStart >= 100) {
+      // Check if blink duration has elapsed
+      if (now - blinkPhaseStart >= BLINK_DURATION) {
         // End blink: draw open eyes
         if (spriteInitialized) {
           drawCharacterToSprite(charSprite, EYE_NORMAL, EFFECT_NONE, bgColor, character);
@@ -981,8 +995,8 @@ void loadWiFiCredentials() {
 
   // If no saved credentials, try using default from credentials.h
   if (strlen(wifiSSID) == 0 && strlen(defaultSSID) > 0) {
-    strncpy(wifiSSID, defaultSSID, sizeof(wifiSSID) - 1);
-    strncpy(wifiPassword, defaultPassword, sizeof(wifiPassword) - 1);
+    safeCopyStr(wifiSSID, defaultSSID);
+    safeCopyStr(wifiPassword, defaultPassword);
   }
 }
 
@@ -993,8 +1007,8 @@ void saveWiFiCredentials(const char* ssid, const char* password) {
   preferences.putString("wifiPassword", password);
   preferences.end();
 
-  strncpy(wifiSSID, ssid, sizeof(wifiSSID) - 1);
-  strncpy(wifiPassword, password, sizeof(wifiPassword) - 1);
+  safeCopyStr(wifiSSID, ssid);
+  safeCopyStr(wifiPassword, password);
 }
 
 #ifdef USE_WEBSOCKET
@@ -1006,7 +1020,7 @@ void loadWebSocketToken() {
 
   // If no saved token, try using default from credentials.h
   if (strlen(wsToken) == 0 && strlen(defaultWSToken) > 0) {
-    strncpy(wsToken, defaultWSToken, sizeof(wsToken) - 1);
+    safeCopyStr(wsToken, defaultWSToken);
   }
 }
 
@@ -1016,7 +1030,7 @@ void saveWebSocketToken(const char* token) {
   preferences.putString("wsToken", token);
   preferences.end();
 
-  strncpy(wsToken, token, sizeof(wsToken) - 1);
+  safeCopyStr(wsToken, token);
 }
 #endif
 
@@ -1376,8 +1390,8 @@ void setupWiFi() {
   tft.print("WiFi: ");
 
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_ATTEMPTS) {
+    delay(WIFI_CONNECT_DELAY_MS);
     tft.print(".");
     attempts++;
   }
@@ -1420,7 +1434,7 @@ void setupWiFi() {
     // Connection failed - clear credentials and start provisioning
     tft.setCursor(10, wifiY + 18);
     tft.println("Starting setup...");
-    delay(2000);
+    delay(WIFI_FAIL_RESTART_MS);
 
     preferences.begin("vibemon", false);
     preferences.remove("wifiSSID");
@@ -1444,15 +1458,7 @@ void handleStatus() {
 
 void handleStatusGet() {
   char response[256];
-  if (strlen(lockedProject) > 0) {
-    snprintf(response, sizeof(response),
-      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":\"%s\",\"lockMode\":\"%s\",\"projectCount\":%d}",
-      getStateString(currentState), currentProject, lockedProject, getLockModeString(), projectCount);
-  } else {
-    snprintf(response, sizeof(response),
-      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":null,\"lockMode\":\"%s\",\"projectCount\":%d}",
-      getStateString(currentState), currentProject, getLockModeString(), projectCount);
-  }
+  buildStatusJson(response, sizeof(response));
   server.send(200, "application/json", response);
 }
 
@@ -1574,7 +1580,7 @@ void setupWebSocket() {
   if (strlen(wsToken) > 0) {
     snprintf(wsPath, sizeof(wsPath), "%s?token=%s", WS_PATH, wsToken);
   } else {
-    strncpy(wsPath, WS_PATH, sizeof(wsPath));
+    safeCopyStr(wsPath, WS_PATH);
   }
 
   // Connect to WebSocket server

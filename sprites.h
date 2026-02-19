@@ -84,6 +84,9 @@ typedef struct {
   int eyeLeftX, eyeRightX, eyeY, eyeW, eyeH;
   // Effect position (sparkle, thought bubble, zzz, etc.)
   int effectX, effectY;
+  // Character image draw functions (eliminates if/else dispatch chains)
+  void (*drawToTFT)(TFT_eSPI&, int, int);
+  void (*drawToSprite)(TFT_eSprite&);
 } CharacterGeometry;
 
 // Character definitions
@@ -93,7 +96,9 @@ const CharacterGeometry CHAR_APTO = {
   // Eyes (leftX, rightX, y, w, h)
   22, 37, 22, 6, 6,
   // Effect position (effectX, effectY)
-  46, 6
+  46, 6,
+  // Draw functions
+  drawAptoImage, drawAptoImageToSprite
 };
 
 const CharacterGeometry CHAR_CLAWD = {
@@ -102,7 +107,9 @@ const CharacterGeometry CHAR_CLAWD = {
   // Eyes (leftX, rightX, y, w, h)
   14, 44, 22, 6, 6,
   // Effect position (effectX, effectY)
-  52, 4
+  52, 4,
+  // Draw functions
+  drawClawdImage, drawClawdImageToSprite
 };
 
 const CharacterGeometry CHAR_KIRO = {
@@ -111,7 +118,9 @@ const CharacterGeometry CHAR_KIRO = {
   // Eyes (leftX, rightX, y, w, h) - tall vertical eyes
   30, 39, 21, 5, 8,
   // Effect position (effectX, effectY)
-  50, 3
+  50, 3,
+  // Draw functions
+  drawKiroImage, drawKiroImageToSprite
 };
 
 const CharacterGeometry CHAR_CLAW = {
@@ -120,7 +129,9 @@ const CharacterGeometry CHAR_CLAW = {
   // Eyes (leftX, rightX, y, w, h)
   21, 38, 16, 6, 6,
   // Effect position (effectX, effectY)
-  49, 4
+  49, 4,
+  // Draw functions
+  drawClawImage, drawClawImageToSprite
 };
 
 // Character array for dynamic lookup
@@ -227,48 +238,18 @@ void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const Ch
 // Draw the Claude character to sprite buffer (128x128) - NO FLICKERING
 // New API: separate eyeType and effectType
 void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
-  // Clear sprite with background color
   sprite.fillSprite(bgColor);
-
-  // Draw body using images
-  if (character == &CHAR_APTO) {
-    drawAptoImageToSprite(sprite);
-  } else if (character == &CHAR_CLAWD) {
-    drawClawdImageToSprite(sprite);
-  } else if (character == &CHAR_KIRO) {
-    drawKiroImageToSprite(sprite);
-  } else if (character == &CHAR_CLAW) {
-    drawClawImageToSprite(sprite);
-  }
-
-  // Draw eye type (normal, blink, happy, focused)
+  character->drawToSprite(sprite);
   drawEyeTypeToSprite(sprite, eyeType, character);
-
-  // Draw effect (sparkle, thinking, alert, zzz)
   drawEffectTypeToSprite(sprite, effectType, character);
 }
 
 // Legacy: Draw the Claude character at specified position (128x128) - direct to screen
 // New API: separate eyeType and effectType
 void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
-  // Clear background area
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
-
-  // Draw character image
-  if (character == &CHAR_APTO) {
-    drawAptoImage(tft, x, y);
-  } else if (character == &CHAR_CLAWD) {
-    drawClawdImage(tft, x, y);
-  } else if (character == &CHAR_KIRO) {
-    drawKiroImage(tft, x, y);
-  } else if (character == &CHAR_CLAW) {
-    drawClawImage(tft, x, y);
-  }
-
-  // Draw eye type
+  character->drawToTFT(tft, x, y);
   drawEyeType(tft, x, y, eyeType, character);
-
-  // Draw effect
   drawEffectType(tft, x, y, effectType, character);
 }
 
