@@ -99,14 +99,14 @@ bool spriteInitialized = false;
 #define FLOAT_AMPLITUDE_Y 5  // Floating animation amplitude Y (pixels)
 #define STATUS_TEXT_Y 160  // size 3 (24px) → bottom 184
 #define LOADING_Y     190  // dots after status text (gap 6px) → bottom ~198
-#define PROJECT_Y     204  // info rows: 24px even spacing
-#define TOOL_Y        228
-#define MODEL_Y       252
-#define MEMORY_Y      276  // font ~14px → bottom 290
+#define PROJECT_Y     204  // info rows: 25px spacing (+1px from previous 24px)
+#define TOOL_Y        229
+#define MODEL_Y       254
+#define MEMORY_Y      279  // font ~14px → bottom 293
 #define MEMORY_BAR_X  10
-#define MEMORY_BAR_Y  294  // 4px gap after memory text
+#define MEMORY_BAR_Y  297  // 4px gap after memory text
 #define MEMORY_BAR_W  152
-#define MEMORY_BAR_H  6    // bar bottom 300 → 20px bottom margin
+#define MEMORY_BAR_H  6    // bar bottom 303 → 17px bottom margin
 #define BRAND_Y       308  // start screen only (size 1, 8px)
 
 // State variables (char arrays instead of String for memory efficiency)
