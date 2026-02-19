@@ -97,17 +97,17 @@ bool spriteInitialized = false;
 #define CHAR_Y_BASE   18   // Base Y position (float ±5px → 13~23)
 #define FLOAT_AMPLITUDE_X 3  // Floating animation amplitude X (pixels)
 #define FLOAT_AMPLITUDE_Y 5  // Floating animation amplitude Y (pixels)
-#define STATUS_TEXT_Y 160
-#define LOADING_Y     192
-#define PROJECT_Y     216
-#define TOOL_Y        236
+#define STATUS_TEXT_Y 160  // size 3 (24px) → bottom 184
+#define LOADING_Y     190  // dots after status text (gap 6px)
+#define PROJECT_Y     204  // info rows: 26px spacing (icon 20px + 6px gap)
+#define TOOL_Y        230
 #define MODEL_Y       256
-#define MEMORY_Y      276
+#define MEMORY_Y      282
 #define MEMORY_BAR_X  10
-#define MEMORY_BAR_Y  294
+#define MEMORY_BAR_Y  306  // 4px below memory text bottom (282+20+4)
 #define MEMORY_BAR_W  152
-#define MEMORY_BAR_H  8
-#define BRAND_Y       306
+#define MEMORY_BAR_H  6    // bar bottom 312 → 8px bottom margin
+#define BRAND_Y       308  // start screen only (size 1, 8px)
 
 // State variables (char arrays instead of String for memory efficiency)
 // Note: AppState enum is defined in sprites.h
@@ -724,6 +724,7 @@ void drawStartScreen() {
   tft.println("Waiting...");
 
   // Brand (centered at bottom)
+  tft.setTextSize(1);
   int verX = (SCREEN_WIDTH - strlen(VERSION) * 6) / 2;
   tft.setCursor(verX, BRAND_Y);
   tft.println(VERSION);
@@ -745,14 +746,15 @@ void truncateText(const char* src, char* dst, size_t dstSize, int maxLen, int tr
 }
 
 // Helper: Draw icon + truncated text as a single info row
-void drawInfoRow(int y, void (*iconFn)(TFT_eSPI&, int, int, uint16_t), const char* text, uint16_t textColor) {
+// Icon scale=2 (20x20px) matches setTextSize(2) (16px); text x=34, y+2 centers in 20px row
+void drawInfoRow(int y, void (*iconFn)(TFT_eSPI&, int, int, uint16_t, int, uint16_t), const char* text, uint16_t textColor, uint16_t bgColor) {
   tft.setTextColor(textColor);
-  tft.setTextSize(1.5);
-  iconFn(tft, 10, y + 1, textColor);
-  tft.setCursor(26, y);
+  tft.setTextSize(2);
+  iconFn(tft, 10, y, textColor, 2, bgColor);
+  tft.setCursor(34, y + 2);
   char display[20];
-  truncateText(text, display, sizeof(display), 15, 12);
-  tft.println(display);
+  truncateText(text, display, sizeof(display), 12, 9);
+  tft.print(display);
 }
 
 void drawStatus() {
@@ -823,27 +825,27 @@ void drawStatus() {
     }
 
     if (strlen(currentProject) > 0) {
-      drawInfoRow(PROJECT_Y, drawFolderIcon, currentProject, textColor);
+      drawInfoRow(PROJECT_Y, drawFolderIcon, currentProject, textColor, bgColor);
     }
 
     // Tool name (working state only)
     if (strlen(currentTool) > 0 && currentState == STATE_WORKING) {
-      drawInfoRow(TOOL_Y, drawToolIcon, currentTool, textColor);
+      drawInfoRow(TOOL_Y, drawToolIcon, currentTool, textColor, bgColor);
     }
 
     // Model name
     if (strlen(currentModel) > 0) {
-      drawInfoRow(MODEL_Y, drawRobotIcon, currentModel, textColor);
+      drawInfoRow(MODEL_Y, drawRobotIcon, currentModel, textColor, bgColor);
     }
 
     // Memory usage (hide on start state)
     if (currentMemory > 0 && currentState != STATE_START) {
       tft.setTextColor(textColor);
-      tft.setTextSize(1.5);
-      drawBrainIcon(tft, 10, MEMORY_Y + 1, textColor);
-      tft.setCursor(26, MEMORY_Y);
+      tft.setTextSize(2);
+      drawBrainIcon(tft, 10, MEMORY_Y, textColor, 2, bgColor);
+      tft.setCursor(34, MEMORY_Y + 2);
       tft.print(currentMemory);
-      tft.println("%");
+      tft.print("%");
 
       // Memory bar (below percentage)
       drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, currentMemory, bgColor);
@@ -1042,7 +1044,7 @@ void startProvisioningMode() {
   int setupY = 230;
   tft.setCursor(10, setupY);
   tft.setTextColor(COLOR_TEXT_DIM);
-  tft.setTextSize(1.3);
+  tft.setTextSize(1);
   tft.println("Setup Mode");
 
   // Start Access Point
@@ -1386,7 +1388,7 @@ void setupWiFi() {
   int wifiY = 230;
   tft.setCursor(10, wifiY);
   tft.setTextColor(COLOR_TEXT_DIM);
-  tft.setTextSize(1.3);
+  tft.setTextSize(1);
   tft.print("WiFi: ");
 
   int attempts = 0;

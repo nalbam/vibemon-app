@@ -70,8 +70,8 @@ The `working` state displays context-aware text based on the active tool:
 
 - **Floating**: Gentle motion (±3px horizontal, ±5px vertical, ~3.2s cycle)
 - **Blink**: Idle state blinks every 3 seconds
-- **Loading dots**: Thinking/planning/working states show animated progress dots
-  - Thinking/planning: 3x slower animation for contemplative feel
+- **Loading dots**: Thinking/planning/packing/working states show animated progress dots
+  - Thinking/planning/packing: 3x slower animation for contemplative feel
   - Working: Normal speed animation
 - **Matrix rain**: Working state shows falling green code effect
 - **Sunglasses**: Working state character wears Matrix-style sunglasses

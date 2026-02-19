@@ -150,7 +150,7 @@ curl -X POST http://DEVICE_IP/wifi-reset
 ```
 
 Device will:
-1. Clear `wifiSSID`, `wifiPassword`, `wsToken` from NVS
+1. Clear `wifiSSID`, `wifiPassword` from NVS (WebSocket token is preserved)
 2. Reboot automatically
 3. Enter provisioning mode
 

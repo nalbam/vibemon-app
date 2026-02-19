@@ -21,7 +21,7 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | `model` | 50 chars | String |
 | `memory` | - | Integer 0-100 |
 | `character` | - | `apto`, `clawd`, `kiro`, or `claw` |
-| `terminalId` | 100 chars | Terminal session ID from `ITERM_SESSION_ID` (e.g., `w0t4p0:UUID`) or `GHOSTTY_PID` (e.g., `12345`) env |
+| `terminalId` | 100 chars | Terminal session ID with prefix: `iterm2:w0t0p0:UUID` (from `ITERM_SESSION_ID`) or `ghostty:12345` (from `GHOSTTY_PID`) |
 
 ---
 
@@ -67,7 +67,7 @@ curl -X POST http://127.0.0.1:19280/status \
 | `model` | string | Model name (e.g., `opus`, `sonnet`) |
 | `memory` | number | Memory usage (0-100) |
 | `character` | string | `apto`, `clawd`, `kiro`, or `claw` |
-| `terminalId` | string | Terminal ID for click-to-focus (iTerm2 session ID or Ghostty PID) |
+| `terminalId` | string | Terminal ID for click-to-focus (e.g., `iterm2:w0t0p0:UUID` or `ghostty:12345`) |
 
 **Response:**
 ```json
@@ -338,7 +338,7 @@ curl -X POST http://192.168.0.185/wifi-reset
 ```
 
 **Behavior:**
-- Clears `wifiSSID`, `wifiPassword`, `wsToken` from NVS
+- Clears `wifiSSID`, `wifiPassword` from NVS (WebSocket token is preserved)
 - Device reboots automatically
 - Enters provisioning mode (creates `VibeMon-Setup` AP)
 

@@ -54,7 +54,7 @@ npm start
 - **Project change resets**: Model/memory cleared when project changes
 - **Sparkle effect (start, working)**: Animated 4-point star sparkle
 - **Sunglasses (working)**: Dark green sunglasses with frame and shine (EYE_FOCUSED)
-- **Loading dots speed**: Thinking state uses 3x slower animation than working state
+- **Loading dots speed**: Thinking/planning/packing states use 3x slower animation than working state
 - **Snap to corner**: Window snaps to screen corners when dragged within 30px of edges (150ms debounce)
 - **Window close timer**: Desktop window auto-closes after 10min in sleep state; reopens on new status
 - **Click to focus terminal**: Click window to switch to corresponding iTerm2 or Ghostty tab (macOS only, uses `terminalId` from `ITERM_SESSION_ID` or `GHOSTTY_PID`)
@@ -96,6 +96,7 @@ Two modes available (`multi` or `single`):
 | `GET /stats/data` | Desktop | Stats data from cache |
 | `POST /quit` | Desktop | Quit application |
 | `POST /reboot` | ESP32 | Reboot device |
+| `POST /wifi-reset` | ESP32 | Clear WiFi credentials, enter provisioning mode |
 
 ## States
 
