@@ -809,7 +809,18 @@ void drawStatus() {
       tft.setTextSize(1.5);
       drawToolIcon(tft, 10, TOOL_Y + 1, textColor);
       tft.setCursor(26, TOOL_Y);
-      tft.println(currentTool);
+
+      char displayTool[20];
+      size_t maxTool = sizeof(displayTool) - 1;
+      if (strlen(currentTool) > 15) {
+        strncpy(displayTool, currentTool, 12);
+        displayTool[12] = '\0';
+        strncat(displayTool, "...", maxTool - strlen(displayTool));
+      } else {
+        strncpy(displayTool, currentTool, maxTool);
+        displayTool[maxTool] = '\0';
+      }
+      tft.println(displayTool);
     }
 
     // Model name
