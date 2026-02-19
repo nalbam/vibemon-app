@@ -104,7 +104,7 @@ bool spriteInitialized = false;
 #define MODEL_Y       254
 #define MEMORY_Y      279  // font ~14px → bottom 293
 #define MEMORY_BAR_X  10
-#define MEMORY_BAR_Y  297  // 4px gap after memory text
+#define MEMORY_BAR_Y  299  // 5px gap after memory text
 #define MEMORY_BAR_W  152
 #define MEMORY_BAR_H  6    // bar bottom 303 → 17px bottom margin
 #define BRAND_Y       308  // start screen only (size 1, 8px)
