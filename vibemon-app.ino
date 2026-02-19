@@ -717,6 +717,30 @@ void drawStartScreen() {
   drawConnectionIndicator();
 }
 
+// Helper: Truncate text to maxLen chars, appending "..." if too long
+void truncateText(const char* src, char* dst, size_t dstSize, int maxLen, int truncLen) {
+  if ((int)strlen(src) > maxLen) {
+    strncpy(dst, src, truncLen);
+    dst[truncLen] = '\0';
+    strncat(dst, "...", dstSize - strlen(dst) - 1);
+  } else {
+    strncpy(dst, src, dstSize - 1);
+    dst[dstSize - 1] = '\0';
+  }
+}
+
+// Helper: Draw icon + truncated text as a single info row
+typedef void (*IconDrawFunc)(TFT_eSPI&, int, int, uint16_t);
+void drawInfoRow(int y, IconDrawFunc iconFn, const char* text, uint16_t textColor) {
+  tft.setTextColor(textColor);
+  tft.setTextSize(1.5);
+  iconFn(tft, 10, y + 1, textColor);
+  tft.setCursor(26, y);
+  char display[20];
+  truncateText(text, display, sizeof(display), 15, 12);
+  tft.println(display);
+}
+
 void drawStatus() {
   uint16_t bgColor = getBackgroundColorEnum(currentState);
   uint16_t textColor = getTextColorEnum(currentState);
@@ -785,62 +809,17 @@ void drawStatus() {
     }
 
     if (strlen(currentProject) > 0) {
-      tft.setTextColor(textColor);
-      tft.setTextSize(1.5);
-      drawFolderIcon(tft, 10, PROJECT_Y + 1, textColor);
-      tft.setCursor(26, PROJECT_Y);
-
-      char displayProject[20];
-      size_t maxDisplay = sizeof(displayProject) - 1;
-      if (strlen(currentProject) > 15) {
-        strncpy(displayProject, currentProject, 12);
-        displayProject[12] = '\0';
-        strncat(displayProject, "...", maxDisplay - strlen(displayProject));
-      } else {
-        strncpy(displayProject, currentProject, maxDisplay);
-        displayProject[maxDisplay] = '\0';
-      }
-      tft.println(displayProject);
+      drawInfoRow(PROJECT_Y, drawFolderIcon, currentProject, textColor);
     }
 
     // Tool name (working state only)
     if (strlen(currentTool) > 0 && currentState == STATE_WORKING) {
-      tft.setTextColor(textColor);
-      tft.setTextSize(1.5);
-      drawToolIcon(tft, 10, TOOL_Y + 1, textColor);
-      tft.setCursor(26, TOOL_Y);
-
-      char displayTool[20];
-      size_t maxTool = sizeof(displayTool) - 1;
-      if (strlen(currentTool) > 15) {
-        strncpy(displayTool, currentTool, 12);
-        displayTool[12] = '\0';
-        strncat(displayTool, "...", maxTool - strlen(displayTool));
-      } else {
-        strncpy(displayTool, currentTool, maxTool);
-        displayTool[maxTool] = '\0';
-      }
-      tft.println(displayTool);
+      drawInfoRow(TOOL_Y, drawToolIcon, currentTool, textColor);
     }
 
     // Model name
     if (strlen(currentModel) > 0) {
-      tft.setTextColor(textColor);
-      tft.setTextSize(1.5);
-      drawRobotIcon(tft, 10, MODEL_Y + 1, textColor);
-      tft.setCursor(26, MODEL_Y);
-
-      char displayModel[20];
-      size_t maxModel = sizeof(displayModel) - 1;
-      if (strlen(currentModel) > 15) {
-        strncpy(displayModel, currentModel, 12);
-        displayModel[12] = '\0';
-        strncat(displayModel, "...", maxModel - strlen(displayModel));
-      } else {
-        strncpy(displayModel, currentModel, maxModel);
-        displayModel[maxModel] = '\0';
-      }
-      tft.println(displayModel);
+      drawInfoRow(MODEL_Y, drawRobotIcon, currentModel, textColor);
     }
 
     // Memory usage (hide on start state)
