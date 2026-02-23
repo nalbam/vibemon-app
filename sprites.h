@@ -9,11 +9,25 @@
 
 #include <Arduino.h>
 
-// Character image data (RGB565 format)
-#include "img_apto.h"
-#include "img_clawd.h"
-#include "img_kiro.h"
-#include "img_claw.h"
+// =============================================================================
+// SECTION 1: State Enum
+// =============================================================================
+
+enum AppState {
+  STATE_START,
+  STATE_IDLE,
+  STATE_THINKING,
+  STATE_PLANNING,
+  STATE_WORKING,
+  STATE_PACKING,
+  STATE_NOTIFICATION,
+  STATE_DONE,
+  STATE_SLEEP
+};
+
+// =============================================================================
+// SECTION 2: Color Constants
+// =============================================================================
 
 // Character colors (RGB565)
 #define COLOR_APTO        0x7BF3  // #797C98 Apto blue-gray (121,124,152)
@@ -26,15 +40,77 @@
 // Transparent color marker for pushImage (magenta 0xF81F is common convention)
 #define COLOR_TRANSPARENT_MARKER 0xF81F
 
-// Helper function to draw PROGMEM image with transparency to TFT
+// Background colors by state (RGB565)
+#define COLOR_BG_SESSION  0x0679  // #00CCCC Cyan
+#define COLOR_BG_IDLE     0x0540  // #00AA00 Green
+#define COLOR_BG_THINKING 0xA997  // #AA33BB Purple
+#define COLOR_BG_PLANNING 0x0451  // #008888 Teal
+#define COLOR_BG_WORKING  0x0339  // #0066CC Blue
+#define COLOR_BG_PACKING  0xAD55  // #AAAAAA Gray
+#define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
+#define COLOR_BG_DONE     0x0540  // #00AA00 Green
+#define COLOR_BG_SLEEP    0x1088  // #111144 Navy blue
+
+// Text colors
+#define COLOR_TEXT_WHITE  0xFFFF
+#define COLOR_TEXT_DIM    0x7BEF
+
+// Sunglasses colors
+#define COLOR_SUNGLASSES_FRAME 0x0841  // #111111
+#define COLOR_SUNGLASSES_LENS  0x0080  // #001100
+#define COLOR_SUNGLASSES_SHINE 0x0180  // #003300
+
+// RGB565 color constants for memory bar gradient (matches Desktop/statusline.py)
+#define COLOR_MEM_GREEN  0x0540  // #00AA00
+#define COLOR_MEM_YELLOW 0xFE60  // #FFCC00
+#define COLOR_MEM_RED    0xFA28  // #FF4444
+
+// =============================================================================
+// SECTION 3: Dimension Constants & Visual Enums
+// =============================================================================
+
+// Character dimensions (128x128, doubled from 64x64)
+#define CHAR_WIDTH  128
+#define CHAR_HEIGHT 128
+#define SCALE       2    // Scale factor from original design
+
+// Eye types (visual appearance of eyes)
+enum EyeType {
+  EYE_NORMAL,      // Normal square eyes (default)
+  EYE_BLINK,       // Closed eyes (horizontal lines)
+  EYE_HAPPY,       // Happy eyes (> <)
+  EYE_FOCUSED      // Sunglasses (Matrix style)
+};
+
+// Effect types (visual effects around character)
+enum EffectType {
+  EFFECT_NONE,     // No effect
+  EFFECT_SPARKLE,  // Sparkle effect (start/working state)
+  EFFECT_THINKING, // Thought bubble (thinking/planning state)
+  EFFECT_ALERT,    // Question mark (notification state)
+  EFFECT_ZZZ       // Zzz animation (sleep state)
+};
+
+// Animation frame counter (defined in .ino)
+extern int animFrame;
+
+// =============================================================================
+// SECTION 4: Character Image Draw Functions
+// =============================================================================
+
+// Character image data (RGB565 format)
+#include "img_apto.h"
+#include "img_clawd.h"
+#include "img_kiro.h"
+#include "img_claw.h"
+
+// Helper: Draw PROGMEM image with transparency to TFT
 // Optimized: Uses pushImage instead of pixel-by-pixel drawing (100x faster)
 void drawImageToTFT(TFT_eSPI &tft, int offsetX, int offsetY, const uint16_t* img, int width, int height, uint16_t transparentColor) {
-  // LovyanGFX pushImage with transparent color support
-  // This sends the entire image in one SPI transaction, skipping transparent pixels
   tft.pushImage(offsetX, offsetY, width, height, img, transparentColor);
 }
 
-// Draw character image from RGB565 array (128x128) with transparency
+// TFT draw functions for each character
 void drawAptoImage(TFT_eSPI &tft, int x, int y) {
   drawImageToTFT(tft, x, y, IMG_APTO, IMG_APTO_WIDTH, IMG_APTO_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
@@ -51,15 +127,13 @@ void drawClawImage(TFT_eSPI &tft, int x, int y) {
   drawImageToTFT(tft, x, y, IMG_CLAW, IMG_CLAW_WIDTH, IMG_CLAW_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
 
-// Helper function to draw PROGMEM image with transparency to sprite
+// Helper: Draw PROGMEM image with transparency to sprite
 // Optimized: Uses pushImage instead of pixel-by-pixel drawing (100x faster)
 void drawImageWithTransparency(TFT_eSprite &sprite, const uint16_t* img, int width, int height, uint16_t transparentColor) {
-  // LovyanGFX pushImage with transparent color support
-  // Transparent pixels (0xF81F magenta) are skipped, preserving the background
   sprite.pushImage(0, 0, width, height, img, transparentColor);
 }
 
-// Sprite versions for double buffering
+// Sprite draw functions for each character
 void drawAptoImageToSprite(TFT_eSprite &sprite) {
   drawImageWithTransparency(sprite, IMG_APTO, IMG_APTO_WIDTH, IMG_APTO_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
@@ -75,6 +149,10 @@ void drawKiroImageToSprite(TFT_eSprite &sprite) {
 void drawClawImageToSprite(TFT_eSprite &sprite) {
   drawImageWithTransparency(sprite, IMG_CLAW, IMG_CLAW_WIDTH, IMG_CLAW_HEIGHT, COLOR_TRANSPARENT_MARKER);
 }
+
+// =============================================================================
+// SECTION 5: CharacterGeometry Struct & Definitions
+// =============================================================================
 
 // Character geometry structure
 typedef struct {
@@ -165,98 +243,63 @@ bool isValidCharacter(const char* name) {
   return false;
 }
 
-// Background colors by state (RGB565)
-#define COLOR_BG_SESSION  0x0679  // #00CCCC Cyan
-#define COLOR_BG_IDLE     0x0540  // #00AA00 Green
-#define COLOR_BG_THINKING 0xA997  // #AA33BB Purple
-#define COLOR_BG_PLANNING 0x0451  // #008888 Teal
-#define COLOR_BG_WORKING  0x0339  // #0066CC Blue
-#define COLOR_BG_PACKING  0xAD55  // #AAAAAA Gray
-#define COLOR_BG_NOTIFY   0xFE60  // #FFCC00 Yellow
-#define COLOR_BG_DONE     0x0540  // #00AA00 Green
-#define COLOR_BG_SLEEP    0x1088  // #111144 Navy blue
+// =============================================================================
+// SECTION 6: State → Visual Mapping Functions
+// =============================================================================
 
-// Text colors
-#define COLOR_TEXT_WHITE  0xFFFF
-#define COLOR_TEXT_DIM    0x7BEF
-
-// Character dimensions (128x128, doubled from 64x64)
-#define CHAR_WIDTH  128
-#define CHAR_HEIGHT 128
-#define SCALE       2    // Scale factor from original design
-
-// Eye types (visual appearance of eyes)
-enum EyeType {
-  EYE_NORMAL,      // Normal square eyes (default)
-  EYE_BLINK,       // Closed eyes (horizontal lines)
-  EYE_HAPPY,       // Happy eyes (> <)
-  EYE_FOCUSED      // Sunglasses (Matrix style)
-};
-
-// Effect types (visual effects around character)
-enum EffectType {
-  EFFECT_NONE,     // No effect
-  EFFECT_SPARKLE,  // Sparkle effect (start/working state)
-  EFFECT_THINKING, // Thought bubble (thinking/planning state)
-  EFFECT_ALERT,    // Question mark (notification state)
-  EFFECT_ZZZ       // Zzz animation (sleep state)
-};
-
-// Animation frame counter
-extern int animFrame;
-
-// Forward declarations for functions called before definition
-void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character);
-void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character);
-void drawQuestionMark(TFT_eSPI &tft, int x, int y);
-void drawSparkle(TFT_eSPI &tft, int x, int y, uint16_t sparkleColor);
-void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
-void drawZzz(TFT_eSPI &tft, int x, int y, int frame, uint16_t color);
-
-/*
- * Character structure (128x128, scaled 2x from 64x64):
- *
- *         20    88    20
- *        +----+------+----+
- *        |    |██████|    |  16   (top padding)
- *        |    |██████|    |
- *        |    |█ ■■ █|    |  24  (eyes area)
- *   +----+----+██████+----+----+
- *   |████|    |██████|    |████|  24  (arms)
- *   +----+----+██████+----+----+
- *        |    |██████|    |  16
- *        |    +--++--+    |
- *        |      |██|      |  32  (legs)
- *        |      |██|      |
- *        +------+--+------+
- */
-
-// Forward declarations for sprite versions
-void drawEyeTypeToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character);
-void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const CharacterGeometry* character);
-
-// Draw the Claude character to sprite buffer (128x128) - NO FLICKERING
-// New API: separate eyeType and effectType
-void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
-  sprite.fillSprite(bgColor);
-  character->drawToSprite(sprite);
-  drawEyeTypeToSprite(sprite, eyeType, character);
-  drawEffectTypeToSprite(sprite, effectType, character);
+// Get background color for state
+uint16_t getBackgroundColorEnum(AppState state) {
+  switch (state) {
+    case STATE_START: return COLOR_BG_SESSION;
+    case STATE_IDLE: return COLOR_BG_IDLE;
+    case STATE_THINKING: return COLOR_BG_THINKING;
+    case STATE_PLANNING: return COLOR_BG_PLANNING;
+    case STATE_WORKING: return COLOR_BG_WORKING;
+    case STATE_PACKING: return COLOR_BG_PACKING;
+    case STATE_NOTIFICATION: return COLOR_BG_NOTIFY;
+    case STATE_DONE: return COLOR_BG_DONE;
+    case STATE_SLEEP: return COLOR_BG_SLEEP;
+    default: return COLOR_BG_IDLE;
+  }
 }
 
-// Legacy: Draw the Claude character at specified position (128x128) - direct to screen
-// New API: separate eyeType and effectType
-void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
-  tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
-  character->drawToTFT(tft, x, y);
-  drawEyeType(tft, x, y, eyeType, character);
-  drawEffectType(tft, x, y, effectType, character);
+// Get eye type for state
+EyeType getEyeTypeEnum(AppState state) {
+  switch (state) {
+    case STATE_WORKING: return EYE_FOCUSED;
+    case STATE_DONE: return EYE_HAPPY;
+    case STATE_SLEEP: return EYE_BLINK;
+    default: return EYE_NORMAL;
+  }
 }
 
-// Sunglasses colors
-#define COLOR_SUNGLASSES_FRAME 0x0841  // #111111
-#define COLOR_SUNGLASSES_LENS  0x0080  // #001100
-#define COLOR_SUNGLASSES_SHINE 0x0180  // #003300
+// Get effect type for state
+EffectType getEffectTypeEnum(AppState state) {
+  switch (state) {
+    case STATE_START: return EFFECT_SPARKLE;
+    case STATE_THINKING: return EFFECT_THINKING;
+    case STATE_PLANNING: return EFFECT_THINKING;
+    case STATE_PACKING: return EFFECT_THINKING;
+    case STATE_WORKING: return EFFECT_SPARKLE;
+    case STATE_NOTIFICATION: return EFFECT_ALERT;
+    case STATE_SLEEP: return EFFECT_ZZZ;
+    default: return EFFECT_NONE;
+  }
+}
+
+// Get text color for state
+uint16_t getTextColorEnum(AppState state) {
+  switch (state) {
+    case STATE_START: return TFT_BLACK;
+    case STATE_PACKING: return TFT_BLACK;
+    case STATE_NOTIFICATION: return TFT_BLACK;
+    default: return COLOR_TEXT_WHITE;
+  }
+}
+
+// =============================================================================
+// SECTION 7: Eye Drawing Helper Functions (template versions)
+// =============================================================================
 
 // Get eye cover position (used by sunglasses and sleep eyes)
 void getEyeCoverPosition(int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, bool isKiro,
@@ -270,8 +313,7 @@ void getEyeCoverPosition(int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, 
   rightLensX = rightEyeX - (2 * SCALE) + (isKiro ? (5 * SCALE) : 0);
 }
 
-// Draw sleep eyes (closed eyes with body color background)
-// Template version: works with both TFT_eSPI (LGFX) and TFT_eSprite (LGFX_Sprite)
+// Draw sleep/blink eyes (closed eyes with body color background)
 template<typename T>
 void drawSleepEyesT(T &canvas, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
   int lensW, lensH, lensY, leftLensX, rightLensX;
@@ -288,7 +330,6 @@ void drawSleepEyesT(T &canvas, int leftEyeX, int rightEyeX, int eyeY, int ew, in
   canvas.fillRect(rightLensX + SCALE, closedEyeY, lensW - (2 * SCALE), closedEyeH, COLOR_EYE);
 }
 
-// Legacy wrapper for TFT
 inline void drawSleepEyes(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY, int ew, int eh, uint16_t bodyColor, bool isKiro = false) {
   drawSleepEyesT(tft, leftEyeX, rightEyeX, eyeY, ew, eh, bodyColor, isKiro);
 }
@@ -362,76 +403,13 @@ inline void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY,
   drawSunglassesT(tft, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
 }
 
-// Draw eye type only (normal, blink, happy, focused)
-// EyeType: EYE_NORMAL | EYE_BLINK | EYE_HAPPY | EYE_FOCUSED
-void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
-  // Eye base positions (scaled 2x)
-  int leftEyeX = x + (character->eyeLeftX * SCALE);
-  int rightEyeX = x + (character->eyeRightX * SCALE);
-  int eyeY = y + (character->eyeY * SCALE);
-  int ew = character->eyeW * SCALE;
-  int eh = character->eyeH * SCALE;
-  bool isKiro = (character == &CHAR_KIRO);
+// =============================================================================
+// SECTION 8: Animation Effect Functions (template versions)
+// =============================================================================
 
-  switch (eyeType) {
-    case EYE_FOCUSED:
-      // Sunglasses (Matrix style)
-      drawSunglasses(tft, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
-      break;
-
-    case EYE_BLINK:
-      // Closed eyes (horizontal lines)
-      drawSleepEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-      break;
-
-    case EYE_HAPPY:
-      // Happy eyes (> <)
-      drawHappyEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-      break;
-
-    case EYE_NORMAL:
-    default:
-      // Normal eyes - already in character image, no additional drawing needed
-      break;
-  }
-}
-
-// Draw effect only (sparkle, thinking, alert, zzz)
-void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
-  bool isKiro = (character == &CHAR_KIRO);
-  uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
-
-  // Effect position (from character config)
-  int effectX = x + (character->effectX * SCALE);
-  int effectY = y + (character->effectY * SCALE);
-
-  switch (effectType) {
-    case EFFECT_SPARKLE:
-      drawSparkle(tft, effectX, effectY + (2 * SCALE), effectColor);
-      break;
-
-    case EFFECT_THINKING:
-      drawThoughtBubble(tft, effectX, effectY, animFrame, effectColor);
-      break;
-
-    case EFFECT_ALERT:
-      drawQuestionMark(tft, effectX, effectY);
-      break;
-
-    case EFFECT_ZZZ:
-      drawZzz(tft, effectX, effectY, animFrame, effectColor);
-      break;
-
-    case EFFECT_NONE:
-    default:
-      break;
-  }
-}
-
-// Draw sparkle effect (scaled 2x)
+// Draw sparkle effect (scaled 2x) — 4-point star
 template<typename T>
 void drawSparkleT(T &canvas, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
-  // 4-point star sparkle
   int frame = animFrame % 4;
 
   // Center dot (2x2 -> 4x4)
@@ -514,6 +492,158 @@ inline void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t c
   drawThoughtBubbleT(tft, x, y, frame, color);
 }
 
+// =============================================================================
+// SECTION 9: Eye & Effect Dispatch Functions
+// =============================================================================
+
+/*
+ * Character structure (128x128, scaled 2x from 64x64):
+ *
+ *         20    88    20
+ *        +----+------+----+
+ *        |    |██████|    |  16   (top padding)
+ *        |    |██████|    |
+ *        |    |█ ■■ █|    |  24  (eyes area)
+ *   +----+----+██████+----+----+
+ *   |████|    |██████|    |████|  24  (arms)
+ *   +----+----+██████+----+----+
+ *        |    |██████|    |  16
+ *        |    +--++--+    |
+ *        |      |██|      |  32  (legs)
+ *        |      |██|      |
+ *        +------+--+------+
+ */
+
+// Draw eye type to TFT (normal, blink, happy, focused)
+void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
+  int leftEyeX = x + (character->eyeLeftX * SCALE);
+  int rightEyeX = x + (character->eyeRightX * SCALE);
+  int eyeY = y + (character->eyeY * SCALE);
+  int ew = character->eyeW * SCALE;
+  int eh = character->eyeH * SCALE;
+  bool isKiro = (character == &CHAR_KIRO);
+
+  switch (eyeType) {
+    case EYE_FOCUSED:
+      drawSunglasses(tft, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
+      break;
+    case EYE_BLINK:
+      drawSleepEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    case EYE_HAPPY:
+      drawHappyEyes(tft, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    case EYE_NORMAL:
+    default:
+      // Normal eyes - already in character image, no additional drawing needed
+      break;
+  }
+}
+
+// Draw effect type to TFT (sparkle, thinking, alert, zzz)
+void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
+  bool isKiro = (character == &CHAR_KIRO);
+  uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
+
+  int effectX = x + (character->effectX * SCALE);
+  int effectY = y + (character->effectY * SCALE);
+
+  switch (effectType) {
+    case EFFECT_SPARKLE:
+      drawSparkle(tft, effectX, effectY + (2 * SCALE), effectColor);
+      break;
+    case EFFECT_THINKING:
+      drawThoughtBubble(tft, effectX, effectY, animFrame, effectColor);
+      break;
+    case EFFECT_ALERT:
+      drawQuestionMark(tft, effectX, effectY);
+      break;
+    case EFFECT_ZZZ:
+      drawZzz(tft, effectX, effectY, animFrame, effectColor);
+      break;
+    case EFFECT_NONE:
+    default:
+      break;
+  }
+}
+
+// Draw eye type to sprite (normal, blink, happy, focused)
+void drawEyeTypeToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
+  int leftEyeX = character->eyeLeftX * SCALE;
+  int rightEyeX = character->eyeRightX * SCALE;
+  int eyeY = character->eyeY * SCALE;
+  int ew = character->eyeW * SCALE;
+  int eh = character->eyeH * SCALE;
+  bool isKiro = (character == &CHAR_KIRO);
+
+  switch (eyeType) {
+    case EYE_FOCUSED:
+      drawSunglassesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
+      break;
+    case EYE_BLINK:
+      drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    case EYE_HAPPY:
+      drawHappyEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
+      break;
+    case EYE_NORMAL:
+    default:
+      // Normal eyes - already in character image
+      break;
+  }
+}
+
+// Draw effect type to sprite (sparkle, thinking, alert, zzz)
+void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
+  bool isKiro = (character == &CHAR_KIRO);
+  uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
+
+  int effectX = character->effectX * SCALE;
+  int effectY = character->effectY * SCALE;
+
+  switch (effectType) {
+    case EFFECT_SPARKLE:
+      drawSparkleT(sprite, effectX, effectY + (2 * SCALE), effectColor);
+      break;
+    case EFFECT_THINKING:
+      drawThoughtBubbleT(sprite, effectX, effectY, animFrame, effectColor);
+      break;
+    case EFFECT_ALERT:
+      drawQuestionMarkT(sprite, effectX, effectY);
+      break;
+    case EFFECT_ZZZ:
+      drawZzzT(sprite, effectX, effectY, animFrame, effectColor);
+      break;
+    case EFFECT_NONE:
+    default:
+      break;
+  }
+}
+
+// =============================================================================
+// SECTION 10: Character Composite Draw Functions
+// =============================================================================
+
+// Draw character to sprite buffer (128x128) — no flickering
+void drawCharacterToSprite(TFT_eSprite &sprite, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
+  sprite.fillSprite(bgColor);
+  character->drawToSprite(sprite);
+  drawEyeTypeToSprite(sprite, eyeType, character);
+  drawEffectTypeToSprite(sprite, effectType, character);
+}
+
+// Draw character directly to TFT at specified position (128x128)
+void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
+  tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
+  character->drawToTFT(tft, x, y);
+  drawEyeType(tft, x, y, eyeType, character);
+  drawEffectType(tft, x, y, effectType, character);
+}
+
+// =============================================================================
+// SECTION 11: Loading Dots & Memory Bar
+// =============================================================================
+
 // Draw loading dots animation (slow = true for thinking state)
 void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame, bool slow = false) {
   int dotRadius = 4;
@@ -529,14 +659,8 @@ void drawLoadingDots(TFT_eSPI &tft, int centerX, int y, int frame, bool slow = f
   }
 }
 
-// RGB565 color constants for gradient (matches Desktop/statusline.py)
-#define COLOR_MEM_GREEN  0x0540  // #00AA00
-#define COLOR_MEM_YELLOW 0xFE60  // #FFCC00
-#define COLOR_MEM_RED    0xFA28  // #FF4444
-
 // Interpolate between two RGB565 colors
 uint16_t lerpColor565(uint16_t color1, uint16_t color2, int ratio, int maxRatio) {
-  // Extract RGB components from RGB565
   int r1 = (color1 >> 11) & 0x1F;
   int g1 = (color1 >> 5) & 0x3F;
   int b1 = color1 & 0x1F;
@@ -545,12 +669,10 @@ uint16_t lerpColor565(uint16_t color1, uint16_t color2, int ratio, int maxRatio)
   int g2 = (color2 >> 5) & 0x3F;
   int b2 = color2 & 0x1F;
 
-  // Interpolate
   int r = r1 + ((r2 - r1) * ratio) / maxRatio;
   int g = g1 + ((g2 - g1) * ratio) / maxRatio;
   int b = b1 + ((b2 - b1) * ratio) / maxRatio;
 
-  // Clamp values
   r = min(31, max(0, r));
   g = min(63, max(0, g));
   b = min(31, max(0, b));
@@ -558,10 +680,9 @@ uint16_t lerpColor565(uint16_t color1, uint16_t color2, int ratio, int maxRatio)
   return (r << 11) | (g << 5) | b;
 }
 
-// Get gradient color for a specific position in the bar
+// Get gradient color for a specific position in the memory bar
 // Thresholds: 0-74% Green, 75-89% Yellow, 90%+ Red (matches statusline.py)
 uint16_t getGradientColor(int pos, int width, int percent) {
-  // Calculate base color from percent (smooth transition)
   uint16_t baseStart, baseEnd;
   int baseRatio;
 
@@ -569,17 +690,17 @@ uint16_t getGradientColor(int pos, int width, int percent) {
     // Green to Yellow range (0-74%)
     baseStart = COLOR_MEM_GREEN;
     baseEnd = COLOR_MEM_YELLOW;
-    baseRatio = (percent * 100) / 75;  // 0-100 for 0-75%
+    baseRatio = (percent * 100) / 75;
   } else if (percent < 90) {
     // Yellow to Orange range (75-89%)
     baseStart = COLOR_MEM_YELLOW;
     baseEnd = COLOR_MEM_RED;
-    baseRatio = ((percent - 75) * 100) / 15;  // 0-100 for 75-90%
+    baseRatio = ((percent - 75) * 100) / 15;
   } else {
     // Orange to Red range (90-100%)
     baseStart = COLOR_MEM_YELLOW;
     baseEnd = COLOR_MEM_RED;
-    baseRatio = 50 + ((percent - 90) * 50) / 10;  // 50-100 for 90-100%
+    baseRatio = 50 + ((percent - 90) * 50) / 10;
   }
 
   // Apply position-based gradient within the bar
@@ -620,69 +741,9 @@ void drawMemoryBar(TFT_eSPI &tft, int x, int y, int width, int height, int perce
   }
 }
 
-// Forward declaration of AppState enum (defined in main .ino)
-enum AppState {
-  STATE_START,
-  STATE_IDLE,
-  STATE_THINKING,
-  STATE_PLANNING,
-  STATE_WORKING,
-  STATE_PACKING,
-  STATE_NOTIFICATION,
-  STATE_DONE,
-  STATE_SLEEP
-};
-
-// Get background color for state (enum version - efficient)
-uint16_t getBackgroundColorEnum(AppState state) {
-  switch (state) {
-    case STATE_START: return COLOR_BG_SESSION;
-    case STATE_IDLE: return COLOR_BG_IDLE;
-    case STATE_THINKING: return COLOR_BG_THINKING;
-    case STATE_PLANNING: return COLOR_BG_PLANNING;
-    case STATE_WORKING: return COLOR_BG_WORKING;
-    case STATE_PACKING: return COLOR_BG_PACKING;
-    case STATE_NOTIFICATION: return COLOR_BG_NOTIFY;
-    case STATE_DONE: return COLOR_BG_DONE;
-    case STATE_SLEEP: return COLOR_BG_SLEEP;
-    default: return COLOR_BG_IDLE;
-  }
-}
-
-// Get eye type for state
-// EyeType: EYE_NORMAL | EYE_BLINK | EYE_HAPPY | EYE_FOCUSED
-EyeType getEyeTypeEnum(AppState state) {
-  switch (state) {
-    case STATE_WORKING: return EYE_FOCUSED;
-    case STATE_DONE: return EYE_HAPPY;
-    case STATE_SLEEP: return EYE_BLINK;
-    default: return EYE_NORMAL;
-  }
-}
-
-// Get effect type for state (new API)
-EffectType getEffectTypeEnum(AppState state) {
-  switch (state) {
-    case STATE_START: return EFFECT_SPARKLE;
-    case STATE_THINKING: return EFFECT_THINKING;
-    case STATE_PLANNING: return EFFECT_THINKING;
-    case STATE_PACKING: return EFFECT_THINKING;
-    case STATE_WORKING: return EFFECT_SPARKLE;
-    case STATE_NOTIFICATION: return EFFECT_ALERT;
-    case STATE_SLEEP: return EFFECT_ZZZ;
-    default: return EFFECT_NONE;
-  }
-}
-
-// Get text color for state (enum version - efficient)
-uint16_t getTextColorEnum(AppState state) {
-  switch (state) {
-    case STATE_START: return TFT_BLACK;
-    case STATE_PACKING: return TFT_BLACK;
-    case STATE_NOTIFICATION: return TFT_BLACK;
-    default: return COLOR_TEXT_WHITE;
-  }
-}
+// =============================================================================
+// SECTION 12: Status Text Functions
+// =============================================================================
 
 // Get working text based on tool (matches Desktop TOOL_TEXTS)
 void getWorkingText(const char* tool, char* buf, size_t bufSize) {
@@ -710,7 +771,7 @@ void getWorkingText(const char* tool, char* buf, size_t bufSize) {
   buf[bufSize - 1] = '\0';
 }
 
-// Get status text for state (enum version, writes to buffer)
+// Get status text for state (writes to buffer)
 void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
   switch (state) {
     case STATE_START:
@@ -746,6 +807,10 @@ void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
   }
   buf[bufSize - 1] = '\0';
 }
+
+// =============================================================================
+// SECTION 13: UI Icon Functions
+// =============================================================================
 
 // Draw folder icon (📂) - s=1: 10x10, s=2: 20x20 pixels
 void drawFolderIcon(TFT_eSPI &tft, int x, int y, uint16_t color, int s = 1, uint16_t bg = 0x0000) {
@@ -796,61 +861,6 @@ void drawBrainIcon(TFT_eSPI &tft, int x, int y, uint16_t color, int s = 1, uint1
   // Top bumps
   tft.fillRect(x + 3*s, y, s, s, bg);
   tft.fillRect(x + 7*s, y, s, s, bg);
-}
-
-// Draw eyes to sprite based on eye type
-// Draw eye type to sprite (normal, blink, happy, focused)
-void drawEyeTypeToSprite(TFT_eSprite &sprite, EyeType eyeType, const CharacterGeometry* character = &CHAR_CLAWD) {
-  int leftEyeX = character->eyeLeftX * SCALE;
-  int rightEyeX = character->eyeRightX * SCALE;
-  int eyeY = character->eyeY * SCALE;
-  int ew = character->eyeW * SCALE;
-  int eh = character->eyeH * SCALE;
-  bool isKiro = (character == &CHAR_KIRO);
-
-  switch (eyeType) {
-    case EYE_FOCUSED:
-      drawSunglassesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, isKiro);
-      break;
-    case EYE_BLINK:
-      drawSleepEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-      break;
-    case EYE_HAPPY:
-      drawHappyEyesT(sprite, leftEyeX, rightEyeX, eyeY, ew, eh, character->color, isKiro);
-      break;
-    case EYE_NORMAL:
-    default:
-      // Normal eyes - already in character image
-      break;
-  }
-}
-
-// Draw effect to sprite (sparkle, thinking, alert, zzz)
-void drawEffectTypeToSprite(TFT_eSprite &sprite, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
-  bool isKiro = (character == &CHAR_KIRO);
-  uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
-
-  // Effect position (from character config)
-  int effectX = character->effectX * SCALE;
-  int effectY = character->effectY * SCALE;
-
-  switch (effectType) {
-    case EFFECT_SPARKLE:
-      drawSparkleT(sprite, effectX, effectY + (2 * SCALE), effectColor);
-      break;
-    case EFFECT_THINKING:
-      drawThoughtBubbleT(sprite, effectX, effectY, animFrame, effectColor);
-      break;
-    case EFFECT_ALERT:
-      drawQuestionMarkT(sprite, effectX, effectY);
-      break;
-    case EFFECT_ZZZ:
-      drawZzzT(sprite, effectX, effectY, animFrame, effectColor);
-      break;
-    case EFFECT_NONE:
-    default:
-      break;
-  }
 }
 
 #endif // SPRITES_H

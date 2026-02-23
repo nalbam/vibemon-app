@@ -6,14 +6,15 @@
  * USB Serial + HTTP support
  */
 
+// =============================================================================
+// SECTION 1: Includes & Libraries
+// =============================================================================
+
 // Use LovyanGFX instead of TFT_eSPI for ESP32-C6 compatibility
 #include "TFT_Compat.h"
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include "sprites.h"
-
-// Persistent storage for settings
-Preferences preferences;
 
 // WiFi configuration (create credentials.h from credentials.h.example)
 #if __has_include("credentials.h")
@@ -26,67 +27,18 @@ Preferences preferences;
 #include <WebServer.h>
 #include <DNSServer.h>
 
-// WiFi provisioning mode
-bool provisioningMode = false;
-const char* AP_SSID = "VibeMon-Setup";
-const char* AP_PASSWORD = "vibemon123";
-DNSServer dnsServer;
-const byte DNS_PORT = 53;
-
-// WiFi credentials storage
-char wifiSSID[64] = "";
-char wifiPassword[64] = "";
-
-// Fallback to credentials.h if defined
-#ifdef WIFI_SSID
-const char* defaultSSID = WIFI_SSID;
-const char* defaultPassword = WIFI_PASSWORD;
-#else
-const char* defaultSSID = "";
-const char* defaultPassword = "";
-#endif
-
-WebServer server(80);
-
-// WiFi connection monitoring
-const unsigned long WIFI_CHECK_INTERVAL = 10000;  // Check every 10 seconds
-unsigned long lastWifiCheck = 0;
-bool wifiWasConnected = false;
-
 // WebSocket client (optional, requires USE_WIFI)
 #ifdef USE_WEBSOCKET
 #include <WebSocketsClient.h>
-WebSocketsClient webSocket;
-bool wsConnected = false;
-
-// WebSocket token storage
-char wsToken[128] = "";
-
-// Fallback to credentials.h if defined
-#ifdef WS_TOKEN
-const char* defaultWSToken = WS_TOKEN;
-#else
-const char* defaultWSToken = "";
-#endif
-
-// Exponential backoff for reconnection (server-friendly)
-const unsigned long WS_RECONNECT_INITIAL = 5000;   // 5 seconds
-const unsigned long WS_RECONNECT_MAX = 60000;       // 60 seconds
-const float WS_RECONNECT_MULTIPLIER = 1.5;
-unsigned long wsReconnectDelay = WS_RECONNECT_INITIAL;
-
-// Heartbeat to detect stale connections
-const unsigned long WS_HEARTBEAT_INTERVAL = 15000;  // Ping every 15s
-const unsigned long WS_HEARTBEAT_TIMEOUT = 3000;    // Pong timeout 3s
-const uint8_t WS_HEARTBEAT_FAILURES = 2;            // Disconnect after 2 missed
 #endif
 #endif
 
-// tft instance is defined in TFT_Compat.h
+// =============================================================================
+// SECTION 2: Constants & Macros
+// =============================================================================
 
-// Sprite buffer for double buffering (prevents flickering)
-TFT_eSprite charSprite(&tft);
-bool spriteInitialized = false;
+// Version string
+#define VERSION "v1.6.2"
 
 // Screen size
 #define SCREEN_WIDTH  172
@@ -109,6 +61,44 @@ bool spriteInitialized = false;
 #define MEMORY_BAR_H  6    // bar bottom 303 → 17px bottom margin
 #define BRAND_Y       308  // start screen only (size 1, 8px)
 
+// Animation timing
+#define BLINK_INTERVAL       3200  // Blink interval in idle state (ms)
+#define BLINK_DURATION        100  // Blink closed-eye hold duration (ms)
+
+// State timeouts
+#define IDLE_TIMEOUT 60000            // 1 minute (start/done -> idle)
+#define SLEEP_TIMEOUT 300000          // 5 minutes (idle -> sleep)
+
+// JSON buffer size for StaticJsonDocument
+// Increased from 256 to 512 for complex payloads with all fields
+#define JSON_BUFFER_SIZE 512
+
+// Project lock modes
+#define LOCK_MODE_FIRST_PROJECT 0
+#define LOCK_MODE_ON_THINKING 1
+#define MAX_PROJECTS 10
+
+// WiFi connection
+#define WIFI_CONNECT_ATTEMPTS  20  // Max connection attempts before giving up
+#define WIFI_CONNECT_DELAY_MS 500  // Delay between each attempt (ms)
+#define WIFI_FAIL_RESTART_MS 2000  // Delay before reboot on connection failure (ms)
+
+// Safe string copy: always null-terminates, requires array (not pointer) as dst
+#define safeCopyStr(dst, src) do { strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]='\0'; } while(0)
+
+// =============================================================================
+// SECTION 3: Global Variables
+// =============================================================================
+
+// Persistent storage for settings
+Preferences preferences;
+
+// tft instance is defined in TFT_Compat.h
+
+// Sprite buffer for double buffering (prevents flickering)
+TFT_eSprite charSprite(&tft);
+bool spriteInitialized = false;
+
 // State variables (char arrays instead of String for memory efficiency)
 // Note: AppState enum is defined in sprites.h
 AppState currentState = STATE_START;
@@ -130,15 +120,10 @@ bool needsRedraw = true;
 int lastCharX = CHAR_X_BASE;  // Track last character X for efficient redraw
 int lastCharY = CHAR_Y_BASE;  // Track last character Y for efficient redraw
 
-// Project lock feature
-#define MAX_PROJECTS 10
+// Project lock
 char projectList[MAX_PROJECTS][32];  // List of incoming projects
 int projectCount = 0;
 char lockedProject[32] = "";  // Locked project name (empty = unlocked)
-
-// Lock mode: 0 = first-project, 1 = on-thinking
-#define LOCK_MODE_FIRST_PROJECT 0
-#define LOCK_MODE_ON_THINKING 1
 int lockMode = LOCK_MODE_ON_THINKING;  // Default: on-thinking
 
 // Dirty rect tracking for efficient redraws
@@ -147,28 +132,67 @@ bool dirtyStatus = true;
 bool dirtyInfo = true;
 
 // State timeouts
-#define IDLE_TIMEOUT 60000            // 1 minute (start/done -> idle)
-#define SLEEP_TIMEOUT 300000          // 5 minutes (idle -> sleep)
 unsigned long lastActivityTime = 0;
 
-// JSON buffer size for StaticJsonDocument
-// Increased from 256 to 512 for complex payloads with all fields
-#define JSON_BUFFER_SIZE 512
+// Serial input buffer (avoid String allocation)
+char serialBuffer[512];
+int serialBufferPos = 0;
 
-// Version string
-#define VERSION "v1.6.1"
+// WiFi variables (conditional)
+#ifdef USE_WIFI
+bool provisioningMode = false;
+const char* AP_SSID = "VibeMon-Setup";
+const char* AP_PASSWORD = "vibemon123";
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
 
-// Safe string copy: always null-terminates, requires array (not pointer) as dst
-#define safeCopyStr(dst, src) do { strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]='\0'; } while(0)
+char wifiSSID[64] = "";
+char wifiPassword[64] = "";
 
-// Animation timing
-#define BLINK_INTERVAL       3200  // Blink interval in idle state (ms)
-#define BLINK_DURATION        100  // Blink closed-eye hold duration (ms)
+// Fallback to credentials.h if defined
+#ifdef WIFI_SSID
+const char* defaultSSID = WIFI_SSID;
+const char* defaultPassword = WIFI_PASSWORD;
+#else
+const char* defaultSSID = "";
+const char* defaultPassword = "";
+#endif
 
-// WiFi connection
-#define WIFI_CONNECT_ATTEMPTS  20  // Max connection attempts before giving up
-#define WIFI_CONNECT_DELAY_MS 500  // Delay between each attempt (ms)
-#define WIFI_FAIL_RESTART_MS 2000  // Delay before reboot on connection failure (ms)
+WebServer server(80);
+
+const unsigned long WIFI_CHECK_INTERVAL = 10000;  // Check every 10 seconds
+unsigned long lastWifiCheck = 0;
+bool wifiWasConnected = false;
+
+#ifdef USE_WEBSOCKET
+WebSocketsClient webSocket;
+bool wsConnected = false;
+
+char wsToken[128] = "";
+
+// Fallback to credentials.h if defined
+#ifdef WS_TOKEN
+const char* defaultWSToken = WS_TOKEN;
+#else
+const char* defaultWSToken = "";
+#endif
+
+// Exponential backoff for reconnection (server-friendly)
+const unsigned long WS_RECONNECT_INITIAL = 5000;   // 5 seconds
+const unsigned long WS_RECONNECT_MAX = 60000;       // 60 seconds
+const float WS_RECONNECT_MULTIPLIER = 1.5;
+unsigned long wsReconnectDelay = WS_RECONNECT_INITIAL;
+
+// Heartbeat to detect stale connections
+const unsigned long WS_HEARTBEAT_INTERVAL = 15000;  // Ping every 15s
+const unsigned long WS_HEARTBEAT_TIMEOUT = 3000;    // Pong timeout 3s
+const uint8_t WS_HEARTBEAT_FAILURES = 2;            // Disconnect after 2 missed
+#endif
+#endif
+
+// =============================================================================
+// SECTION 4: State & Utility Helpers
+// =============================================================================
 
 // Helper: Parse state string to enum
 AppState parseState(const char* stateStr) {
@@ -182,102 +206,6 @@ AppState parseState(const char* stateStr) {
   if (strcmp(stateStr, "done") == 0) return STATE_DONE;
   if (strcmp(stateStr, "sleep") == 0) return STATE_SLEEP;
   return STATE_IDLE;  // default
-}
-
-// Project lock helper: Check if project exists in list
-bool projectExists(const char* project) {
-  for (int i = 0; i < projectCount; i++) {
-    if (strcmp(projectList[i], project) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// Project lock helper: Add project to list (if not exists, max 10)
-void addProjectToList(const char* project) {
-  if (strlen(project) == 0) return;
-  if (projectExists(project)) return;
-  if (projectCount >= MAX_PROJECTS) {
-    // Remove oldest project (shift array)
-    for (int i = 0; i < MAX_PROJECTS - 1; i++) {
-      strcpy(projectList[i], projectList[i + 1]);
-    }
-    projectCount = MAX_PROJECTS - 1;
-  }
-  safeCopyStr(projectList[projectCount], project);
-  projectCount++;
-}
-
-// Project lock helper: Lock to a specific project
-void lockProject(const char* project) {
-  if (strlen(project) > 0) {
-    bool changed = (strcmp(lockedProject, project) != 0);
-    addProjectToList(project);
-    safeCopyStr(lockedProject, project);
-
-    // Transition to idle state when lock changes
-    if (changed) {
-      previousState = currentState;
-      currentState = STATE_IDLE;
-      safeCopyStr(currentProject, project);
-      currentTool[0] = '\0';
-      currentModel[0] = '\0';
-      currentMemory = 0;
-      lastActivityTime = millis();
-      needsRedraw = true;
-      dirtyCharacter = true;
-      dirtyStatus = true;
-      dirtyInfo = true;
-      drawStatus();
-    }
-
-    Serial.print("{\"locked\":\"");
-    Serial.print(lockedProject);
-    Serial.println("\",\"state\":\"idle\"}");
-  }
-}
-
-// Project lock helper: Unlock project
-void unlockProject() {
-  lockedProject[0] = '\0';
-  Serial.println("{\"locked\":null}");
-}
-
-// Project lock helper: Set lock mode
-void setLockMode(int mode) {
-  if (mode == LOCK_MODE_FIRST_PROJECT || mode == LOCK_MODE_ON_THINKING) {
-    lockMode = mode;
-    lockedProject[0] = '\0';  // Reset lock when mode changes
-
-    // Persist to flash storage
-    preferences.begin("vibemon", false);  // Read-write mode
-    preferences.putInt("lockMode", lockMode);
-    preferences.end();
-
-    Serial.print("{\"lockMode\":\"");
-    Serial.print(mode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking");
-    Serial.println("\",\"locked\":null}");
-  }
-}
-
-// Project lock helper: Get lock mode string
-const char* getLockModeString() {
-  return lockMode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking";
-}
-
-// Project lock helper: Parse lock mode string
-int parseLockMode(const char* modeStr) {
-  if (strcmp(modeStr, "first-project") == 0) return LOCK_MODE_FIRST_PROJECT;
-  if (strcmp(modeStr, "on-thinking") == 0) return LOCK_MODE_ON_THINKING;
-  return -1;  // Invalid mode
-}
-
-// Project lock helper: Check if locked to different project
-bool isLockedToDifferentProject(const char* project) {
-  if (strlen(lockedProject) == 0) return false;  // Not locked
-  if (strlen(project) == 0) return false;  // No project specified
-  return strcmp(lockedProject, project) != 0;
 }
 
 // Helper: Get state string from enum
@@ -296,97 +224,6 @@ const char* getStateString(AppState state) {
   }
 }
 
-void setup() {
-  Serial.begin(115200);
-
-  // Load settings from persistent storage
-  preferences.begin("vibemon", true);  // Read-only mode
-  lockMode = preferences.getInt("lockMode", LOCK_MODE_ON_THINKING);
-  preferences.end();
-
-  // Validate loaded lockMode (flash corruption safety)
-  if (lockMode != LOCK_MODE_FIRST_PROJECT && lockMode != LOCK_MODE_ON_THINKING) {
-    lockMode = LOCK_MODE_ON_THINKING;
-    preferences.begin("vibemon", false);
-    preferences.putInt("lockMode", lockMode);
-    preferences.end();
-  }
-
-  // TFT init
-  tft.init();
-  tft.setRotation(0);  // Portrait mode
-  tft.setSwapBytes(true);  // Swap bytes for pushImage (ESP32 little-endian)
-  tft.fillScreen(TFT_BLACK);
-
-  // Initialize sprite buffer for character (128x128)
-  charSprite.setColorDepth(16);
-  charSprite.setSwapBytes(true);  // Swap bytes for sprite pushImage
-  if (charSprite.createSprite(CHAR_WIDTH, CHAR_HEIGHT)) {
-    spriteInitialized = true;
-    Serial.println("{\"sprite\":\"initialized\",\"size\":\"128x128\"}");
-  } else {
-    Serial.println("{\"sprite\":\"failed\",\"error\":\"memory\"}");
-  }
-
-  // Start screen
-  drawStartScreen();
-
-  // Initialize sleep timer
-  lastActivityTime = millis();
-
-#ifdef USE_WIFI
-  setupWiFi();
-#ifdef USE_WEBSOCKET
-  setupWebSocket();
-#endif
-#endif
-}
-
-// Serial input buffer (avoid String allocation)
-char serialBuffer[512];
-int serialBufferPos = 0;
-
-void loop() {
-  // USB Serial check (using char buffer instead of String)
-  while (Serial.available()) {
-    char c = Serial.read();
-    if (c == '\n') {
-      serialBuffer[serialBufferPos] = '\0';
-      if (serialBufferPos > 0) {
-        processInput(serialBuffer);
-      }
-      serialBufferPos = 0;
-    } else if (serialBufferPos < (int)sizeof(serialBuffer) - 1) {
-      serialBuffer[serialBufferPos++] = c;
-    }
-  }
-
-#ifdef USE_WIFI
-  if (provisioningMode) {
-    dnsServer.processNextRequest();
-  }
-  checkWiFiConnection();
-  server.handleClient();
-#ifdef USE_WEBSOCKET
-  webSocket.loop();
-#endif
-#endif
-
-  // Animation update (100ms interval)
-  if (millis() - lastUpdate > 100) {
-    lastUpdate = millis();
-    // Reset animFrame at 4800 to prevent overflow (LCM of 32,12,20,4 = 480)
-    animFrame = (animFrame + 1) % 4800;
-    updateAnimation();
-  }
-
-  // Idle blink (non-blocking state machine)
-  updateBlink();
-
-  // Check sleep timer (only from start, idle or done)
-  checkSleepTimer();
-}
-
 // Helper: True for states that show slow loading dots (thought bubble)
 bool isLoadingState(AppState state) {
   return state == STATE_THINKING || state == STATE_PLANNING || state == STATE_PACKING;
@@ -400,15 +237,7 @@ bool isActiveState(AppState state) {
 
 // Helper: Transition to newState and trigger full redraw
 // resetTimer: reset lastActivityTime (false only for idle->sleep transition)
-void transitionToState(AppState newState, bool resetTimer = true) {
-  previousState = currentState;
-  currentState = newState;
-  if (resetTimer) lastActivityTime = millis();
-  needsRedraw = true;
-  dirtyCharacter = true;
-  dirtyStatus = true;
-  drawStatus();
-}
+void transitionToState(AppState newState, bool resetTimer = true);  // forward declaration
 
 // Check state timeouts for auto-transitions
 void checkSleepTimer() {
@@ -437,6 +266,113 @@ void checkSleepTimer() {
     }
   }
 }
+
+// =============================================================================
+// SECTION 5: Project Lock Functions
+// =============================================================================
+
+// Check if project exists in list
+bool projectExists(const char* project) {
+  for (int i = 0; i < projectCount; i++) {
+    if (strcmp(projectList[i], project) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Add project to list (if not exists, max 10)
+void addProjectToList(const char* project) {
+  if (strlen(project) == 0) return;
+  if (projectExists(project)) return;
+  if (projectCount >= MAX_PROJECTS) {
+    // Remove oldest project (shift array)
+    for (int i = 0; i < MAX_PROJECTS - 1; i++) {
+      strcpy(projectList[i], projectList[i + 1]);
+    }
+    projectCount = MAX_PROJECTS - 1;
+  }
+  safeCopyStr(projectList[projectCount], project);
+  projectCount++;
+}
+
+// Forward declaration for drawStatus (defined in Section 7)
+void drawStatus();
+
+// Lock to a specific project
+void lockProject(const char* project) {
+  if (strlen(project) > 0) {
+    bool changed = (strcmp(lockedProject, project) != 0);
+    addProjectToList(project);
+    safeCopyStr(lockedProject, project);
+
+    // Transition to idle state when lock changes
+    if (changed) {
+      previousState = currentState;
+      currentState = STATE_IDLE;
+      safeCopyStr(currentProject, project);
+      currentTool[0] = '\0';
+      currentModel[0] = '\0';
+      currentMemory = 0;
+      lastActivityTime = millis();
+      needsRedraw = true;
+      dirtyCharacter = true;
+      dirtyStatus = true;
+      dirtyInfo = true;
+      drawStatus();
+    }
+
+    Serial.print("{\"locked\":\"");
+    Serial.print(lockedProject);
+    Serial.println("\",\"state\":\"idle\"}");
+  }
+}
+
+// Unlock project
+void unlockProject() {
+  lockedProject[0] = '\0';
+  Serial.println("{\"locked\":null}");
+}
+
+// Set lock mode
+void setLockMode(int mode) {
+  if (mode == LOCK_MODE_FIRST_PROJECT || mode == LOCK_MODE_ON_THINKING) {
+    lockMode = mode;
+    lockedProject[0] = '\0';  // Reset lock when mode changes
+
+    // Persist to flash storage
+    preferences.begin("vibemon", false);  // Read-write mode
+    preferences.putInt("lockMode", lockMode);
+    preferences.end();
+
+    Serial.print("{\"lockMode\":\"");
+    Serial.print(mode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking");
+    Serial.println("\",\"locked\":null}");
+  }
+}
+
+// Get lock mode string
+const char* getLockModeString() {
+  return lockMode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking";
+}
+
+// Parse lock mode string
+int parseLockMode(const char* modeStr) {
+  if (strcmp(modeStr, "first-project") == 0) return LOCK_MODE_FIRST_PROJECT;
+  if (strcmp(modeStr, "on-thinking") == 0) return LOCK_MODE_ON_THINKING;
+  return -1;  // Invalid mode
+}
+
+// Check if locked to different project
+bool isLockedToDifferentProject(const char* project) {
+  if (strlen(lockedProject) == 0) return false;  // Not locked
+  if (strlen(project) == 0) return false;  // No project specified
+  return strcmp(lockedProject, project) != 0;
+}
+
+// =============================================================================
+// SECTION 6: Status & Input Processing
+// =============================================================================
 
 // Build status JSON into buffer (shared by Serial command handler and HTTP handler)
 void buildStatusJson(char* buf, size_t size) {
@@ -497,6 +433,9 @@ bool handleCommand(const char* command, JsonObject doc) {
   }
   return false;
 }
+
+// Forward declaration for processStatusData (defined below)
+void processStatusData(JsonObject doc);
 
 // Handle WebSocket message-type input (authenticated/error/status)
 // Returns true if the message was handled
@@ -653,6 +592,10 @@ void processStatusData(JsonObject doc) {
     drawStatus();
   }
 }
+
+// =============================================================================
+// SECTION 7: Graphics & Display Functions
+// =============================================================================
 
 // Precomputed lookup tables for floating animation (10-20x faster than sin/cos)
 // Values: cos(i * 2π/32) * 3 and sin(i * 2π/32) * 5, rounded to nearest integer
@@ -989,6 +932,115 @@ void updateBlink() {
       break;
   }
 }
+
+// =============================================================================
+// SECTION 8: Transition Helper (defined after drawStatus)
+// =============================================================================
+
+void transitionToState(AppState newState, bool resetTimer) {
+  previousState = currentState;
+  currentState = newState;
+  if (resetTimer) lastActivityTime = millis();
+  needsRedraw = true;
+  dirtyCharacter = true;
+  dirtyStatus = true;
+  drawStatus();
+}
+
+// =============================================================================
+// SECTION 9: setup() & loop()
+// =============================================================================
+
+void setup() {
+  Serial.begin(115200);
+
+  // Load settings from persistent storage
+  preferences.begin("vibemon", true);  // Read-only mode
+  lockMode = preferences.getInt("lockMode", LOCK_MODE_ON_THINKING);
+  preferences.end();
+
+  // Validate loaded lockMode (flash corruption safety)
+  if (lockMode != LOCK_MODE_FIRST_PROJECT && lockMode != LOCK_MODE_ON_THINKING) {
+    lockMode = LOCK_MODE_ON_THINKING;
+    preferences.begin("vibemon", false);
+    preferences.putInt("lockMode", lockMode);
+    preferences.end();
+  }
+
+  // TFT init
+  tft.init();
+  tft.setRotation(0);  // Portrait mode
+  tft.setSwapBytes(true);  // Swap bytes for pushImage (ESP32 little-endian)
+  tft.fillScreen(TFT_BLACK);
+
+  // Initialize sprite buffer for character (128x128)
+  charSprite.setColorDepth(16);
+  charSprite.setSwapBytes(true);  // Swap bytes for sprite pushImage
+  if (charSprite.createSprite(CHAR_WIDTH, CHAR_HEIGHT)) {
+    spriteInitialized = true;
+    Serial.println("{\"sprite\":\"initialized\",\"size\":\"128x128\"}");
+  } else {
+    Serial.println("{\"sprite\":\"failed\",\"error\":\"memory\"}");
+  }
+
+  // Start screen
+  drawStartScreen();
+
+  // Initialize sleep timer
+  lastActivityTime = millis();
+
+#ifdef USE_WIFI
+  setupWiFi();
+#ifdef USE_WEBSOCKET
+  setupWebSocket();
+#endif
+#endif
+}
+
+void loop() {
+  // USB Serial check (using char buffer instead of String)
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') {
+      serialBuffer[serialBufferPos] = '\0';
+      if (serialBufferPos > 0) {
+        processInput(serialBuffer);
+      }
+      serialBufferPos = 0;
+    } else if (serialBufferPos < (int)sizeof(serialBuffer) - 1) {
+      serialBuffer[serialBufferPos++] = c;
+    }
+  }
+
+#ifdef USE_WIFI
+  if (provisioningMode) {
+    dnsServer.processNextRequest();
+  }
+  checkWiFiConnection();
+  server.handleClient();
+#ifdef USE_WEBSOCKET
+  webSocket.loop();
+#endif
+#endif
+
+  // Animation update (100ms interval)
+  if (millis() - lastUpdate > 100) {
+    lastUpdate = millis();
+    // Reset animFrame at 4800 to prevent overflow (LCM of 32,12,20,4 = 480)
+    animFrame = (animFrame + 1) % 4800;
+    updateAnimation();
+  }
+
+  // Idle blink (non-blocking state machine)
+  updateBlink();
+
+  // Check sleep timer (only from start, idle or done)
+  checkSleepTimer();
+}
+
+// =============================================================================
+// SECTION 10: WiFi Functions (conditional)
+// =============================================================================
 
 #ifdef USE_WIFI
 
