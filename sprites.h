@@ -805,6 +805,9 @@ void getStatusTextEnum(AppState state, char* buf, size_t bufSize) {
     case STATE_SLEEP:
       strncpy(buf, "Zzz...", bufSize - 1);
       break;
+    case STATE_ERROR:
+      strncpy(buf, "Error", bufSize - 1);
+      break;
     default:
       strncpy(buf, "Ready", bufSize - 1);
       break;
