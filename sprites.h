@@ -286,6 +286,7 @@ EffectType getEffectTypeEnum(AppState state) {
     case STATE_WORKING: return EFFECT_SPARKLE;
     case STATE_NOTIFICATION: return EFFECT_ALERT;
     case STATE_SLEEP: return EFFECT_ZZZ;
+    case STATE_ERROR: return EFFECT_EXCLAMATION;
     default: return EFFECT_NONE;
   }
 }
