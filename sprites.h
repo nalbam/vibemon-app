@@ -503,7 +503,7 @@ void drawExclamationMarkT(T &canvas, int x, int y, int frame, uint16_t bgColor) 
   int shakeOffset = ((frame / 2) % 4 < 2) ? 2 : -2;
   int markY = y + shakeOffset;
   uint16_t white = TFT_WHITE;
-  uint16_t red = 0xD800;
+  uint16_t red = COLOR_BG_ALERT;
   canvas.fillRect(x + 6, markY, 4, 20, white);
   canvas.drawRect(x + 5, markY - 1, 6, 22, red);
   canvas.fillRect(x + 6, markY + 24, 4, 4, white);
