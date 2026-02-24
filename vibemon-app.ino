@@ -221,6 +221,7 @@ const char* getStateString(AppState state) {
     case STATE_NOTIFICATION: return "notification";
     case STATE_DONE: return "done";
     case STATE_SLEEP: return "sleep";
+    case STATE_ERROR: return "error";
     default: return "idle";
   }
 }
