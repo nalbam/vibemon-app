@@ -112,6 +112,7 @@ Two modes available (`multi` or `single`):
 | `notification` | Yellow | User input needed |
 | `done` | Green | Tool completed |
 | `sleep` | Navy | 5min inactivity |
+| `error` | Red | Critical error/failure |
 
 ## Testing
 
