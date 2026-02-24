@@ -557,7 +557,7 @@ void drawEyeType(TFT_eSPI &tft, int x, int y, EyeType eyeType, const CharacterGe
 }
 
 // Draw effect type to TFT (sparkle, thinking, alert, zzz)
-void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const CharacterGeometry* character = &CHAR_CLAWD) {
+void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, uint16_t bgColor, const CharacterGeometry* character = &CHAR_CLAWD) {
   bool isKiro = (character == &CHAR_KIRO);
   uint16_t effectColor = isKiro ? COLOR_EFFECT_ALT : COLOR_TEXT_WHITE;
 
@@ -576,6 +576,9 @@ void drawEffectType(TFT_eSPI &tft, int x, int y, EffectType effectType, const Ch
       break;
     case EFFECT_ZZZ:
       drawZzz(tft, effectX, effectY, animFrame, effectColor);
+      break;
+    case EFFECT_EXCLAMATION:
+      drawExclamationMark(tft, x + 100, y + 10, animFrame, bgColor);
       break;
     case EFFECT_NONE:
     default:
@@ -653,7 +656,7 @@ void drawCharacter(TFT_eSPI &tft, int x, int y, EyeType eyeType, EffectType effe
   tft.fillRect(x, y, CHAR_WIDTH, CHAR_HEIGHT, bgColor);
   character->drawToTFT(tft, x, y);
   drawEyeType(tft, x, y, eyeType, character);
-  drawEffectType(tft, x, y, effectType, character);
+  drawEffectType(tft, x, y, effectType, bgColor, character);
 }
 
 // =============================================================================
