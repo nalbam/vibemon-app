@@ -496,6 +496,18 @@ inline void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t c
   drawThoughtBubbleT(tft, x, y, frame, color);
 }
 
+// Draw exclamation mark effect (error state)
+void drawExclamationMark(TFT_eSPI& display, int x, int y, int frame, uint16_t bgColor) {
+  int shakeOffset = ((frame / 2) % 4 < 2) ? 2 : -2;
+  int markY = y + shakeOffset;
+  uint16_t white = TFT_WHITE;
+  uint16_t red = 0xD800;
+  display.fillRect(x + 6, markY, 4, 20, white);
+  display.drawRect(x + 5, markY - 1, 6, 22, red);
+  display.fillRect(x + 6, markY + 24, 4, 4, white);
+  display.drawRect(x + 5, markY + 23, 6, 6, red);
+}
+
 // =============================================================================
 // SECTION 9: Eye & Effect Dispatch Functions
 // =============================================================================
