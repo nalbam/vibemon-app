@@ -24,6 +24,7 @@ All characters use **image-based rendering** (128x128 PNG). Character is **auto-
 | `notification` | Yellow | ● ● + ? | Input? | User input needed |
 | `done` | Green | > < | Done! | Tool completed |
 | `sleep` | Navy | ─ ─ + Z | Zzz... | 5min inactivity |
+| `alert` | Red | ■ ■ + ! | Alert | Critical error/failure |
 
 ### Working State Text
 
@@ -46,7 +47,7 @@ The `working` state displays fixed text based on the active tool:
 | From State | Timeout | To State |
 |------------|---------|----------|
 | `start`, `done` | 1 minute | `idle` |
-| `planning`, `thinking`, `working`, `packing`, `notification` | 5 minutes | `idle` |
+| `planning`, `thinking`, `working`, `packing`, `notification`, `alert` | 5 minutes | `idle` |
 | `idle` | 5 minutes | `sleep` |
 
 **Desktop only:** After 10 minutes in sleep state, the window automatically closes.

@@ -61,7 +61,7 @@ curl -X POST http://127.0.0.1:19280/status \
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `state` | string | `start`, `idle`, `thinking`, `planning`, `working`, `packing`, `notification`, `done`, `sleep` |
+| `state` | string | `start`, `idle`, `thinking`, `planning`, `working`, `packing`, `notification`, `done`, `sleep`, `alert` |
 | `tool` | string | Tool name (e.g., `Bash`, `Read`, `Edit`) |
 | `project` | string | Project name |
 | `model` | string | Model name (e.g., `opus`, `sonnet`) |
