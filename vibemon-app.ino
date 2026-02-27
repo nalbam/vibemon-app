@@ -956,6 +956,9 @@ void transitionToState(AppState newState, bool resetTimer) {
 void setup() {
   Serial.begin(115200);
 
+  // Reduce CPU frequency to 80MHz (sufficient for animation/WiFi, reduces heat)
+  setCpuFrequencyMhz(80);
+
   // Load settings from persistent storage
   preferences.begin("vibemon", true);  // Read-only mode
   lockMode = preferences.getInt("lockMode", LOCK_MODE_ON_THINKING);
@@ -1038,6 +1041,10 @@ void loop() {
 
   // Check sleep timer (only from start, idle or done)
   checkSleepTimer();
+
+  // Yield to FreeRTOS: prevents 100% CPU spin, dramatically reduces heat.
+  // Sleep state uses longer delay since updates are infrequent.
+  delay(currentState == STATE_SLEEP ? 20 : 5);
 }
 
 // =============================================================================
@@ -1463,8 +1470,10 @@ void setupWiFi() {
     tft.println(WiFi.localIP());
     wifiWasConnected = true;
 
-    // Disable WiFi power saving for stable WebSocket connection
-    WiFi.setSleep(false);
+    // Enable WiFi modem sleep (DTIM-based, wakes ~10x/sec) to reduce radio heat.
+    // WebSocket heartbeat (15s) and HTTP remain functional with modem sleep.
+    // If WebSocket disconnects frequently, change to WiFi.setSleep(false).
+    WiFi.setSleep(true);
 
     // HTTP server setup
     server.on("/status", HTTP_POST, handleStatus);
