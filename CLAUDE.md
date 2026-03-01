@@ -36,7 +36,7 @@ npm start
 ```
 
 ### Key Files
-- **ESP32**: `vibemon-app.ino` (main), `sprites.h` (rendering)
+- **ESP32**: `esp32.ino` (main), `sprites.h` (rendering)
 - **Desktop**: `main.js` (entry point), `modules/*.cjs` (http-server, http-utils, multi-window-manager, state-manager, tray-manager, validators, ws-client), `renderer.js` + `index.html` (renderer)
 - **Shared**: `desktop/shared/` folder (config, constants)
 - **Config Data**: `desktop/shared/data/constants.json` (single source of truth - window dimensions, animation settings, limits)

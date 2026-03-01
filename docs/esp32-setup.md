@@ -196,7 +196,7 @@ The token is used for **authentication** when connecting to VibeMon WebSocket se
 
 **What happens:**
 1. Device attempts to connect with provided credentials
-2. If connection fails after 20 attempts
+2. If connection fails after 3 rounds of 20 attempts (60 total)
 3. Credentials automatically cleared from NVS
 4. Device reboots into provisioning mode
 
@@ -321,7 +321,7 @@ To disable features, edit `credentials.h`:
 
 ### Custom Access Point Settings
 
-To change the provisioning AP name/password, edit `vibemon-app.ino`:
+To change the provisioning AP name/password, edit `state.h`:
 
 ```cpp
 const char* AP_SSID = "MyCustomSSID";
