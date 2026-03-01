@@ -68,4 +68,4 @@ desktop/out/
 *.app
 
 # WiFi credentials (ESP32)
-credentials.h
+esp32/credentials.h
