@@ -2,7 +2,7 @@
 
 Default port: Desktop App `19280`, ESP32 WiFi `80`
 
-## Security & Limits
+## Security & Limits (Desktop only)
 
 | Limit | Value | Description |
 |-------|-------|-------------|
@@ -10,6 +10,8 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | Rate limit | 100 req/min | Per IP address |
 | Request timeout | 30 sec | Prevents Slowloris attacks |
 | CORS | localhost only | Only allows localhost origins |
+
+> **Note:** ESP32 HTTP server does not enforce these limits. ESP32 security relies on local network isolation and SSID sanitization.
 
 ### Input Validation
 
@@ -21,7 +23,7 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 | `model` | 50 chars | String |
 | `memory` | - | Integer 0-100 |
 | `character` | - | `apto`, `clawd`, `kiro`, or `claw` |
-| `terminalId` | 100 chars | Terminal session ID with prefix: `iterm2:w0t0p0:UUID` (from `ITERM_SESSION_ID`) or `ghostty:12345` (from `GHOSTTY_PID`) |
+| `terminalId` | 100 chars | Desktop only. Terminal session ID with prefix: `iterm2:w0t0p0:UUID` (from `ITERM_SESSION_ID`) or `ghostty:12345` (from `GHOSTTY_PID`) |
 
 ---
 
@@ -67,7 +69,7 @@ curl -X POST http://127.0.0.1:19280/status \
 | `model` | string | Model name (e.g., `opus`, `sonnet`) |
 | `memory` | number | Memory usage (0-100) |
 | `character` | string | `apto`, `clawd`, `kiro`, or `claw` |
-| `terminalId` | string | Terminal ID for click-to-focus (e.g., `iterm2:w0t0p0:UUID` or `ghostty:12345`) |
+| `terminalId` | string | Desktop only. Terminal ID for click-to-focus (e.g., `iterm2:w0t0p0:UUID` or `ghostty:12345`) |
 
 **Response:**
 ```json

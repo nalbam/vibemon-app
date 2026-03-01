@@ -36,7 +36,7 @@ npm start
 ```
 
 ### Key Files
-- **ESP32**: `esp32.ino` (main), `sprites.h` (rendering)
+- **ESP32**: `esp32.ino` (main orchestrator), `config.h` (constants), `sprites.h` (rendering), `ui_elements.h` (status text, icons), `state.h` (globals, timers), `display.h` (screen drawing), `project_lock.h` (lock logic), `input.h` (JSON parsing), `wifi_manager.h` (WiFi/HTTP/WebSocket), `wifi_portal.h` (captive portal HTML)
 - **Desktop**: `main.js` (entry point), `modules/*.cjs` (http-server, http-utils, multi-window-manager, state-manager, tray-manager, validators, ws-client), `renderer.js` + `index.html` (renderer)
 - **Shared**: `desktop/shared/` folder (config, constants)
 - **Config Data**: `desktop/shared/data/constants.json` (single source of truth - window dimensions, animation settings, limits)
@@ -48,7 +48,7 @@ npm start
 - **Animation**: `animFrame % N` approach (100ms tick)
 - **Floating**: Cosine/Sine wave offset (X: ±3px, Y: ±5px, ~3.2s cycle)
 - **Working text**: Tool-based fixed text via `getWorkingText(tool)` (Bash→Running, Read→Reading, Edit→Editing, Write→Writing, Grep/WebSearch→Searching, Glob→Scanning, WebFetch→Fetching, Task→Tasking, default→Working)
-- **JSON fields**: `{"state", "tool", "project", "model", "memory", "character", "terminalId"}`
+- **JSON fields**: `{"state", "tool", "project", "model", "memory", "character"}` (Desktop adds `"terminalId"` for click-to-focus)
 - **Characters**: `apto` (gray-purple), `clawd` (orange), `kiro` (white ghost), `claw` (red)
 - **Memory hidden on start**: Memory not displayed during `start` state
 - **Project change resets**: Model/memory cleared when project changes
