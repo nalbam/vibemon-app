@@ -47,6 +47,7 @@ void lockProject(const char* project) {
     safeCopyStr(lockedProject, project);
 
     // Transition to idle state when lock changes
+    // (actual drawStatus() is called in loop())
     if (changed) {
       previousState = currentState;
       currentState = STATE_IDLE;
@@ -59,7 +60,6 @@ void lockProject(const char* project) {
       dirtyCharacter = true;
       dirtyStatus = true;
       dirtyInfo = true;
-      drawStatus();
     }
 
     Serial.print("{\"locked\":\"");

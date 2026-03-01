@@ -415,7 +415,7 @@ inline void drawSunglasses(TFT_eSPI &tft, int leftEyeX, int rightEyeX, int eyeY,
 // Draw sparkle effect (scaled 2x) — 4-point star
 template<typename T>
 void drawSparkleT(T &canvas, int x, int y, uint16_t sparkleColor = COLOR_TEXT_WHITE) {
-  int frame = animFrame % 4;
+  int frame = animFrame % ANIM_SPARKLE_PERIOD;
 
   // Center dot (2x2 -> 4x4)
   canvas.fillRect(x + (2 * SCALE), y + (2 * SCALE), 2 * SCALE, 2 * SCALE, sparkleColor);
@@ -458,8 +458,8 @@ inline void drawQuestionMark(TFT_eSPI &tft, int x, int y) {
 // Draw Zzz animation for sleep state (scaled 2x)
 template<typename T>
 void drawZzzT(T &canvas, int x, int y, int frame, uint16_t color = COLOR_TEXT_WHITE) {
-  // Blink effect: show Z for 10 frames, hide for 10 frames (2 second cycle)
-  if ((frame % 20) < 10) {
+  // Blink effect: show Z for half period, hide for half period (2 second cycle)
+  if ((frame % ANIM_ZZZ_PERIOD) < (ANIM_ZZZ_PERIOD / 2)) {
     canvas.fillRect(x, y, 6 * SCALE, 1 * SCALE, color);              // Top
     canvas.fillRect(x + (4 * SCALE), y + (1 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 1
     canvas.fillRect(x + (3 * SCALE), y + (2 * SCALE), 2 * SCALE, 1 * SCALE, color); // Upper diagonal 2
@@ -481,7 +481,7 @@ void drawThoughtBubbleT(T &canvas, int x, int y, int frame, uint16_t color = COL
   canvas.fillRect(x + (2 * SCALE), y + (3 * SCALE), 2 * SCALE, 2 * SCALE, color);
 
   // Main bubble (animated size)
-  if ((frame % 12) < 6) {
+  if ((frame % ANIM_THOUGHT_PERIOD) < (ANIM_THOUGHT_PERIOD / 2)) {
     // Larger bubble
     canvas.fillRect(x + (3 * SCALE), y - (2 * SCALE), 6 * SCALE, 2 * SCALE, color);
     canvas.fillRect(x + (2 * SCALE), y, 8 * SCALE, 3 * SCALE, color);

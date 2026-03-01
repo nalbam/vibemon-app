@@ -52,6 +52,10 @@ void loadWebSocketToken() {
 
 // Save WebSocket token to Preferences
 void saveWebSocketToken(const char* token) {
+  if (strlen(token) >= sizeof(wsToken)) {
+    Serial.println("{\"error\":\"Token too long (max 127 chars)\"}");
+    return;
+  }
   preferences.begin("vibemon", false);  // Read-write
   preferences.putString("wsToken", token);
   preferences.end();
@@ -154,6 +158,10 @@ void setupProvisioningServer() {
       // Also save WebSocket token if provided
       if (server.hasArg("token")) {
         String token = server.arg("token");
+        if (token.length() > 127) {
+          server.send(400, "application/json", "{\"success\":false,\"message\":\"Token max 127 characters\"}");
+          return;
+        }
         saveWebSocketToken(token.c_str());
       }
 #endif

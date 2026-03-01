@@ -227,17 +227,15 @@ bool processStatusData(JsonObject doc) {
   // Reset activity timer on any input
   lastActivityTime = millis();
 
-  // Redraw if state or info changed
+  // Set dirty flags for rendering (actual drawStatus() is called in loop())
   if (currentState != previousState) {
     needsRedraw = true;
     dirtyCharacter = true;
     dirtyStatus = true;
     dirtyInfo = true;
-    drawStatus();
   } else if (infoChanged) {
     // Same state but info changed - only redraw info section
     dirtyInfo = true;
-    drawStatus();
   }
   return true;
 }

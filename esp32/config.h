@@ -34,6 +34,13 @@
 #define BLINK_INTERVAL       3200  // Blink interval in idle state (ms)
 #define BLINK_DURATION        100  // Blink closed-eye hold duration (ms)
 
+// Animation periods (in animation frames, each frame = 100ms tick)
+#define ANIM_SPARKLE_PERIOD     4  // 4-point star rotation (400ms cycle)
+#define ANIM_THOUGHT_PERIOD    12  // Thought bubble size toggle (1.2s cycle)
+#define ANIM_ZZZ_PERIOD        20  // Z blink on/off (2s cycle)
+#define ANIM_FLOAT_TABLE_SIZE  32  // Floating sine/cosine lookup entries (~3.2s cycle)
+#define ANIM_FRAME_WRAP      4800  // LCM(32,12,20,4)=480 × 10 for safety
+
 // State timeouts
 #define IDLE_TIMEOUT 60000            // 1 minute (start/done -> idle)
 #define SLEEP_TIMEOUT 300000          // 5 minutes (idle -> sleep)

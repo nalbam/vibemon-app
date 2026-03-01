@@ -167,8 +167,16 @@ bool isActiveState(AppState state) {
          state == STATE_NOTIFICATION || state == STATE_PACKING || state == STATE_ALERT;
 }
 
-// Forward declaration: transitionToState is defined in display.h
-void transitionToState(AppState newState, bool resetTimer = true);
+// State transition: updates state variables and sets dirty flags.
+// Rendering is handled centrally in loop() via drawStatus().
+void transitionToState(AppState newState, bool resetTimer = true) {
+  previousState = currentState;
+  currentState = newState;
+  if (resetTimer) lastActivityTime = millis();
+  needsRedraw = true;
+  dirtyCharacter = true;
+  dirtyStatus = true;
+}
 
 // Check state timeouts for auto-transitions
 void checkSleepTimer() {

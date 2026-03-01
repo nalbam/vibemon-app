@@ -14,7 +14,6 @@
 #include "TFT_Compat.h"
 #include <ArduinoJson.h>
 #include <Preferences.h>
-#include "sprites.h"
 
 // WiFi configuration (create credentials.h from credentials.h.example)
 #if __has_include("credentials.h")
@@ -38,6 +37,7 @@
 // =============================================================================
 
 #include "config.h"
+#include "sprites.h"
 #include "state.h"
 #include "display.h"
 #include "project_lock.h"
@@ -102,6 +102,8 @@ void setup() {
 }
 
 void loop() {
+  // === INPUT PROCESSING ===
+
   // USB Serial check (using char buffer instead of String)
   while (Serial.available()) {
     char c = Serial.read();
@@ -127,19 +129,27 @@ void loop() {
 #endif
 #endif
 
+  // === STATE MANAGEMENT ===
+
+  // Check sleep timer (may set dirty flags via transitionToState)
+  checkSleepTimer();
+
+  // === RENDERING ===
+
+  // Full screen redraw if state/info changed (centralized rendering)
+  if (needsRedraw || dirtyCharacter || dirtyStatus || dirtyInfo) {
+    drawStatus();
+  }
+
   // Animation update (100ms interval)
   if (millis() - lastUpdate > 100) {
     lastUpdate = millis();
-    // Reset animFrame at 4800 to prevent overflow (LCM of 32,12,20,4 = 480)
-    animFrame = (animFrame + 1) % 4800;
+    animFrame = (animFrame + 1) % ANIM_FRAME_WRAP;
     updateAnimation();
   }
 
   // Idle blink (non-blocking state machine)
   updateBlink();
-
-  // Check sleep timer (only from start, idle or done)
-  checkSleepTimer();
 
   // Yield to FreeRTOS: prevents 100% CPU spin, dramatically reduces heat.
   // Sleep state uses longer delay since updates are infrequent.

@@ -12,17 +12,17 @@
 
 // Precomputed lookup tables for floating animation (10-20x faster than sin/cos)
 // Values: cos(i * 2π/32) * 3 and sin(i * 2π/32) * 5, rounded to nearest integer
-const int8_t FLOAT_TABLE_X[32] = {3, 3, 3, 2, 2, 2, 1, 1, 0, -1, -1, -2, -2, -2, -3, -3, -3, -3, -3, -2, -2, -2, -1, -1, 0, 1, 1, 2, 2, 2, 3, 3};
-const int8_t FLOAT_TABLE_Y[32] = {0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 4, 4, 3, 2, 1, 0, -1, -2, -3, -4, -4, -5, -5, -5, -5, -5, -4, -4, -3, -2, -1};
+const int8_t FLOAT_TABLE_X[ANIM_FLOAT_TABLE_SIZE] = {3, 3, 3, 2, 2, 2, 1, 1, 0, -1, -1, -2, -2, -2, -3, -3, -3, -3, -3, -2, -2, -2, -1, -1, 0, 1, 1, 2, 2, 2, 3, 3};
+const int8_t FLOAT_TABLE_Y[ANIM_FLOAT_TABLE_SIZE] = {0, 1, 2, 3, 4, 4, 5, 5, 5, 5, 5, 4, 4, 3, 2, 1, 0, -1, -2, -3, -4, -4, -5, -5, -5, -5, -5, -4, -4, -3, -2, -1};
 
 // Calculate floating X offset using lookup table
 int getFloatOffsetX() {
-  return FLOAT_TABLE_X[animFrame % 32];
+  return FLOAT_TABLE_X[animFrame % ANIM_FLOAT_TABLE_SIZE];
 }
 
 // Calculate floating Y offset using lookup table
 int getFloatOffsetY() {
-  return FLOAT_TABLE_Y[animFrame % 32];
+  return FLOAT_TABLE_Y[animFrame % ANIM_FLOAT_TABLE_SIZE];
 }
 
 // =============================================================================
@@ -281,11 +281,11 @@ void updateAnimation() {
   bool needsCharRedraw = positionChanged;
   if (!needsCharRedraw) {
     if (isLoadingState(currentState)) {
-      needsCharRedraw = (animFrame % 12 == 0);  // Thought bubble animation
+      needsCharRedraw = (animFrame % ANIM_THOUGHT_PERIOD == 0);
     } else if (currentState == STATE_START || currentState == STATE_WORKING) {
-      needsCharRedraw = (animFrame % 4 == 0);   // Sparkle animation
+      needsCharRedraw = (animFrame % ANIM_SPARKLE_PERIOD == 0);
     } else if (currentState == STATE_SLEEP) {
-      needsCharRedraw = (animFrame % 20 == 0);  // Zzz animation
+      needsCharRedraw = (animFrame % ANIM_ZZZ_PERIOD == 0);
     }
   }
 
@@ -367,20 +367,6 @@ void updateBlink() {
       }
       break;
   }
-}
-
-// =============================================================================
-// State Transition
-// =============================================================================
-
-void transitionToState(AppState newState, bool resetTimer) {
-  previousState = currentState;
-  currentState = newState;
-  if (resetTimer) lastActivityTime = millis();
-  needsRedraw = true;
-  dirtyCharacter = true;
-  dirtyStatus = true;
-  drawStatus();
 }
 
 #endif // DISPLAY_H
