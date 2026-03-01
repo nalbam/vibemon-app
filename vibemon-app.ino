@@ -38,7 +38,7 @@
 // =============================================================================
 
 // Version string
-#define VERSION "v1.8.0"
+#define VERSION "v1.8.1"
 
 // Screen size
 #define SCREEN_WIDTH  172
@@ -179,9 +179,13 @@ const char* defaultWSToken = "";
 
 // Exponential backoff for reconnection (server-friendly)
 const unsigned long WS_RECONNECT_INITIAL = 5000;   // 5 seconds
-const unsigned long WS_RECONNECT_MAX = 60000;       // 60 seconds
+const unsigned long WS_RECONNECT_MAX = 15000;       // 15 seconds (reduced from 60s)
 const float WS_RECONNECT_MULTIPLIER = 1.5;
 unsigned long wsReconnectDelay = WS_RECONNECT_INITIAL;
+
+// Track when WebSocket last disconnected (for health check)
+unsigned long wsDisconnectedSince = 0;
+const unsigned long WS_REINIT_TIMEOUT = 120000;  // Force reinit if disconnected >120s
 
 // Heartbeat to detect stale connections
 const unsigned long WS_HEARTBEAT_INTERVAL = 15000;  // Ping every 15s
@@ -1470,10 +1474,9 @@ void setupWiFi() {
     tft.println(WiFi.localIP());
     wifiWasConnected = true;
 
-    // Enable WiFi modem sleep (DTIM-based, wakes ~10x/sec) to reduce radio heat.
-    // WebSocket heartbeat (15s) and HTTP remain functional with modem sleep.
-    // If WebSocket disconnects frequently, change to WiFi.setSleep(false).
-    WiFi.setSleep(true);
+    // Disable WiFi modem sleep to maintain stable WebSocket/HTTP connections.
+    // Modem sleep causes heartbeat pong delays (>3s timeout) → spurious disconnects.
+    WiFi.setSleep(false);
 
     // HTTP server setup
     server.on("/status", HTTP_POST, handleStatus);
@@ -1631,10 +1634,30 @@ void checkWiFiConnection() {
 #ifdef USE_WEBSOCKET
     // Reset backoff and restart WebSocket after WiFi recovery
     wsReconnectDelay = WS_RECONNECT_INITIAL;
+    wsDisconnectedSince = 0;
     webSocket.disconnect();
     setupWebSocket();
 #endif
   }
+
+#ifdef USE_WEBSOCKET
+  // WebSocket health check: if WiFi is up but WS has been disconnected too long,
+  // force reinitialize (handles cases where library reconnect silently fails).
+  if (currentlyConnected && !wsConnected && wsDisconnectedSince > 0) {
+    if (now - wsDisconnectedSince >= WS_REINIT_TIMEOUT) {
+      unsigned long disconnectedMs = now - wsDisconnectedSince;
+      wsReconnectDelay = WS_RECONNECT_INITIAL;
+      wsDisconnectedSince = now;  // Reset timer to avoid repeated rapid reinit
+      Serial.print("{\"websocket\":\"force_reinit\",\"disconnectedMs\":");
+      Serial.print(disconnectedMs);
+      Serial.print(",\"heap\":");
+      Serial.print(ESP.getFreeHeap());
+      Serial.println("}");
+      webSocket.disconnect();
+      setupWebSocket();
+    }
+  }
+#endif
 }
 
 #ifdef USE_WEBSOCKET
@@ -1678,6 +1701,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
     case WStype_DISCONNECTED:
       wsConnected = false;
+      if (wsDisconnectedSince == 0) wsDisconnectedSince = millis();
       drawConnectionIndicator();
       // Exponential backoff: increase delay for next reconnection
       {
@@ -1694,6 +1718,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
     case WStype_CONNECTED:
       wsConnected = true;
+      wsDisconnectedSince = 0;  // Clear disconnect timestamp
       drawConnectionIndicator();
       // Reset backoff on successful connection
       wsReconnectDelay = WS_RECONNECT_INITIAL;
