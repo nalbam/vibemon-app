@@ -346,9 +346,9 @@ void setupWiFi() {
     tft.println(WiFi.localIP());
     wifiWasConnected = true;
 
-    // Disable WiFi modem sleep to maintain stable WebSocket/HTTP connections.
-    // Modem sleep causes heartbeat pong delays (>3s timeout) → spurious disconnects.
-    WiFi.setSleep(false);
+    // Enable WiFi modem sleep (WIFI_PS_MIN_MODEM) to reduce radio power and heat.
+    // Heartbeat timeout relaxed to 10s (from 3s) to accommodate modem sleep latency.
+    WiFi.setSleep(true);
 
     // HTTP server setup
     server.on("/status", HTTP_POST, handleStatus);
@@ -486,7 +486,7 @@ void setupWebSocket() {
   webSocket.setReconnectInterval(wsReconnectDelay);
 
   // Enable heartbeat to detect stale connections
-  // Ping every 15s, timeout after 3s, disconnect after 2 missed pongs
+  // Ping every 30s, timeout after 10s, disconnect after 2 missed pongs
   webSocket.enableHeartbeat(WS_HEARTBEAT_INTERVAL, WS_HEARTBEAT_TIMEOUT, WS_HEARTBEAT_FAILURES);
 
   Serial.print("{\"websocket\":\"connecting\",\"heap\":");

@@ -76,6 +76,7 @@ void setup() {
   tft.init();
   tft.setRotation(0);  // Portrait mode
   tft.setSwapBytes(true);  // Swap bytes for pushImage (ESP32 little-endian)
+  tft.setBrightness(BACKLIGHT_NORMAL);
   tft.fillScreen(TFT_BLACK);
 
   // Initialize sprite buffer for character (128x128)
@@ -159,7 +160,7 @@ void loop() {
   // Idle blink (non-blocking state machine)
   updateBlink();
 
-  // Yield to FreeRTOS: prevents 100% CPU spin, dramatically reduces heat.
-  // Sleep state uses longer delay since updates are infrequent.
-  delay(currentState == STATE_SLEEP ? 20 : 5);
+  // Yield to FreeRTOS: state-based delay reduces CPU usage and heat.
+  // Active states: 10ms, idle/done: 30ms, sleep: 100ms.
+  delay(getLoopDelay());
 }

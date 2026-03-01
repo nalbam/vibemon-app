@@ -61,6 +61,15 @@
 #define WIFI_CONNECT_RETRIES    3  // Number of full rounds before giving up
 #define WIFI_FAIL_RESTART_MS 2000  // Delay before reboot on connection failure (ms)
 
+// Backlight brightness (0-255, PWM on pin 22)
+#define BACKLIGHT_NORMAL  255
+#define BACKLIGHT_SLEEP    64
+
+// Loop delays per state category (ms)
+#define LOOP_DELAY_ACTIVE   10  // thinking, planning, working, packing, notification, alert
+#define LOOP_DELAY_IDLE     30  // start, idle, done
+#define LOOP_DELAY_SLEEP   100  // sleep
+
 // Safe string copy: always null-terminates, requires array (not pointer) as dst
 #define safeCopyStr(dst, src) do { strncpy(dst, src, sizeof(dst)-1); dst[sizeof(dst)-1]='\0'; } while(0)
 

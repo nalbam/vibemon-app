@@ -114,9 +114,9 @@ uint8_t wsConsecutiveFailures = 0;
 unsigned long wsDisconnectedSince = 0;
 const unsigned long WS_REINIT_TIMEOUT = 120000;  // Force reinit if disconnected >120s
 
-// Heartbeat to detect stale connections
-const unsigned long WS_HEARTBEAT_INTERVAL = 15000;  // Ping every 15s
-const unsigned long WS_HEARTBEAT_TIMEOUT = 3000;    // Pong timeout 3s
+// Heartbeat to detect stale connections (relaxed for modem sleep compatibility)
+const unsigned long WS_HEARTBEAT_INTERVAL = 30000;  // Ping every 30s
+const unsigned long WS_HEARTBEAT_TIMEOUT = 10000;   // Pong timeout 10s (modem sleep adds 100-300ms)
 const uint8_t WS_HEARTBEAT_FAILURES = 2;            // Disconnect after 2 missed
 #endif
 #endif
@@ -166,6 +166,13 @@ bool isLoadingState(AppState state) {
 bool isActiveState(AppState state) {
   return state == STATE_THINKING || state == STATE_PLANNING || state == STATE_WORKING ||
          state == STATE_NOTIFICATION || state == STATE_PACKING || state == STATE_ALERT;
+}
+
+// Helper: Get loop delay based on current state (reduces CPU usage in low-activity states)
+int getLoopDelay() {
+  if (currentState == STATE_SLEEP) return LOOP_DELAY_SLEEP;
+  if (isActiveState(currentState)) return LOOP_DELAY_ACTIVE;
+  return LOOP_DELAY_IDLE;
 }
 
 // State transition: updates state variables and sets dirty flags.

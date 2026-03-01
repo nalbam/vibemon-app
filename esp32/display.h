@@ -212,6 +212,7 @@ void drawStatus() {
   const CharacterGeometry* character = getCharacterByName(currentCharacter);
 
   if (needsRedraw) {
+    tft.setBrightness(currentState == STATE_SLEEP ? BACKLIGHT_SLEEP : BACKLIGHT_NORMAL);
     tft.fillScreen(bgColor);
   }
 
