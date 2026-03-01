@@ -100,8 +100,14 @@ const char* defaultWSToken = "";
 // Exponential backoff for reconnection (server-friendly)
 const unsigned long WS_RECONNECT_INITIAL = 5000;   // 5 seconds
 const unsigned long WS_RECONNECT_MAX = 15000;       // 15 seconds (reduced from 60s)
+const unsigned long WS_RECONNECT_BACKOFF = 300000;  // 5 minutes (after max failures)
 const float WS_RECONNECT_MULTIPLIER = 1.5;
 unsigned long wsReconnectDelay = WS_RECONNECT_INITIAL;
+
+// Track consecutive failures to distinguish persistent errors (e.g., bad token)
+// from transient network issues. After WS_MAX_FAILURES, slow down to 5-minute intervals.
+const uint8_t WS_MAX_FAILURES = 10;
+uint8_t wsConsecutiveFailures = 0;
 
 // Track when WebSocket last disconnected (for health check)
 unsigned long wsDisconnectedSince = 0;

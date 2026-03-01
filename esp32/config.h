@@ -49,8 +49,9 @@
 #define MAX_PROJECTS 10
 
 // WiFi connection
-#define WIFI_CONNECT_ATTEMPTS  20  // Max connection attempts before giving up
+#define WIFI_CONNECT_ATTEMPTS  20  // Max connection attempts per round
 #define WIFI_CONNECT_DELAY_MS 500  // Delay between each attempt (ms)
+#define WIFI_CONNECT_RETRIES    3  // Number of full rounds before giving up
 #define WIFI_FAIL_RESTART_MS 2000  // Delay before reboot on connection failure (ms)
 
 // Safe string copy: always null-terminates, requires array (not pointer) as dst

@@ -3,8 +3,8 @@
  * WiFi connection, HTTP server, WebSocket client, and provisioning
  */
 
-#ifndef WIFI_H
-#define WIFI_H
+#ifndef WIFI_MANAGER_H
+#define WIFI_MANAGER_H
 
 #ifdef USE_WIFI
 
@@ -263,9 +263,18 @@ void handleLockModePost() {
 }
 
 void handleReboot() {
-  server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
-  delay(100);  // Allow HTTP response to complete
-  ESP.restart();
+  // Require {"confirm":true} in request body to prevent accidental/unauthorized reboots
+  if (server.hasArg("plain")) {
+    StaticJsonDocument<64> doc;
+    deserializeJson(doc, server.arg("plain"));
+    if (doc["confirm"] == true) {
+      server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
+      delay(100);  // Allow HTTP response to complete
+      ESP.restart();
+      return;
+    }
+  }
+  server.send(400, "application/json", "{\"error\":\"Requires {\\\"confirm\\\":true}\"}");
 }
 
 // =============================================================================
@@ -288,10 +297,9 @@ void setupWiFi() {
     return;
   }
 
-  // Try to connect to WiFi
+  // Try to connect to WiFi with retry rounds
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  WiFi.begin(wifiSSID, wifiPassword);
 
   // Display WiFi status at Y=230 for better visibility
   int wifiY = 230;
@@ -300,11 +308,23 @@ void setupWiFi() {
   tft.setTextSize(1);
   tft.print("WiFi: ");
 
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_ATTEMPTS) {
-    delay(WIFI_CONNECT_DELAY_MS);
-    tft.print(".");
-    attempts++;
+  for (int retry = 0; retry < WIFI_CONNECT_RETRIES; retry++) {
+    if (retry > 0) {
+      tft.print("R");
+      tft.print(retry + 1);
+      WiFi.disconnect();
+      delay(1000);
+    }
+    WiFi.begin(wifiSSID, wifiPassword);
+
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_ATTEMPTS) {
+      delay(WIFI_CONNECT_DELAY_MS);
+      yield();  // Prevent WDT timeout during long connection wait
+      tft.print(".");
+      attempts++;
+    }
+    if (WiFi.status() == WL_CONNECTED) break;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -328,32 +348,37 @@ void setupWiFi() {
     server.on("/lock-mode", HTTP_POST, handleLockModePost);
     server.on("/reboot", HTTP_POST, handleReboot);
 
-    // Add WiFi reset endpoint
+    // WiFi reset endpoint - requires {"confirm":true} to prevent accidental resets
     server.on("/wifi-reset", HTTP_POST, []() {
-      preferences.begin("vibemon", false);
-      preferences.remove("wifiSSID");
-      preferences.remove("wifiPassword");
-      preferences.end();
-      server.send(200, "application/json", "{\"success\":true,\"message\":\"WiFi credentials cleared. Rebooting...\"}");
-      delay(1000);
-      ESP.restart();
+      if (server.hasArg("plain")) {
+        StaticJsonDocument<64> doc;
+        deserializeJson(doc, server.arg("plain"));
+        if (doc["confirm"] == true) {
+          preferences.begin("vibemon", false);
+          preferences.remove("wifiSSID");
+          preferences.remove("wifiPassword");
+          preferences.end();
+          server.send(200, "application/json", "{\"success\":true,\"message\":\"WiFi credentials cleared. Rebooting...\"}");
+          delay(1000);
+          ESP.restart();
+          return;
+        }
+      }
+      server.send(400, "application/json", "{\"error\":\"Requires {\\\"confirm\\\":true}\"}");
     });
 
     server.begin();
   } else {
     tft.println("Failed");
 
-    // Connection failed - clear credentials and start provisioning
+    // Connection failed after all retries - enter provisioning mode
+    // Keep saved credentials so user can retry without re-entering them
     tft.setCursor(10, wifiY + 18);
     tft.println("Starting setup...");
     delay(WIFI_FAIL_RESTART_MS);
 
-    preferences.begin("vibemon", false);
-    preferences.remove("wifiSSID");
-    preferences.remove("wifiPassword");
-    preferences.end();
-
-    ESP.restart();
+    startProvisioningMode();
+    return;
   }
 }
 
@@ -425,19 +450,12 @@ void setupWebSocket() {
     loadWebSocketToken();
   }
 
-  // Build path with token query parameter for API Gateway authentication
-  char wsPath[256];
-  if (strlen(wsToken) > 0) {
-    snprintf(wsPath, sizeof(wsPath), "%s?token=%s", WS_PATH, wsToken);
-  } else {
-    safeCopyStr(wsPath, WS_PATH);
-  }
-
-  // Connect to WebSocket server
+  // Connect to WebSocket server (token sent via auth message after connection,
+  // not in URL query parameter, to avoid exposure in server/proxy logs)
 #if WS_USE_SSL
-  webSocket.beginSSL(WS_HOST, WS_PORT, wsPath);
+  webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
 #else
-  webSocket.begin(WS_HOST, WS_PORT, wsPath);
+  webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
 #endif
 
   // Set event handler
@@ -460,14 +478,21 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
     case WStype_DISCONNECTED:
       wsConnected = false;
       if (wsDisconnectedSince == 0) wsDisconnectedSince = millis();
+      if (wsConsecutiveFailures < 255) wsConsecutiveFailures++;
       drawConnectionIndicator();
-      // Exponential backoff: increase delay for next reconnection
-      {
+      // Exponential backoff: increase delay for next reconnection.
+      // After WS_MAX_FAILURES consecutive disconnects (likely persistent error
+      // such as bad token), slow down to 5-minute intervals to avoid wasting bandwidth.
+      if (wsConsecutiveFailures >= WS_MAX_FAILURES) {
+        wsReconnectDelay = WS_RECONNECT_BACKOFF;
+      } else {
         unsigned long newDelay = (unsigned long)(wsReconnectDelay * WS_RECONNECT_MULTIPLIER);
         wsReconnectDelay = (newDelay > WS_RECONNECT_MAX) ? WS_RECONNECT_MAX : newDelay;
       }
       webSocket.setReconnectInterval(wsReconnectDelay);
-      Serial.print("{\"websocket\":\"disconnected\",\"nextRetry\":");
+      Serial.print("{\"websocket\":\"disconnected\",\"failures\":");
+      Serial.print(wsConsecutiveFailures);
+      Serial.print(",\"nextRetry\":");
       Serial.print(wsReconnectDelay);
       Serial.print(",\"heap\":");
       Serial.print(ESP.getFreeHeap());
@@ -477,6 +502,7 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
     case WStype_CONNECTED:
       wsConnected = true;
       wsDisconnectedSince = 0;  // Clear disconnect timestamp
+      wsConsecutiveFailures = 0;  // Reset failure counter on successful connection
       drawConnectionIndicator();
       // Reset backoff on successful connection
       wsReconnectDelay = WS_RECONNECT_INITIAL;
@@ -514,4 +540,4 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 
 #endif // USE_WEBSOCKET
 #endif // USE_WIFI
-#endif // WIFI_H
+#endif // WIFI_MANAGER_H

@@ -45,7 +45,7 @@
 
 #ifdef USE_WIFI
 #include "wifi_portal.h"
-#include "wifi.h"
+#include "wifi_manager.h"
 #endif
 
 // =============================================================================
