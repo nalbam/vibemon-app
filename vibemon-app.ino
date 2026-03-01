@@ -70,8 +70,9 @@
 #define SLEEP_TIMEOUT 300000          // 5 minutes (idle -> sleep)
 
 // JSON buffer size for StaticJsonDocument
-// Increased from 256 to 512 for complex payloads with all fields
-#define JSON_BUFFER_SIZE 512
+// Increased to 1024 for WebSocket nested payloads:
+// {"type":"status","data":{"state":"...", "project":"...", "model":"...", ...}}
+#define JSON_BUFFER_SIZE 1024
 
 // Project lock modes
 #define LOCK_MODE_FIRST_PROJECT 0
@@ -247,6 +248,9 @@ void transitionToState(AppState newState, bool resetTimer = true);  // forward d
 
 // Check state timeouts for auto-transitions
 void checkSleepTimer() {
+#ifdef USE_WIFI
+  if (provisioningMode) return;  // Skip sleep timer during WiFi provisioning
+#endif
   unsigned long now = millis();
 
   // start/done -> idle after 1 minute
@@ -441,7 +445,7 @@ bool handleCommand(const char* command, JsonObject doc) {
 }
 
 // Forward declaration for processStatusData (defined below)
-void processStatusData(JsonObject doc);
+bool processStatusData(JsonObject doc);
 
 // Handle WebSocket message-type input (authenticated/error/status)
 // Returns true if the message was handled
@@ -463,36 +467,36 @@ bool handleWebSocketMessage(const char* msgType, JsonObject doc) {
       Serial.println("{\"error\":\"Invalid status data\"}");
       return true;
     }
-    processStatusData(data);
+    (void)processStatusData(data);  // Return value intentionally ignored (WebSocket has no response channel)
     return true;
   }
   return false;
 }
 
-void processInput(const char* input) {
+bool processInput(const char* input) {
   StaticJsonDocument<JSON_BUFFER_SIZE> doc;
   DeserializationError error = deserializeJson(doc, input);
 
   if (error) {
     Serial.println("{\"error\":\"JSON parse error\"}");
-    return;
+    return false;
   }
 
   JsonObject obj = doc.as<JsonObject>();
 
   // Handle command (lock/unlock/reboot/status/lock-mode)
   const char* command = doc["command"] | "";
-  if (strlen(command) > 0 && handleCommand(command, obj)) return;
+  if (strlen(command) > 0 && handleCommand(command, obj)) return true;
 
   // Handle WebSocket message types (server sends {type: "status", data: {...}})
   const char* msgType = doc["type"] | "";
-  if (strlen(msgType) > 0 && handleWebSocketMessage(msgType, obj)) return;
+  if (strlen(msgType) > 0 && handleWebSocketMessage(msgType, obj)) return true;
 
   // Direct format: {state: "...", project: "...", ...}
-  processStatusData(obj);
+  return processStatusData(obj);
 }
 
-void processStatusData(JsonObject doc) {
+bool processStatusData(JsonObject doc) {
   // Get incoming project
   const char* incomingProject = doc["project"] | "";
 
@@ -519,7 +523,7 @@ void processStatusData(JsonObject doc) {
   if (isLockedToDifferentProject(incomingProject)) {
     // Silently ignore update from different project
     Serial.println("{\"ok\":true,\"blocked\":true}");
-    return;
+    return false;
   }
 
   previousState = currentState;
@@ -597,6 +601,7 @@ void processStatusData(JsonObject doc) {
     dirtyInfo = true;
     drawStatus();
   }
+  return true;
 }
 
 // =============================================================================
@@ -754,8 +759,7 @@ void drawStatus() {
 
     tft.setTextColor(textColor);
     tft.setTextSize(3);
-    int textWidth = strlen(statusText) * 18;
-    int textX = (SCREEN_WIDTH - textWidth) / 2;
+    int textX = (SCREEN_WIDTH - tft.textWidth(statusText)) / 2;
     tft.setCursor(textX, STATUS_TEXT_Y);
     tft.println(statusText);
   }
@@ -1136,7 +1140,9 @@ void startProvisioningMode() {
   // Setup web server for configuration
   setupProvisioningServer();
 
-  Serial.println("{\"wifi\":\"provisioning_mode\",\"ssid\":\"" + String(AP_SSID) + "\"}");
+  char provMsg[80];
+  snprintf(provMsg, sizeof(provMsg), "{\"wifi\":\"provisioning_mode\",\"ssid\":\"%s\"}", AP_SSID);
+  Serial.println(provMsg);
 }
 
 // Setup web server endpoints for provisioning
@@ -1148,15 +1154,21 @@ void setupProvisioningServer() {
 
   // WiFi scan endpoint
   server.on("/scan", HTTP_GET, []() {
-    String json = "{\"networks\":[";
     int n = WiFi.scanNetworks();
+    String json;
+    json.reserve(20 + n * 80);  // Pre-allocate: ~80 chars per network entry
+    json = "{\"networks\":[";
     for (int i = 0; i < n; i++) {
       if (i > 0) json += ",";
-      // Escape SSID for JSON (replace " with \")
+      // Escape SSID for JSON safety
       String ssid = WiFi.SSID(i);
       ssid.replace("\\", "\\\\");  // Escape backslashes first
       ssid.replace("\"", "\\\"");  // Escape quotes
-      json += "{\"ssid\":\"" + ssid + "\",\"rssi\":" + String(WiFi.RSSI(i)) + ",\"secure\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
+      char entry[96];
+      snprintf(entry, sizeof(entry), "{\"ssid\":\"%s\",\"rssi\":%d,\"secure\":%s}",
+        ssid.c_str(), WiFi.RSSI(i),
+        WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false");
+      json += entry;
     }
     json += "]}";
     server.send(200, "application/json", json);
@@ -1167,6 +1179,16 @@ void setupProvisioningServer() {
     if (server.hasArg("ssid") && server.hasArg("password")) {
       String ssid = server.arg("ssid");
       String password = server.arg("password");
+
+      // Validate input lengths before saving
+      if (ssid.length() == 0 || ssid.length() > 32) {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"SSID must be 1-32 characters\"}");
+        return;
+      }
+      if (password.length() > 63) {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"Password max 63 characters\"}");
+        return;
+      }
 
       saveWiFiCredentials(ssid.c_str(), password.c_str());
 
@@ -1521,8 +1543,12 @@ void handleStatus() {
   if (server.hasArg("plain")) {
     // Use const reference to avoid String copy (heap allocation)
     const String& body = server.arg("plain");
-    processInput(body.c_str());
-    server.send(200, "application/json", "{\"ok\":true}");
+    bool applied = processInput(body.c_str());
+    if (applied) {
+      server.send(200, "application/json", "{\"ok\":true}");
+    } else {
+      server.send(200, "application/json", "{\"ok\":true,\"blocked\":true}");
+    }
   } else {
     server.send(400, "application/json", "{\"error\":\"no body\"}");
   }

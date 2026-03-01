@@ -500,14 +500,14 @@ inline void drawThoughtBubble(TFT_eSPI &tft, int x, int y, int frame, uint16_t c
 // Draw exclamation mark effect (alert state) - template version
 template<typename T>
 void drawExclamationMarkT(T &canvas, int x, int y, int frame, uint16_t bgColor) {
-  int shakeOffset = ((frame / 2) % 4 < 2) ? 2 : -2;
+  int shakeOffset = ((frame / 2) % 4 < 2) ? (2 * SCALE) : (-2 * SCALE);
   int markY = y + shakeOffset;
   uint16_t white = TFT_WHITE;
   uint16_t red = COLOR_BG_ALERT;
-  canvas.fillRect(x + 6, markY, 4, 20, white);
-  canvas.drawRect(x + 5, markY - 1, 6, 22, red);
-  canvas.fillRect(x + 6, markY + 24, 4, 4, white);
-  canvas.drawRect(x + 5, markY + 23, 6, 6, red);
+  canvas.fillRect(x + 6*SCALE, markY, 4*SCALE, 20*SCALE, white);
+  canvas.drawRect(x + 5*SCALE, markY - SCALE, 6*SCALE, 22*SCALE, red);
+  canvas.fillRect(x + 6*SCALE, markY + 24*SCALE, 4*SCALE, 4*SCALE, white);
+  canvas.drawRect(x + 5*SCALE, markY + 23*SCALE, 6*SCALE, 6*SCALE, red);
 }
 
 inline void drawExclamationMark(TFT_eSPI &tft, int x, int y, int frame, uint16_t bgColor) {
