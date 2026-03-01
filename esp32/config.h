@@ -7,7 +7,7 @@
 #define CONFIG_H
 
 // Version string
-#define VERSION "v1.8.1"
+#define VERSION "v1.9.0"
 
 // Screen size
 #define SCREEN_WIDTH  172
