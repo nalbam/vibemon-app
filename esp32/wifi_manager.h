@@ -450,12 +450,21 @@ void setupWebSocket() {
     loadWebSocketToken();
   }
 
-  // Connect to WebSocket server (token sent via auth message after connection,
-  // not in URL query parameter, to avoid exposure in server/proxy logs)
+  // Build path with token query parameter for API Gateway authentication.
+  // API Gateway authorizes at $connect route using URL query params,
+  // so the token MUST be in the URL for the connection to be accepted.
+  // The auth message sent after connection is for application-level auth.
+  char wsPath[256];
+  if (strlen(wsToken) > 0) {
+    snprintf(wsPath, sizeof(wsPath), "%s?token=%s", WS_PATH, wsToken);
+  } else {
+    safeCopyStr(wsPath, WS_PATH);
+  }
+
 #if WS_USE_SSL
-  webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+  webSocket.beginSSL(WS_HOST, WS_PORT, wsPath);
 #else
-  webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
+  webSocket.begin(WS_HOST, WS_PORT, wsPath);
 #endif
 
   // Set event handler
