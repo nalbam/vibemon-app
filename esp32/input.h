@@ -210,9 +210,9 @@ bool processStatusData(JsonObject doc) {
     infoChanged = true;
   }
 
-  // Parse memory (number 0-100)
+  // Parse memory (number 0-100, clamped to valid range)
   int memoryVal = doc["memory"] | -1;
-  if (memoryVal >= 0 && memoryVal != currentMemory) {
+  if (memoryVal >= 0 && memoryVal <= 100 && memoryVal != currentMemory) {
     currentMemory = memoryVal;
     infoChanged = true;
   }

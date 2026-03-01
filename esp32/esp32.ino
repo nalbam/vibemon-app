@@ -38,6 +38,7 @@
 
 #include "config.h"
 #include "sprites.h"
+#include "ui_elements.h"
 #include "state.h"
 #include "display.h"
 #include "project_lock.h"
@@ -108,13 +109,20 @@ void loop() {
   while (Serial.available()) {
     char c = Serial.read();
     if (c == '\n') {
-      serialBuffer[serialBufferPos] = '\0';
-      if (serialBufferPos > 0) {
-        processInput(serialBuffer);
+      if (serialOverflow) {
+        Serial.println("{\"error\":\"input too long\"}");
+        serialOverflow = false;
+      } else {
+        serialBuffer[serialBufferPos] = '\0';
+        if (serialBufferPos > 0) {
+          processInput(serialBuffer);
+        }
       }
       serialBufferPos = 0;
     } else if (serialBufferPos < (int)sizeof(serialBuffer) - 1) {
       serialBuffer[serialBufferPos++] = c;
+    } else {
+      serialOverflow = true;
     }
   }
 

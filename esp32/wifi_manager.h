@@ -109,9 +109,9 @@ void startProvisioningMode() {
 
 // Setup web server endpoints for provisioning
 void setupProvisioningServer() {
-  // Captive portal - serve config page for all requests
+  // Captive portal - serve config page for all requests (from flash, no heap copy)
   server.onNotFound([]() {
-    server.send(200, "text/html", getConfigPage());
+    server.send(200, "text/html", CONFIG_PAGE);
   });
 
   // WiFi scan endpoint
@@ -124,6 +124,10 @@ void setupProvisioningServer() {
       if (i > 0) json += ",";
       // Escape SSID for JSON safety
       String ssid = WiFi.SSID(i);
+      // Remove control characters (0x00-0x1F) that break JSON
+      for (int j = ssid.length() - 1; j >= 0; j--) {
+        if (ssid[j] < 0x20) ssid.remove(j, 1);
+      }
       ssid.replace("\\", "\\\\");  // Escape backslashes first
       ssid.replace("\"", "\\\"");  // Escape quotes
       char entry[96];

@@ -131,6 +131,79 @@ void drawInfoRow(int y, void (*iconFn)(TFT_eSPI&, int, int, uint16_t, int, uint1
 // Main Status Drawing
 // =============================================================================
 
+// Draw character using sprite buffer (no flickering)
+void drawCharacterSection(uint16_t bgColor, EyeType eyeType, EffectType effectType, const CharacterGeometry* character) {
+  int charX = CHAR_X_BASE + getFloatOffsetX();
+  int charY = CHAR_Y_BASE + getFloatOffsetY();
+  lastCharX = charX;
+  lastCharY = charY;
+
+  if (spriteInitialized) {
+    drawCharacterToSprite(charSprite, eyeType, effectType, bgColor, character);
+    charSprite.pushSprite(charX, charY);
+  } else {
+    drawCharacter(tft, charX, charY, eyeType, effectType, bgColor, character);
+  }
+}
+
+// Draw status text (centered, size 3)
+void drawStatusTextSection(uint16_t bgColor, uint16_t textColor) {
+  // Clear status text region when only status changed (not full redraw)
+  if (dirtyStatus && !needsRedraw) {
+    tft.fillRect(0, STATUS_TEXT_Y, SCREEN_WIDTH, LOADING_Y - STATUS_TEXT_Y, bgColor);
+  }
+
+  char statusText[32];
+  if (currentState == STATE_WORKING) {
+    getWorkingText(currentTool, statusText, sizeof(statusText));
+  } else {
+    getStatusTextEnum(currentState, statusText, sizeof(statusText));
+  }
+
+  tft.setTextColor(textColor);
+  tft.setTextSize(3);
+  int textX = (SCREEN_WIDTH - tft.textWidth(statusText)) / 2;
+  tft.setCursor(textX, STATUS_TEXT_Y);
+  tft.println(statusText);
+}
+
+// Draw project, tool, model, memory info rows
+void drawInfoSection(uint16_t bgColor, uint16_t textColor) {
+  // Clear info region when only info changed (not full redraw)
+  if (dirtyInfo && !needsRedraw) {
+    tft.fillRect(0, PROJECT_Y, SCREEN_WIDTH, SCREEN_HEIGHT - PROJECT_Y, bgColor);
+  }
+
+  if (strlen(currentProject) > 0) {
+    drawInfoRow(PROJECT_Y, drawFolderIcon, currentProject, textColor, bgColor);
+  }
+
+  // Tool name (working state only)
+  if (strlen(currentTool) > 0 && currentState == STATE_WORKING) {
+    drawInfoRow(TOOL_Y, drawToolIcon, currentTool, textColor, bgColor);
+  }
+
+  // Model name
+  if (strlen(currentModel) > 0) {
+    drawInfoRow(MODEL_Y, drawRobotIcon, currentModel, textColor, bgColor);
+  }
+
+  // Memory usage (hide on start state)
+  if (currentMemory > 0 && currentState != STATE_START) {
+    tft.setTextColor(textColor);
+    tft.setFont(&fonts::FreeSans9pt7b);
+    tft.setTextSize(1);
+    drawBrainIcon(tft, 10, MEMORY_Y + 2, textColor, 1, bgColor);
+    tft.setCursor(24, MEMORY_Y);
+    tft.print(currentMemory);
+    tft.print("%");
+    tft.setFont(nullptr);
+
+    // Memory bar (below percentage)
+    drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, currentMemory, bgColor);
+  }
+}
+
 void drawStatus() {
   uint16_t bgColor = getBackgroundColorEnum(currentState);
   uint16_t textColor = getTextColorEnum(currentState);
@@ -138,48 +211,16 @@ void drawStatus() {
   EffectType effectType = getEffectTypeEnum(currentState);
   const CharacterGeometry* character = getCharacterByName(currentCharacter);
 
-  // Fill background (only if dirty)
   if (needsRedraw) {
     tft.fillScreen(bgColor);
   }
 
-  // Calculate floating position
-  int charX = CHAR_X_BASE + getFloatOffsetX();
-  int charY = CHAR_Y_BASE + getFloatOffsetY();
-  lastCharX = charX;
-  lastCharY = charY;
-
-  // Draw character using sprite buffer (no flickering)
   if (dirtyCharacter || needsRedraw) {
-    if (spriteInitialized) {
-      drawCharacterToSprite(charSprite, eyeType, effectType, bgColor, character);
-      charSprite.pushSprite(charX, charY);
-    } else {
-      // Fallback to direct drawing
-      drawCharacter(tft, charX, charY, eyeType, effectType, bgColor, character);
-    }
+    drawCharacterSection(bgColor, eyeType, effectType, character);
   }
 
-  // Status text (color based on background)
   if (dirtyStatus || needsRedraw) {
-    // Clear status text region when only status changed (not full redraw)
-    // This prevents text overlap/ghosting
-    if (dirtyStatus && !needsRedraw) {
-      tft.fillRect(0, STATUS_TEXT_Y, SCREEN_WIDTH, LOADING_Y - STATUS_TEXT_Y, bgColor);
-    }
-
-    char statusText[32];
-    if (currentState == STATE_WORKING) {
-      getWorkingText(currentTool, statusText, sizeof(statusText));
-    } else {
-      getStatusTextEnum(currentState, statusText, sizeof(statusText));
-    }
-
-    tft.setTextColor(textColor);
-    tft.setTextSize(3);
-    int textX = (SCREEN_WIDTH - tft.textWidth(statusText)) / 2;
-    tft.setCursor(textX, STATUS_TEXT_Y);
-    tft.println(statusText);
+    drawStatusTextSection(bgColor, textColor);
   }
 
   // Loading dots (thinking, planning, packing and working states)
@@ -189,45 +230,10 @@ void drawStatus() {
     drawLoadingDots(tft, SCREEN_WIDTH / 2, LOADING_Y, animFrame, false);  // Normal
   }
 
-  // Project name, tool, model, memory info
   if (dirtyInfo || needsRedraw) {
-    // Clear info region when only info changed (not full redraw)
-    // This prevents text overlap/ghosting
-    if (dirtyInfo && !needsRedraw) {
-      tft.fillRect(0, PROJECT_Y, SCREEN_WIDTH, SCREEN_HEIGHT - PROJECT_Y, bgColor);
-    }
-
-    if (strlen(currentProject) > 0) {
-      drawInfoRow(PROJECT_Y, drawFolderIcon, currentProject, textColor, bgColor);
-    }
-
-    // Tool name (working state only)
-    if (strlen(currentTool) > 0 && currentState == STATE_WORKING) {
-      drawInfoRow(TOOL_Y, drawToolIcon, currentTool, textColor, bgColor);
-    }
-
-    // Model name
-    if (strlen(currentModel) > 0) {
-      drawInfoRow(MODEL_Y, drawRobotIcon, currentModel, textColor, bgColor);
-    }
-
-    // Memory usage (hide on start state)
-    if (currentMemory > 0 && currentState != STATE_START) {
-      tft.setTextColor(textColor);
-      tft.setFont(&fonts::FreeSans9pt7b);
-      tft.setTextSize(1);
-      drawBrainIcon(tft, 10, MEMORY_Y + 2, textColor, 1, bgColor);
-      tft.setCursor(24, MEMORY_Y);
-      tft.print(currentMemory);
-      tft.print("%");
-      tft.setFont(nullptr);
-
-      // Memory bar (below percentage)
-      drawMemoryBar(tft, MEMORY_BAR_X, MEMORY_BAR_Y, MEMORY_BAR_W, MEMORY_BAR_H, currentMemory, bgColor);
-    }
+    drawInfoSection(bgColor, textColor);
   }
 
-  // Connection indicator
   drawConnectionIndicator();
 
   needsRedraw = false;

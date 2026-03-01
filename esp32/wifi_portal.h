@@ -6,9 +6,8 @@
 #ifndef WIFI_PORTAL_H
 #define WIFI_PORTAL_H
 
-// HTML page for WiFi configuration
-String getConfigPage() {
-  String html = R"HTML(
+// HTML page for WiFi configuration (stored in flash, no heap allocation)
+const char CONFIG_PAGE[] = R"HTML(
 <!DOCTYPE html>
 <html>
 <head>
@@ -250,7 +249,5 @@ String getConfigPage() {
 </body>
 </html>
 )HTML";
-  return html;
-}
 
 #endif // WIFI_PORTAL_H

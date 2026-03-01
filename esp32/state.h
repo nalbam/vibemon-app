@@ -57,6 +57,7 @@ unsigned long lastActivityTime = 0;
 // Serial input buffer (avoid String allocation)
 char serialBuffer[512];
 int serialBufferPos = 0;
+bool serialOverflow = false;
 
 // WiFi variables (conditional)
 #ifdef USE_WIFI
