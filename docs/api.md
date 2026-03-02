@@ -148,6 +148,11 @@ curl -X POST http://127.0.0.1:19280/close \
   -d '{"project":"my-project"}'
 ```
 
+**Response:**
+```json
+{"success": true, "project": "my-project", "windowCount": 1}
+```
+
 ### POST /show (Desktop only)
 
 Show window and position to top-right corner.
@@ -194,6 +199,11 @@ Set window mode (`multi` or `single`).
 curl -X POST http://127.0.0.1:19280/window-mode \
   -H "Content-Type: application/json" \
   -d '{"mode":"single"}'
+```
+
+**Response:**
+```json
+{"success": true, "mode": "single", "windowCount": 1, "lockedProject": null}
 ```
 
 ---

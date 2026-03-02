@@ -231,7 +231,7 @@ void handleLock() {
   // No body or no project - lock current project
   if (strlen(currentProject) > 0) {
     lockProject(currentProject);
-    snprintf(response, sizeof(response), "{\"success\":true,\"locked\":\"%s\"}", lockedProject);
+    snprintf(response, sizeof(response), "{\"success\":true,\"lockedProject\":\"%s\"}", lockedProject);
     server.send(200, "application/json", response);
   } else {
     server.send(400, "application/json", "{\"error\":\"No project to lock\"}");
