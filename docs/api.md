@@ -323,7 +323,14 @@ curl -X POST http://127.0.0.1:19280/quit
 Reboot the ESP32 device.
 
 ```bash
-curl -X POST http://192.168.0.185/reboot
+curl -X POST http://192.168.0.185/reboot \
+  -H "Content-Type: application/json" \
+  -d '{"confirm":true}'
+```
+
+**Response:**
+```json
+{"ok": true, "rebooting": true}
 ```
 
 ### POST /wifi-reset (ESP32 only)
@@ -331,7 +338,9 @@ curl -X POST http://192.168.0.185/reboot
 Clear saved WiFi credentials and return to provisioning mode.
 
 ```bash
-curl -X POST http://192.168.0.185/wifi-reset
+curl -X POST http://192.168.0.185/wifi-reset \
+  -H "Content-Type: application/json" \
+  -d '{"confirm":true}'
 ```
 
 **Response:**

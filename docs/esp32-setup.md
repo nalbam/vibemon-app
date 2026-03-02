@@ -146,7 +146,9 @@ These are used as **defaults** if no saved credentials exist.
 Clear saved credentials and return to provisioning mode:
 
 ```bash
-curl -X POST http://DEVICE_IP/wifi-reset
+curl -X POST http://DEVICE_IP/wifi-reset \
+  -H "Content-Type: application/json" \
+  -d '{"confirm":true}'
 ```
 
 Device will:
