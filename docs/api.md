@@ -8,7 +8,6 @@ Default port: Desktop App `19280`, ESP32 WiFi `80`
 |-------|-------|-------------|
 | Payload size | 10KB | Maximum request body size |
 | Rate limit | 100 req/min | Per IP address |
-| Request timeout | 30 sec | Prevents Slowloris attacks |
 | CORS | localhost only | Only allows localhost origins |
 
 > **Note:** ESP32 HTTP server does not enforce these limits. ESP32 security relies on local network isolation and SSID sanitization.
