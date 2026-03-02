@@ -71,10 +71,19 @@ curl -X POST http://127.0.0.1:19280/status \
 | `character` | string | `apto`, `clawd`, `kiro`, or `claw` |
 | `terminalId` | string | Desktop only. Terminal ID for click-to-focus (e.g., `iterm2:w0t0p0:UUID` or `ghostty:12345`) |
 
-**Response:**
+**Response (Desktop):**
 ```json
-{"success": true, "project": "my-project", "state": "working", "windowCount": 1}
+{"success": true, "project": "my-project", "state": "working", "windowCount": 2}
 ```
+
+> `skipped: true` is added when no state change is detected (optimization). If a project is blocked (project locked or max windows), `success` is `false` with an `error` field.
+
+**Response (ESP32 WiFi):**
+```json
+{"success": true}
+```
+
+> If blocked by project lock: `{"success": false, "blocked": true}`
 
 ### GET /status
 
@@ -100,7 +109,7 @@ curl http://127.0.0.1:19280/status
 {
   "state": "working",
   "project": "my-project",
-  "locked": "my-project",
+  "lockedProject": "my-project",
   "lockMode": "on-thinking",
   "projectCount": 1
 }
@@ -193,36 +202,67 @@ curl -X POST http://127.0.0.1:19280/window-mode \
 
 ### POST /lock
 
-Lock to a specific project (single-window mode only).
+Lock to a specific project.
 
 ```bash
+# Desktop
 curl -X POST http://127.0.0.1:19280/lock \
   -H "Content-Type: application/json" \
   -d '{"project":"my-project"}'
+
+# ESP32
+curl -X POST http://192.168.0.185/lock \
+  -H "Content-Type: application/json" \
+  -d '{"project":"my-project"}'
 ```
+
+**Request Body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `project` | string | Project name to lock. Defaults to current project if omitted (ESP32 only). |
 
 **Response:**
 ```json
 {"success": true, "lockedProject": "my-project"}
 ```
 
+> **Desktop:** Only works in single-window mode. Returns `{"success": false, "error": "Lock only available in single-window mode"}` in multi-window mode.
+>
+> **ESP32:** Always available. When locking a new project, the display transitions to `idle` state and clears `tool`, `model`, `memory`.
+
 ### POST /unlock
 
 Unlock project.
 
 ```bash
+# Desktop
 curl -X POST http://127.0.0.1:19280/unlock
+
+# ESP32
+curl -X POST http://192.168.0.185/unlock
 ```
+
+**Response:**
+```json
+{"success": true, "lockedProject": null}
+```
+
+> **Desktop:** Only works in single-window mode. Returns `{"success": false, "error": "Unlock only available in single-window mode"}` in multi-window mode.
 
 ### GET /lock-mode
 
 Get current lock mode.
 
 ```bash
+# Desktop
 curl http://127.0.0.1:19280/lock-mode
+
+# ESP32
+curl http://192.168.0.185/lock-mode
 ```
 
-**Response:**
+**Response (Desktop):**
 ```json
 {
   "mode": "on-thinking",
@@ -232,15 +272,39 @@ curl http://127.0.0.1:19280/lock-mode
 }
 ```
 
+**Response (ESP32 WiFi):**
+```json
+{
+  "mode": "on-thinking",
+  "modes": {"first-project": "First Project", "on-thinking": "On Thinking"},
+  "lockedProject": null
+}
+```
+
+> `windowMode` is Desktop-only (ESP32 has no window mode concept).
+
 ### POST /lock-mode
 
 Set lock mode (`first-project` or `on-thinking`).
 
 ```bash
+# Desktop
 curl -X POST http://127.0.0.1:19280/lock-mode \
   -H "Content-Type: application/json" \
   -d '{"mode":"first-project"}'
+
+# ESP32
+curl -X POST http://192.168.0.185/lock-mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"first-project"}'
 ```
+
+**Response:**
+```json
+{"success": true, "mode": "first-project", "lockedProject": null}
+```
+
+> **ESP32:** Changing lock mode resets the current lock (`lockedProject` becomes null) and persists the new mode to Flash storage.
 
 ---
 
@@ -330,7 +394,7 @@ curl -X POST http://192.168.0.185/reboot \
 
 **Response:**
 ```json
-{"ok": true, "rebooting": true}
+{"success": true, "rebooting": true}
 ```
 
 ### POST /wifi-reset (ESP32 only)
@@ -359,15 +423,17 @@ See [ESP32 Setup Guide](esp32-setup.md#reset-wifi-settings) for details.
 
 ## HTTP Status Codes
 
-| Code | Description |
-|------|-------------|
-| `200` | Success |
-| `400` | Bad request (validation error) |
-| `404` | Not found |
-| `408` | Request timeout |
-| `413` | Payload too large (>10KB) |
-| `429` | Too many requests (rate limited) |
-| `500` | Internal server error |
+| Code | Desktop | ESP32 |
+|------|---------|-------|
+| `200` | Success | Success (also used for some errors — check `success` field) |
+| `400` | Bad request (validation error) | Bad request (missing body or invalid input) |
+| `404` | Not found | - |
+| `408` | Request timeout | - |
+| `413` | Payload too large (>10KB) | - |
+| `429` | Too many requests (rate limited) | - |
+| `500` | Internal server error | - |
+
+> **ESP32 note:** The ESP32 HTTP server always returns HTTP 200 for valid requests (including project-lock rejections). Check the `success` field in the response body to determine the outcome.
 
 ### Error Response Format
 

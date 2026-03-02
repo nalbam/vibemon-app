@@ -14,11 +14,11 @@
 void buildStatusJson(char* buf, size_t size) {
   if (strlen(lockedProject) > 0) {
     snprintf(buf, size,
-      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":\"%s\",\"lockMode\":\"%s\",\"projectCount\":%d}",
+      "{\"state\":\"%s\",\"project\":\"%s\",\"lockedProject\":\"%s\",\"lockMode\":\"%s\",\"projectCount\":%d}",
       getStateString(currentState), currentProject, lockedProject, getLockModeString(), projectCount);
   } else {
     snprintf(buf, size,
-      "{\"state\":\"%s\",\"project\":\"%s\",\"locked\":null,\"lockMode\":\"%s\",\"projectCount\":%d}",
+      "{\"state\":\"%s\",\"project\":\"%s\",\"lockedProject\":null,\"lockMode\":\"%s\",\"projectCount\":%d}",
       getStateString(currentState), currentProject, getLockModeString(), projectCount);
   }
 }
@@ -44,7 +44,7 @@ bool handleCommand(const char* command, JsonObject doc) {
     return true;
   }
   if (strcmp(command, "reboot") == 0) {
-    Serial.println("{\"ok\":true,\"rebooting\":true}");
+    Serial.println("{\"success\":true,\"rebooting\":true}");
     delay(100);  // Allow serial output to complete
     ESP.restart();
     return true;
@@ -65,7 +65,7 @@ bool handleCommand(const char* command, JsonObject doc) {
         Serial.println("{\"error\":\"Invalid mode. Valid modes: first-project, on-thinking\"}");
       }
     } else {
-      Serial.print("{\"lockMode\":\"");
+      Serial.print("{\"mode\":\"");
       Serial.print(getLockModeString());
       Serial.println("\"}");
     }
@@ -160,7 +160,7 @@ bool processStatusData(JsonObject doc) {
   // Check if update should be blocked due to project lock
   if (isLockedToDifferentProject(incomingProject)) {
     // Silently ignore update from different project
-    Serial.println("{\"ok\":true,\"blocked\":true}");
+    Serial.println("{\"success\":false,\"blocked\":true}");
     return false;
   }
 

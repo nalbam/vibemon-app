@@ -192,9 +192,9 @@ void handleStatus() {
     const String& body = server.arg("plain");
     bool applied = processInput(body.c_str());
     if (applied) {
-      server.send(200, "application/json", "{\"ok\":true}");
+      server.send(200, "application/json", "{\"success\":true}");
     } else {
-      server.send(200, "application/json", "{\"ok\":true,\"blocked\":true}");
+      server.send(200, "application/json", "{\"success\":false,\"blocked\":true}");
     }
   } else {
     server.send(400, "application/json", "{\"error\":\"no body\"}");
@@ -222,7 +222,7 @@ void handleLock() {
       const char* projectToLock = doc["project"] | currentProject;
       if (strlen(projectToLock) > 0) {
         lockProject(projectToLock);
-        snprintf(response, sizeof(response), "{\"success\":true,\"locked\":\"%s\"}", lockedProject);
+        snprintf(response, sizeof(response), "{\"success\":true,\"lockedProject\":\"%s\"}", lockedProject);
         server.send(200, "application/json", response);
         return;
       }
@@ -240,14 +240,20 @@ void handleLock() {
 
 void handleUnlock() {
   unlockProject();
-  server.send(200, "application/json", "{\"success\":true,\"locked\":null}");
+  server.send(200, "application/json", "{\"success\":true,\"lockedProject\":null}");
 }
 
 void handleLockModeGet() {
-  char response[192];
-  snprintf(response, sizeof(response),
-    "{\"lockMode\":\"%s\",\"modes\":{\"first-project\":\"First project auto-lock\",\"on-thinking\":\"Lock on thinking\"}}",
-    getLockModeString());
+  char response[256];
+  if (strlen(lockedProject) > 0) {
+    snprintf(response, sizeof(response),
+      "{\"mode\":\"%s\",\"modes\":{\"first-project\":\"First Project\",\"on-thinking\":\"On Thinking\"},\"lockedProject\":\"%s\"}",
+      getLockModeString(), lockedProject);
+  } else {
+    snprintf(response, sizeof(response),
+      "{\"mode\":\"%s\",\"modes\":{\"first-project\":\"First Project\",\"on-thinking\":\"On Thinking\"},\"lockedProject\":null}",
+      getLockModeString());
+  }
   server.send(200, "application/json", response);
 }
 
@@ -264,7 +270,7 @@ void handleLockModePost() {
         if (newMode >= 0) {
           setLockMode(newMode);
           char response[64];
-          snprintf(response, sizeof(response), "{\"success\":true,\"lockMode\":\"%s\"}", getLockModeString());
+          snprintf(response, sizeof(response), "{\"success\":true,\"mode\":\"%s\",\"lockedProject\":null}", getLockModeString());
           server.send(200, "application/json", response);
           return;
         }
@@ -280,7 +286,7 @@ void handleReboot() {
     StaticJsonDocument<64> doc;
     deserializeJson(doc, server.arg("plain"));
     if (doc["confirm"] == true) {
-      server.send(200, "application/json", "{\"ok\":true,\"rebooting\":true}");
+      server.send(200, "application/json", "{\"success\":true,\"rebooting\":true}");
       delay(100);  // Allow HTTP response to complete
       ESP.restart();
       return;

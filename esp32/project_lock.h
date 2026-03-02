@@ -62,7 +62,7 @@ void lockProject(const char* project) {
       dirtyInfo = true;
     }
 
-    Serial.print("{\"locked\":\"");
+    Serial.print("{\"lockedProject\":\"");
     Serial.print(lockedProject);
     Serial.println("\",\"state\":\"idle\"}");
   }
@@ -71,7 +71,7 @@ void lockProject(const char* project) {
 // Unlock project
 void unlockProject() {
   lockedProject[0] = '\0';
-  Serial.println("{\"locked\":null}");
+  Serial.println("{\"lockedProject\":null}");
 }
 
 // =============================================================================
@@ -89,9 +89,9 @@ void setLockMode(int mode) {
     preferences.putInt("lockMode", lockMode);
     preferences.end();
 
-    Serial.print("{\"lockMode\":\"");
+    Serial.print("{\"mode\":\"");
     Serial.print(mode == LOCK_MODE_FIRST_PROJECT ? "first-project" : "on-thinking");
-    Serial.println("\",\"locked\":null}");
+    Serial.println("\",\"lockedProject\":null}");
   }
 }
 
