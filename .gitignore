@@ -45,15 +45,8 @@ target/
 .env*.local
 .env
 
-# claude
-.claude/
-.prompt-*.md
-.prompt.md
-prompt-*.md
-prompt.md
-
-# kiro
-.kiro/specs/
+# prompt files
+*.prompt.md
 
 # Node.js
 node_modules/
