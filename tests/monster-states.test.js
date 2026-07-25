@@ -2,7 +2,7 @@
  * Tests for the 3D engine's state/theme definitions
  * (src/engine/monster-states.js) — guards that every registry state has an
  * animation, every referenced move/joint/eye mode is part of the declared
- * vocabulary, and every bundled character has a color theme.
+ * vocabulary, and every character in the registry carries a 3D palette.
  *
  * Like tests/engine.test.js, the module is an ES module the renderer loads
  * in the browser, so it is read, export-stripped, and evaluated in a vm
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { VALID_STATES } = require('../src/shared/states.cjs');
-const { CHARACTER_NAMES } = require('../src/shared/characters.cjs');
+const { CHARACTER_NAMES, CHARACTER_CONFIG } = require('../src/shared/characters.cjs');
 
 function loadMonsterStates() {
   const src = fs.readFileSync(
@@ -22,7 +22,7 @@ function loadMonsterStates() {
   )
     .replace(/^export /gm, '')
     + '\nmodule.exports = { JOINTS, MOVES, EYE_MODES, STATE_ANIMATIONS, ' +
-      'CHARACTER_THEMES, DEFAULT_THEME, getCharacterTheme, getStateAnimation, lerp, dampFactor };';
+      'DEFAULT_THEME, getCharacterTheme, getStateAnimation, lerp, dampFactor };';
 
   const mod = { exports: {} };
   vm.runInNewContext(src, { module: mod, exports: mod.exports, console });
@@ -30,8 +30,7 @@ function loadMonsterStates() {
 }
 
 const {
-  JOINTS, MOVES, EYE_MODES, STATE_ANIMATIONS,
-  CHARACTER_THEMES, DEFAULT_THEME,
+  JOINTS, MOVES, EYE_MODES, STATE_ANIMATIONS, DEFAULT_THEME,
   getCharacterTheme, getStateAnimation, lerp, dampFactor
 } = loadMonsterStates();
 
@@ -68,9 +67,9 @@ describe('state animation coverage', () => {
 });
 
 describe('character themes', () => {
-  test('every bundled character has a theme with valid hex colors', () => {
+  test('every character in the registry has a theme with valid hex colors', () => {
     for (const name of CHARACTER_NAMES) {
-      const theme = CHARACTER_THEMES[name];
+      const theme = CHARACTER_CONFIG[name].theme;
       expect(theme).toBeDefined();
       for (const key of ['body', 'belly', 'accent', 'eye', 'blush', 'flame']) {
         expect(theme[key]).toMatch(HEX_COLOR);
@@ -78,14 +77,16 @@ describe('character themes', () => {
     }
   });
 
-  test('unknown characters derive a theme from their registry entry', () => {
-    const theme = getCharacterTheme('newmon', { color: '#123456', eyeColor: '#ABCDEF' });
-    expect(theme.body).toBe('#123456');
-    expect(theme.eye).toBe('#ABCDEF');
+  test('the theme comes from the registry entry, not the 2D overlay color', () => {
+    const entry = CHARACTER_CONFIG.codex;
+    expect(getCharacterTheme(entry)).toBe(entry.theme);
+    // codex's `color` is the sprite's eye/glasses overlay, never the body.
+    expect(getCharacterTheme(entry).body).not.toBe(entry.color);
   });
 
-  test('unknown characters without a registry entry use the default theme', () => {
-    expect(getCharacterTheme('newmon', undefined)).toBe(DEFAULT_THEME);
+  test('entries without a theme use the default theme', () => {
+    expect(getCharacterTheme({ color: '#123456' })).toBe(DEFAULT_THEME);
+    expect(getCharacterTheme(undefined)).toBe(DEFAULT_THEME);
   });
 });
 

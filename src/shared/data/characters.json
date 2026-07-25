@@ -6,14 +6,16 @@
       "color": "#FFFFFF",
       "image": "vibemon.png",
       "eyes": { "left": { "x": 44, "y": 52 }, "right": { "x": 76, "y": 52 }, "w": 8, "h": 12 },
-      "effect": { "x": 96, "y": 6 }
+      "effect": { "x": 96, "y": 6 },
+      "theme": { "body": "#8B7CF6", "belly": "#EDE9FF", "accent": "#C4B5FD", "eye": "#241B3A", "blush": "#FF9EC4", "flame": "#7DF9FF" }
     },
     "clawd": {
       "displayName": "Clawd",
       "color": "#D97757",
       "image": "clawd.png",
       "eyes": { "left": { "x": 28, "y": 42 }, "right": { "x": 88, "y": 42 }, "size": 12 },
-      "effect": { "x": 104, "y": 8 }
+      "effect": { "x": 104, "y": 8 },
+      "theme": { "body": "#D97757", "belly": "#F5C9B0", "accent": "#A8442A", "eye": "#2B1A12", "blush": "#FF9E80", "flame": "#FFC26B" }
     },
     "codex": {
       "displayName": "Codex",
@@ -22,28 +24,32 @@
       "glassesColor": "#ECF8FC",
       "image": "codex.png",
       "eyes": { "left": { "x": 42, "y": 71 }, "right": { "x": 81, "y": 71 }, "w": 5, "h": 11 },
-      "effect": { "x": 100, "y": 10 }
+      "effect": { "x": 100, "y": 10 },
+      "theme": { "body": "#4886FC", "belly": "#8FB5FF", "accent": "#1F63F1", "eye": "#1C2745", "blush": "#76A5FF", "flame": "#9DB8FF" }
     },
     "kiro": {
       "displayName": "Kiro",
       "color": "#FFFFFF",
       "image": "kiro.png",
       "eyes": { "left": { "x": 62, "y": 36 }, "right": { "x": 88, "y": 36 }, "w": 10, "h": 20 },
-      "effect": { "x": 100, "y": 6 }
+      "effect": { "x": 100, "y": 6 },
+      "theme": { "body": "#F4F4F5", "belly": "#FFFFFF", "accent": "#C9C9D4", "eye": "#27272A", "blush": "#FFC2CE", "flame": "#A5E8FF" }
     },
     "claw": {
       "displayName": "Claw",
       "color": "#DD4444",
       "image": "claw.png",
       "eyes": { "left": { "x": 42, "y": 32 }, "right": { "x": 76, "y": 32 }, "size": 12 },
-      "effect": { "x": 98, "y": 8 }
+      "effect": { "x": 98, "y": 8 },
+      "theme": { "body": "#DD5555", "belly": "#FFC9C9", "accent": "#C24444", "eye": "#331111", "blush": "#FF9494", "flame": "#FFB4A0" }
     },
     "daangni": {
       "displayName": "Daangni",
       "color": "#F2CAB2",
       "image": "daangni.png",
       "eyes": { "left": { "x": 40, "y": 70 }, "right": { "x": 78, "y": 70 }, "w": 8, "h": 12 },
-      "effect": { "x": 94, "y": 6 }
+      "effect": { "x": 94, "y": 6 },
+      "theme": { "body": "#F2CAB2", "belly": "#FDEFE4", "accent": "#2AA198", "eye": "#46352A", "blush": "#F9A08C", "flame": "#7FE3D8" }
     }
   }
 }

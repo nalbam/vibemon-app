@@ -1,10 +1,10 @@
 /**
  * VibeMon state/theme definitions for the 3D engine (vibemon-engine-3d.js).
  *
- * Pure data + math — no three.js import — so jest can load it with the same
- * vm-sandbox technique as tests/engine.test.js and guard the invariants:
- * every registry state has an animation, every move name is implemented,
- * every bundled character has a color theme.
+ * Pure data + math — no three.js import — so a consumer's test runner can
+ * load it in a sandbox and guard the invariants: every registry state has an
+ * animation and every move name is implemented. Character colors are not
+ * here; they live in each registry entry's `theme` (data/characters.json).
  *
  * The character is a digital vibe monster: a squishy horned creature with a
  * spade tail and a "vibe flame" burning above its head. The flame is the
@@ -139,9 +139,10 @@ export const STATE_ANIMATIONS = {
 };
 
 /**
- * Character color themes for the vibe monster, tinted per character after
- * each character's established identity (vibemon purple, clawd orange,
- * codex light blue, kiro white, claw red, daangni peach).
+ * Fallback palette (VibeMon purple), used when a registry entry carries no
+ * usable `theme`. The canonical registry requires one on every character, so
+ * this covers a remote copy whose palette was dropped in sanitization.
+ * Same shape as `theme` in data/characters.json:
  *   body   - slime body color
  *   belly  - belly patch / paws
  *   accent - horns / spade tail tip
@@ -149,34 +150,18 @@ export const STATE_ANIMATIONS = {
  *   blush  - cheek patches
  *   flame  - vibe flame glow color
  */
-export const CHARACTER_THEMES = {
-  vibemon: { body: '#8B7CF6', belly: '#EDE9FF', accent: '#C4B5FD', eye: '#241B3A', blush: '#FF9EC4', flame: '#7DF9FF' },
-  clawd:   { body: '#D97757', belly: '#F5C9B0', accent: '#A8442A', eye: '#2B1A12', blush: '#FF9E80', flame: '#FFC26B' },
-  codex:   { body: '#4886FC', belly: '#8FB5FF', accent: '#1F63F1', eye: '#1C2745', blush: '#76A5FF', flame: '#9DB8FF' },
-  kiro:    { body: '#F4F4F5', belly: '#FFFFFF', accent: '#C9C9D4', eye: '#27272A', blush: '#FFC2CE', flame: '#A5E8FF' },
-  claw:    { body: '#DD5555', belly: '#FFC9C9', accent: '#C24444', eye: '#331111', blush: '#FF9494', flame: '#FFB4A0' },
-  daangni: { body: '#F2CAB2', belly: '#FDEFE4', accent: '#2AA198', eye: '#46352A', blush: '#F9A08C', flame: '#7FE3D8' }
+export const DEFAULT_THEME = {
+  body: '#8B7CF6', belly: '#EDE9FF', accent: '#C4B5FD', eye: '#241B3A', blush: '#FF9EC4', flame: '#7DF9FF'
 };
 
-export const DEFAULT_THEME = CHARACTER_THEMES.vibemon;
-
 /**
- * Resolve the theme for a character name. Unknown characters (future registry
- * additions) derive a theme from their registry entry's color/eyeColor so
- * they still render distinctly instead of falling back to the default.
+ * Resolve the 3D palette for a character from its registry entry, so a
+ * character added to the registry renders in 3D without a code change. Note
+ * the entry's top-level `color` is the 2D sprite's eye/accent overlay, not a
+ * body color — only `theme` describes the monster.
  */
-export function getCharacterTheme(name, registryEntry) {
-  if (CHARACTER_THEMES[name]) return CHARACTER_THEMES[name];
-  if (registryEntry && registryEntry.color) {
-    return {
-      body: registryEntry.color,
-      belly: '#FFFFFF',
-      accent: registryEntry.glassesColor || '#C4B5FD',
-      eye: registryEntry.eyeColor || '#241B3A',
-      blush: '#FF9EC4',
-      flame: '#7DF9FF'
-    };
-  }
+export function getCharacterTheme(registryEntry) {
+  if (registryEntry && registryEntry.theme) return registryEntry.theme;
   return DEFAULT_THEME;
 }
 

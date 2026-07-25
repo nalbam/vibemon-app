@@ -34,9 +34,18 @@ VibeMon normalizes multiple agent ecosystems into one display model. The renderi
 | `claw` | Red | Antenna character | OpenClaw |
 | `daangni` | Peach/teal | Round face, fluffy top | Manual only (Character Lock) |
 
-All characters use **image-based rendering** (128x128 PNG). Images load remote-first from `static.vibemon.io`, with copies bundled in `src/assets/characters/` as the offline fallback. Character is **auto-selected by bridge**, not by the core display runtime. You can also force one with [Character Lock](#character-lock).
+In **2D** (default) all characters use **image-based rendering** (128x128 PNG). Images load remote-first from `static.vibemon.io`, with copies bundled in `src/assets/characters/` as the offline fallback. Character is **auto-selected by bridge**, not by the core display runtime. You can also force one with [Character Lock](#character-lock).
 
-Characters are defined in a single registry canonically hosted in [vibemon-static](https://github.com/opspresso/vibemon-static) (served at `static.vibemon.io/data/characters.json`, with `src/shared/data/characters.json` bundled as the fallback and kept in sync via `npm run check:registry`): display name, accent color (the eye/accent overlay drawn on the sprite — white for VibeMon, distinct from the "Color" appearance above), image file, and eye/effect coordinates (in canvas pixels on the 128x128 sprite, adjustable at 1px). The character window, tray icon (downscaled from the same PNG), menus, and validation all derive from it — adding a character is one PNG plus one registry entry in vibemon-static.
+Characters are defined in a single registry canonically hosted in [vibemon-static](https://github.com/opspresso/vibemon-static) (served at `static.vibemon.io/data/characters.json`, with `src/shared/data/characters.json` bundled as the fallback and kept in sync via `npm run check:registry`): display name, accent color (the eye/accent overlay drawn on the sprite — white for VibeMon, distinct from the "Color" appearance above), image file, eye/effect coordinates (in canvas pixels on the 128x128 sprite, adjustable at 1px), and the `theme` palette the 3D engine paints. The character window, tray icon (downscaled from the same PNG), menus, and validation all derive from it — adding a character is one PNG plus one registry entry in vibemon-static, no code change here.
+
+### Render Mode
+
+**Settings → Character → Render Mode** switches the character window between the two engines; the choice persists and the open window reloads into it.
+
+- `2d` (default): the pixel-art sprite described above
+- `3d`: a procedurally rendered pet (three.js) — no images are used. The rig is the same for every character; each one is tinted by its registry `theme` (`body`/`belly`/`accent`/`eye`/`blush`/`flame`), so Character Lock and per-project switching behave identically to 2D.
+
+Both engines are vendored from vibemon-static (`src/engine/`); three.js ships locally in `src/vendor/` because the renderer CSP forbids runtime CDN imports.
 
 ### Character Lock
 

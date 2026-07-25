@@ -35,6 +35,9 @@ const REGISTRY_NAME = /^[a-z0-9_-]{1,32}$/;
 const IMAGE_FILE = /^[a-z0-9_-]{1,64}\.png$/;
 const MAX_TEXT_LENGTH = 32;
 
+// Palette slots the 3D engine paints (monster-states.js DEFAULT_THEME).
+const THEME_SLOTS = ['body', 'belly', 'accent', 'eye', 'blush', 'flame'];
+
 const REQUIRED_STATES = Object.keys(bundledStates.states);
 
 /**
@@ -125,6 +128,20 @@ function sanitizeEyes(eyes) {
 }
 
 /**
+ * Validate the 3D palette. Returns a `{ body, belly, accent, eye, blush,
+ * flame }` object, or null when any slot is missing or not a hex color.
+ */
+function sanitizeTheme(theme) {
+  if (!theme || typeof theme !== 'object') return null;
+  const sanitized = {};
+  for (const slot of THEME_SLOTS) {
+    if (typeof theme[slot] !== 'string' || !HEX_COLOR.test(theme[slot])) return null;
+    sanitized[slot] = theme[slot];
+  }
+  return sanitized;
+}
+
+/**
  * Validate and sanitize a remote characters registry. Returns a
  * `{ default, characters }` object in the bundled file's shape, or null
  * when unusable. Invalid entries are dropped (character removal is a
@@ -167,6 +184,13 @@ function sanitizeCharactersRegistry(json) {
     }
     if (typeof entry.glassesColor === 'string' && HEX_COLOR.test(entry.glassesColor)) {
       characters[name].glassesColor = entry.glassesColor;
+    }
+    // 3D palette (monster-states.js): kept only when every slot is a valid
+    // color, so a malformed palette degrades to the engine's default theme
+    // instead of painting the rig with junk. The entry stays usable in 2D.
+    const theme = sanitizeTheme(entry.theme);
+    if (theme) {
+      characters[name].theme = theme;
     }
   }
 

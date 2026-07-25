@@ -114,6 +114,25 @@ describe('sanitizeCharactersRegistry', () => {
     expect(result.characters.clawd.glassesColor).toBeUndefined();
   });
 
+  test('preserves the 3D theme so a refreshed cache keeps its palette', () => {
+    const result = sanitizeCharactersRegistry(clone(bundledCharacters));
+    for (const [name, entry] of Object.entries(bundledCharacters.characters)) {
+      expect(result.characters[name].theme).toEqual(entry.theme);
+    }
+  });
+
+  test('drops an incomplete or malformed theme but keeps the entry', () => {
+    const json = clone(bundledCharacters);
+    delete json.characters.vibemon.theme.flame;
+    json.characters.clawd.theme.body = 'orange';
+    json.characters.kiro.theme = 'white';
+    const result = sanitizeCharactersRegistry(json);
+    for (const name of ['vibemon', 'clawd', 'kiro']) {
+      expect(result.characters[name]).toBeDefined();
+      expect(result.characters[name].theme).toBeUndefined();
+    }
+  });
+
   test('drops entries with out-of-range eye/effect anchors', () => {
     const json = clone(bundledCharacters);
     json.characters.offcanvas = {

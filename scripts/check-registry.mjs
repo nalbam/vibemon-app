@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Verifies that the bundled registry fallbacks (src/shared/data/*.json and
- * src/assets/characters/*.png) match the canonical registry in the
+ * src/assets/characters/*.png) and the vendored rendering modules
+ * (src/engine/, src/bubble/) match the canonical copies in the
  * vibemon-static repository.
  *
  * By default the canonical files are fetched from GitHub (main branch). Set
@@ -79,6 +80,8 @@ const checks = [
   compare('data/states.json', path.join(DATA_DIR, 'states.json'), true),
   compare('data/characters.json', path.join(DATA_DIR, 'characters.json'), true),
   compare('js/vibemon-engine.js', path.join(ENGINE_DIR, 'vibemon-engine.js'), false),
+  compare('js/vibemon-engine-3d.js', path.join(ENGINE_DIR, 'vibemon-engine-3d.js'), false),
+  compare('js/monster-states.js', path.join(ENGINE_DIR, 'monster-states.js'), false),
   compare('js/vibemon-bubble.js', path.join(BUBBLE_DIR, 'vibemon-bubble.js'), false),
   compare('css/vibemon-bubble.css', path.join(BUBBLE_DIR, 'vibemon-bubble.css'), false),
   ...imageFiles.map((img) => compare(`characters/${img}`, path.join(ASSETS_DIR, img), false)),

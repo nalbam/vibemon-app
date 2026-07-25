@@ -36,10 +36,16 @@ async function init() {
   ]);
 
   if (renderMode === '3d') {
-    // 3D pet engine: renders procedurally — characters map to color themes,
-    // no images are loaded.
-    const { createVibeMonEngine } = await import('./engine/vibemon-engine-3d.js');
+    // 3D pet engine: renders procedurally — characters map to the registry's
+    // `theme` palette, no images are loaded. The engine is vendored from
+    // vibemon-static, which ships no dependencies, so it takes three.js from
+    // here (local file: the CSP forbids runtime CDN imports).
+    const [{ createVibeMonEngine }, THREE] = await Promise.all([
+      import('./engine/vibemon-engine-3d.js'),
+      import('./vendor/three.module.min.js')
+    ]);
     vibeMonEngine = createVibeMonEngine(container, {
+      THREE,
       characters,
       defaultCharacter,
       states

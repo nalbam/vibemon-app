@@ -14,11 +14,14 @@
  * the 10 registry states blends to a target pose and layers named
  * creature-behavior moves on top (see monster-states.js).
  *
- * Characters are represented as color themes on the same rig
- * (CHARACTER_THEMES), so Character Lock and bridge character switching keep
- * working. Public API mirrors the 2D engine so renderer.js is a drop-in:
+ * Characters are represented as color themes on the same rig (each registry
+ * entry's `theme`), so Character Lock and bridge character switching keep
+ * working. Public API mirrors the 2D engine so renderer.js is a drop-in,
+ * plus the three.js namespace the consumer supplies — this repository ships
+ * no dependencies, so the caller resolves three.js itself:
  *
  *   const engine = createVibeMonEngine(container, {
+ *     THREE,            // three.js namespace (required)
  *     characters,       // registry entries (theme fallback for unknown names)
  *     defaultCharacter,
  *     states            // registry entries (unused visually; kept for parity)
@@ -29,7 +32,6 @@
  *   engine.startAnimation();
  */
 
-import * as THREE from '../vendor/three.module.min.js';
 import {
   JOINTS,
   getStateAnimation,
@@ -37,6 +39,9 @@ import {
   lerp,
   dampFactor
 } from './monster-states.js';
+
+// three.js namespace, supplied by the consumer through createVibeMonEngine.
+let THREE = null;
 
 const CONSTANTS = {
   VIEW_WIDTH: 172,
@@ -414,7 +419,7 @@ export class VibeMonEngine3D {
 
   _applyTheme(name) {
     if (!this.rig) return;
-    const theme = getCharacterTheme(name, this.characters[name]);
+    const theme = getCharacterTheme(this.characters[name]);
     this.rig.materials.body.color.set(theme.body);
     this.rig.materials.belly.color.set(theme.belly);
     this.rig.materials.accent.color.set(theme.accent);
@@ -550,6 +555,10 @@ export class VibeMonEngine3D {
 // =============================================================================
 
 export function createVibeMonEngine(container, options = {}) {
+  if (!options.THREE) {
+    throw new Error('vibemon-engine-3d requires options.THREE (the three.js namespace)');
+  }
+  THREE = options.THREE;
   return new VibeMonEngine3D(container, options);
 }
 
