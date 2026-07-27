@@ -486,9 +486,13 @@
           } catch (err) {
             console.error('Hook install failed:', err);
             btn.textContent = 'Failed';
+            // IPC prefixes the main-process message with its own wrapper; keep
+            // the last "Error:" segment so the tooltip carries the real cause.
+            btn.title = String((err && err.message) || err).split(/Error:\s*/).pop().trim();
             setTimeout(() => {
               btn.disabled = false;
               btn.textContent = idleText;
+              btn.title = '';
             }, FAILED_LABEL_MS);
           }
         });

@@ -13,6 +13,7 @@ const { centerOnCursorDisplay } = require('./window-position.cjs');
 const {
   ALWAYS_ON_TOP_MODES, CHARACTER_NAMES, CHARACTER_CONFIG, SPEECH_BUBBLE_FIELDS
 } = require('../shared/config.cjs');
+const { describeFailure } = require('./hook-installer.cjs');
 
 // Fixed navigation targets — the renderer picks by key, so no URL ever
 // crosses the IPC boundary.
@@ -155,8 +156,11 @@ class SettingsWindowManager {
       // inline via the row's badge/button state.
       const results = await this.hookInstaller.installByFlag(flag, token, { showSummary: false });
       this.notifyChanged();
-      if (results.length === 0 || results.some(r => !r.result.ok)) {
-        throw new Error('Hook install failed');
+      const failure = results.find(r => !r.result.ok);
+      if (failure || results.length === 0) {
+        // The reason travels with the rejection: this path shows no dialog, so
+        // without it the renderer can only say "Failed".
+        throw new Error(failure ? describeFailure(failure.result) : 'Hook install failed');
       }
       return this.toHookView(this.hookInstaller.getCachedStatuses());
     });
