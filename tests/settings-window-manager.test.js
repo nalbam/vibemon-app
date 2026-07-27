@@ -84,6 +84,7 @@ function makeDeps() {
         { name: 'Claude Code', flag: '--claude', present: true, hasHook: true, changed: false, hookFile: '/secret/path' }
       ]),
       checkForChanges: jest.fn(() => Promise.resolve(false)),
+      clearDismissed: jest.fn(),
       installByFlag: jest.fn(() => Promise.resolve([
         { tool: { flag: '--claude' }, result: { ok: true } }
       ]))
@@ -151,7 +152,7 @@ describe('settings:get-all', () => {
     freshManager();
     const snap = await invoke('settings:get-all');
     expect(snap.hooks).toEqual([
-      { name: 'Claude Code', flag: '--claude', present: true, hasHook: false, changed: false }
+      { name: 'Claude Code', flag: '--claude', present: true, hasHook: false, changed: false, broken: false, brokenPath: null, dismissed: false }
     ]);
   });
 
@@ -232,12 +233,47 @@ describe('AI tool hooks', () => {
     await expect(invoke('settings:install-hook', '--claude')).rejects.toThrow();
   });
 
+  test('reset-hook-prompts clears the dismissals and returns the refreshed view', async () => {
+    const { deps, manager } = freshManager();
+
+    const result = await invoke('settings:reset-hook-prompts');
+
+    expect(deps.hookInstaller.clearDismissed).toHaveBeenCalled();
+    expect(manager.onSettingsChanged).toHaveBeenCalled();
+    expect(result[0]).toEqual(expect.objectContaining({ flag: '--claude', dismissed: false }));
+  });
+
+  test('surfaces the broken flag and its path so the row can explain itself', async () => {
+    const { deps } = freshManager();
+    deps.hookInstaller.getCachedStatuses.mockReturnValue([
+      {
+        name: 'Claude Code',
+        flag: '--claude',
+        present: true,
+        hasHook: true,
+        changed: false,
+        broken: true,
+        brokenPath: 'C:/Python312/python.exe',
+        dismissed: false,
+        hookFile: '/secret/path'
+      }
+    ]);
+
+    const snap = await invoke('settings:get-all');
+
+    expect(snap.hooks[0]).toEqual(expect.objectContaining({
+      broken: true,
+      brokenPath: 'C:/Python312/python.exe'
+    }));
+    expect(snap.hooks[0].hookFile).toBeUndefined();
+  });
+
   test('refresh-hook-statuses re-verifies against the manifest and strips paths', async () => {
     const { deps } = freshManager();
     const result = await invoke('settings:refresh-hook-statuses');
     expect(deps.hookInstaller.checkForChanges).toHaveBeenCalled();
     expect(result).toEqual([
-      { name: 'Claude Code', flag: '--claude', present: true, hasHook: false, changed: false }
+      { name: 'Claude Code', flag: '--claude', present: true, hasHook: false, changed: false, broken: false, brokenPath: null, dismissed: false }
     ]);
   });
 });
