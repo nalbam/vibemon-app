@@ -335,7 +335,10 @@
       <section id="tab-ai-tools" class="tab">
         <div class="section-head" style="margin: 0 0 16px;">
           <h1 style="margin: 0;">AI Tools</h1>
-          <button class="action secondary" id="hooks-refresh">Refresh</button>
+          <div class="row-actions">
+            <button class="action secondary" id="hooks-reset-prompts" hidden>Re-enable prompts</button>
+            <button class="action secondary" id="hooks-refresh">Refresh</button>
+          </div>
         </div>
         <div class="rows" id="vibemon-scripts-list"></div>
         <div class="section-head">
@@ -467,15 +470,28 @@
         const actions = document.createElement('div');
         actions.className = 'row-actions';
 
+        // Broken outranks changed: a hook whose interpreter or script path no
+        // longer exists doesn't run at all, while drift only means outdated.
+        const needsAttention = tool.broken || tool.changed;
+
         if (tool.hasHook) {
           const badge = document.createElement('span');
-          badge.className = 'badge ' + (tool.changed ? 'warn' : 'ok');
-          badge.textContent = tool.changed ? 'Changed' : 'Installed ✓';
+          badge.className = 'badge ' + (needsAttention ? 'warn' : 'ok');
+          badge.textContent = tool.broken ? 'Needs repair' : (tool.changed ? 'Changed' : 'Installed ✓');
+          if (tool.broken && tool.brokenPath) {
+            badge.title = `Not found: ${tool.brokenPath}`;
+          }
+          actions.appendChild(badge);
+        } else if (tool.dismissed) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = 'Prompts off';
+          badge.title = "You picked Don't Ask Again for this tool.";
           actions.appendChild(badge);
         }
 
         const btn = document.createElement('button');
-        btn.className = 'action' + (tool.hasHook && !tool.changed ? ' secondary' : '');
+        btn.className = 'action' + (tool.hasHook && !needsAttention ? ' secondary' : '');
         btn.textContent = tool.hasHook ? 'Reinstall' : 'Install';
         btn.addEventListener('click', async () => {
           const idleText = tool.hasHook ? 'Reinstall' : 'Install';
@@ -505,9 +521,14 @@
 
     function renderHooks(hooks) {
       // Dot badge on the sidebar tab while any installed tool's scripts
-      // drifted from the published versions.
+      // drifted from the published versions or stopped resolving.
       const tabBtn = document.querySelector('.sidebar button[data-tab="ai-tools"]');
-      tabBtn.classList.toggle('attention', hooks.some((t) => t.present && t.changed));
+      tabBtn.classList.toggle('attention', hooks.some((t) => t.present && (t.changed || t.broken)));
+
+      // Only offered when something is actually silenced: "Don't Ask Again"
+      // is stored on disk, so without this the choice is permanent.
+      const resetBtn = $('hooks-reset-prompts');
+      resetBtn.hidden = !hooks.some((t) => t.dismissed);
 
       // The shared VibeMon Scripts entry renders in its own box above the
       // per-tool hook list.
@@ -690,6 +711,16 @@
       await window.settingsAPI.setToken('');
       loadAll();
     });
+    $('hooks-reset-prompts').addEventListener('click', async () => {
+      const btn = $('hooks-reset-prompts');
+      btn.disabled = true;
+      try {
+        renderHooks(await window.settingsAPI.resetHookPrompts());
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     $('hooks-refresh').addEventListener('click', async () => {
       const btn = $('hooks-refresh');
       btn.disabled = true;

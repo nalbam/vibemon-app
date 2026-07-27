@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   setOpenAtLogin: (enabled) => ipcRenderer.invoke('settings:set-open-at-login', enabled),
   setToken: (token) => ipcRenderer.invoke('settings:set-token', token),
   refreshHookStatuses: () => ipcRenderer.invoke('settings:refresh-hook-statuses'),
+  resetHookPrompts: () => ipcRenderer.invoke('settings:reset-hook-prompts'),
   installHook: (flag) => ipcRenderer.invoke('settings:install-hook', flag),
   repairVibemonConfig: () => ipcRenderer.invoke('settings:repair-vibemon-config'),
   setVibemonConfig: (partial) => ipcRenderer.invoke('settings:set-vibemon-config', partial),

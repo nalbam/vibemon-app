@@ -69,6 +69,33 @@ function mockToolMissing(tool) {
   presentCommands = new Set([tool.command]);
 }
 
+// A config in the shape each installer writes, registering the hook.
+function registeredConfigFor(tool) {
+  if (tool.flag === '--openclaw') {
+    return JSON.stringify({ plugins: { entries: { 'vibemon-bridge': { enabled: true } } } });
+  }
+  return JSON.stringify({
+    hooks: { Stop: [{ hooks: [{ type: 'command', command: `python3 ${tool.hookFile}` }] }] }
+  });
+}
+
+// Makes `tool` look fully installed: script files on disk *and* a config that
+// registers the hook, which is what refreshStatuses() requires before it will
+// call a tool installed.
+function mockToolInstalled(tool, { fileContents = 'local-bytes', config, missingFiles = [] } = {}) {
+  const missing = new Set(missingFiles);
+  const filePaths = new Set(
+    [tool.homeDir, tool.hookFile, ...tool.files.map(f => f.local)].filter(p => !missing.has(p))
+  );
+  const configPaths = new Set(tool.configPaths || []);
+  fs.existsSync.mockImplementation(p => filePaths.has(p) || configPaths.has(p));
+  fs.readFileSync.mockImplementation(p => {
+    if (configPaths.has(p)) return config === undefined ? registeredConfigFor(tool) : config;
+    if (filePaths.has(p)) return Buffer.from(fileContents);
+    throw new Error('ENOENT');
+  });
+}
+
 // Configures https.get + spawn to simulate a successful install.py run:
 // serves manifest.json (whose installer hash matches the script) and
 // install.py by URL. Events fire via setTimeout(..., 0) so this works
@@ -135,12 +162,33 @@ describe('HookInstaller', () => {
       expect(missing.map(t => t.flag)).toEqual([target.flag]);
     });
 
-    test('excludes a tool that already has its hook file installed', () => {
+    test('excludes a tool that already has its hook installed', () => {
       const target = TOOLS[1];
-      fs.existsSync.mockImplementation(p => p === target.homeDir || p === target.hookFile);
+      mockToolInstalled(target);
 
       const missing = hookInstaller.getMissingTools();
       expect(missing.find(t => t.flag === target.flag)).toBeUndefined();
+    });
+
+    // The script file surviving says nothing: the tool only runs it because
+    // of an entry in its config, and pruning that entry used to leave the
+    // status stuck on "installed" forever.
+    test('includes a tool whose hook file is present but no longer registered', () => {
+      const target = TOOLS[1];
+      mockToolInstalled(target, { config: JSON.stringify({ hooks: {} }) });
+
+      const missing = hookInstaller.getMissingTools();
+      expect(missing.map(t => t.flag)).toContain(target.flag);
+    });
+
+    test('includes a tool whose config is missing entirely', () => {
+      const target = TOOLS[1];
+      const filePaths = new Set([target.homeDir, target.hookFile, ...target.files.map(f => f.local)]);
+      fs.existsSync.mockImplementation(p => filePaths.has(p));
+      fs.readFileSync.mockImplementation(() => { throw new Error('ENOENT'); });
+
+      const missing = hookInstaller.getMissingTools();
+      expect(missing.map(t => t.flag)).toContain(target.flag);
     });
 
     test('excludes a dismissed tool', () => {
@@ -207,6 +255,118 @@ describe('HookInstaller', () => {
       hookInstaller.dismiss([toolB]);
       expect(hookInstaller.isDismissed(toolA)).toBe(true);
       expect(hookInstaller.isDismissed(toolB)).toBe(true);
+    });
+
+    // Nothing used to remove a flag from the store, so a mis-click silenced
+    // the automatic prompt for that tool permanently.
+    test('clearDismissed restores the automatic prompt', () => {
+      const target = TOOLS[0];
+      mockToolMissing(target);
+      hookInstaller.dismiss([target]);
+      expect(hookInstaller.getMissingTools()).toEqual([]);
+      expect(hookInstaller.hasDismissed()).toBe(true);
+
+      hookInstaller.clearDismissed();
+
+      expect(hookInstaller.isDismissed(target)).toBe(false);
+      expect(hookInstaller.hasDismissed()).toBe(false);
+      expect(hookInstaller.getMissingTools().map(t => t.flag)).toEqual([target.flag]);
+    });
+
+    test('clearDismissed also lifts the in-session suppression a failed install set', async () => {
+      const target = TOOLS[0];
+      mockToolMissing(target);
+      pythonAvailable = false;
+      await hookInstaller.installTools([target], null);
+      expect(hookInstaller.getMissingTools()).toEqual([]);
+
+      hookInstaller.clearDismissed();
+
+      expect(hookInstaller.getMissingTools().map(t => t.flag)).toEqual([target.flag]);
+    });
+
+    test('the status view reports which tools are dismissed', () => {
+      const target = TOOLS[0];
+      mockToolMissing(target);
+      hookInstaller.dismiss([target]);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === target.flag);
+      expect(status.dismissed).toBe(true);
+    });
+  });
+
+  describe('broken registrations', () => {
+    const claude = TOOLS.find(t => t.flag === '--claude');
+
+    // install.py bakes absolute paths into the Windows hook command; a Python
+    // upgrade moves the interpreter and every hook silently stops running,
+    // while the script file and its hash both still look fine.
+    function mockClaudeRegisteredWith(command) {
+      mockToolInstalled(claude, {
+        config: JSON.stringify({ hooks: { Stop: [{ hooks: [{ command }] }] } })
+      });
+    }
+
+    test('flags an absolute interpreter path that no longer exists', () => {
+      mockClaudeRegisteredWith(`C:/Python312/python.exe ${claude.hookFile}`);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === claude.flag);
+      expect(status.hasHook).toBe(true);
+      expect(status.broken).toBe(true);
+      expect(status.brokenPath).toBe('C:/Python312/python.exe');
+      expect(hookInstaller.hasChanges()).toBe(true);
+    });
+
+    test('handles the quoted and call-operator forms install.py emits', () => {
+      mockClaudeRegisteredWith(`& "C:/Program Files/Python312/python.exe" "${claude.hookFile}"`);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === claude.flag);
+      expect(status.brokenPath).toBe('C:/Program Files/Python312/python.exe');
+    });
+
+    test('flags exec form through args, not just the command string', () => {
+      mockToolInstalled(claude, {
+        config: JSON.stringify({
+          hooks: {
+            Stop: [{ hooks: [{ command: 'python3', args: ['/gone/hooks/vibemon.py'] }] }]
+          }
+        })
+      });
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === claude.flag);
+      expect(status.brokenPath).toBe('/gone/hooks/vibemon.py');
+    });
+
+    // The POSIX form has nothing absolute in it, so there is nothing to verify
+    // and it must never be reported as broken.
+    test('leaves a PATH name and a tilde path alone', () => {
+      mockClaudeRegisteredWith('python3 ~/.claude/hooks/vibemon.py');
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === claude.flag);
+      expect(status.hasHook).toBe(true);
+      expect(status.broken).toBe(false);
+      expect(hookInstaller.hasChanges()).toBe(false);
+    });
+
+    test('an OpenClaw entry counts as registered without any command', () => {
+      const openclaw = TOOLS.find(t => t.flag === '--openclaw');
+      mockToolInstalled(openclaw);
+      presentCommands = new Set([openclaw.command]);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === openclaw.flag);
+      expect(status.hasHook).toBe(true);
+      expect(status.broken).toBe(false);
+    });
+
+    test('a disabled OpenClaw plugin entry is not registered', () => {
+      const openclaw = TOOLS.find(t => t.flag === '--openclaw');
+      mockToolInstalled(openclaw, {
+        config: JSON.stringify({ plugins: { entries: { 'vibemon-bridge': { enabled: false } } } })
+      });
+      presentCommands = new Set([openclaw.command]);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === openclaw.flag);
+      expect(status.hasHook).toBe(false);
     });
   });
 
@@ -529,7 +689,7 @@ describe('HookInstaller', () => {
 
     test('refreshes the status cache after finishing', async () => {
       mockSuccessfulInstall();
-      fs.existsSync.mockReturnValue(true); // hook "now installed"
+      mockToolInstalled(TOOLS[0]); // hook "now installed"
 
       await hookInstaller.installTools([TOOLS[0]], null);
 
@@ -635,14 +795,9 @@ describe('HookInstaller', () => {
       });
     }
 
-    // Claude present with every tracked file on disk, holding `contents`.
+    // Claude present and registered, with every tracked file holding `contents`.
     function mockClaudeInstalled(contents = 'local-bytes') {
-      const paths = new Set([claude.homeDir, claude.hookFile, ...claude.files.map(f => f.local)]);
-      fs.existsSync.mockImplementation(p => paths.has(p));
-      fs.readFileSync.mockImplementation(p => {
-        if (!paths.has(p)) throw new Error('ENOENT');
-        return Buffer.from(contents);
-      });
+      mockToolInstalled(claude, { fileContents: contents });
     }
 
     function manifestFor(hashByRemote) {
@@ -693,13 +848,8 @@ describe('HookInstaller', () => {
     });
 
     test('a missing tracked file counts as changed while the hook itself is installed', async () => {
-      mockClaudeInstalled('local-bytes');
       const statuslinePath = claude.files.find(f => f.remote === 'claude/statusline.py').local;
-      fs.existsSync.mockImplementation(p => p !== statuslinePath && (p === claude.homeDir || p === claude.hookFile || claude.files.some(f => f.local === p)));
-      fs.readFileSync.mockImplementation(p => {
-        if (p === statuslinePath) throw new Error('ENOENT');
-        return Buffer.from('local-bytes');
-      });
+      mockToolInstalled(claude, { missingFiles: [statuslinePath] });
       mockManifestResponse(manifestFor({
         'claude/hooks/vibemon.py': sha256('local-bytes'),
         'claude/statusline.py': sha256('local-bytes')

@@ -81,6 +81,105 @@ function fileSha256(filePath) {
 }
 
 /**
+ * Parse a JSON file, or null when it is missing or malformed.
+ * @param {string} filePath
+ * @returns {any|null}
+ */
+function readJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every {command, args} pair anywhere in a parsed config document.
+ *
+ * Walked generically rather than per-tool because the four configs put their
+ * commands in four different places (Claude's hooks map and statusLine,
+ * Codex's hooks map plus its commandWindows override, Kiro's agent hooks and
+ * the standalone .kiro.hook `then` blocks) and only agree on the key names.
+ * @param {any} node
+ * @param {Array<{command: string, args: string[]}>} [out]
+ * @returns {Array<{command: string, args: string[]}>}
+ */
+function collectCommands(node, out = []) {
+  if (Array.isArray(node)) {
+    for (const item of node) collectCommands(item, out);
+    return out;
+  }
+  if (!node || typeof node !== 'object') return out;
+  if (typeof node.command === 'string') {
+    out.push({ command: node.command, args: Array.isArray(node.args) ? node.args : [] });
+  }
+  if (typeof node.commandWindows === 'string') {
+    out.push({ command: node.commandWindows, args: [] });
+  }
+  for (const value of Object.values(node)) collectCommands(value, out);
+  return out;
+}
+
+function isVibemonEntry({ command, args }) {
+  return [command, ...args].some(part => typeof part === 'string' && part.includes('vibemon.py'));
+}
+
+/**
+ * Split a shell-form command into tokens, honouring double quotes and the
+ * PowerShell call operator install.py emits for a quoted interpreter path.
+ * @param {string} command
+ * @returns {string[]}
+ */
+function tokenizeCommand(command) {
+  const tokens = command.trim().replace(/^&\s+/, '').match(/"[^"]*"|\S+/g) || [];
+  return tokens.map(token => token.replace(/^"|"$/g, ''));
+}
+
+// Only absolute paths get checked. A bare `python3` is resolved through PATH
+// at run time and a leading `~` is expanded by the shell — neither is ours to
+// second-guess. An absolute path is exactly the case that rots: install.py
+// bakes the interpreter and script paths in on Windows, and a Python upgrade
+// moves the interpreter out from under them.
+const ABSOLUTE_PATH_RE = /^([a-zA-Z]:[\\/]|[\\/])/;
+
+/**
+ * First absolute path in a registered command that no longer exists, or null.
+ * @param {{command: string, args: string[]}} entry
+ * @returns {string|null}
+ */
+function brokenPathIn(entry) {
+  const tokens = entry.args.length > 0
+    ? [entry.command, ...entry.args]
+    : tokenizeCommand(entry.command);
+  return tokens.find(
+    token => typeof token === 'string' && ABSOLUTE_PATH_RE.test(token) && !fs.existsSync(token)
+  ) || null;
+}
+
+/**
+ * How a tool's hook registration actually looks on disk.
+ *
+ * The hook script being present says nothing about whether the tool will ever
+ * run it: the registration lives in a config file the installer merges into,
+ * and a user who removes just the VibeMon entries leaves the script behind.
+ * @param {object} tool
+ * @returns {{registered: boolean, brokenPath: string|null}}
+ */
+function inspectRegistration(tool) {
+  const docs = (tool.configPaths || []).map(readJson).filter(Boolean);
+  if (tool.isRegistered) {
+    return { registered: tool.isRegistered(docs), brokenPath: null };
+  }
+
+  const entries = docs.flatMap(doc => collectCommands(doc)).filter(isVibemonEntry);
+  if (entries.length === 0) {
+    return { registered: false, brokenPath: null };
+  }
+  const brokenPath = entries.map(brokenPathIn).find(Boolean) || null;
+  return { registered: true, brokenPath };
+}
+
+/**
  * Whether a parsed manifest.json has the expected shape:
  * { installer?: "<sha256 hex>", files: { "<docs path>": "<sha256 hex>" } }.
  * `installer` (the sha256 of install.py itself) is optional for backward
@@ -113,6 +212,12 @@ function homePath(...segments) {
 // source hash. The `sharedAssets` entry covers the shared ~/.vibemon
 // scripts: always considered "present" (they belong to every installation)
 // and excluded from the missing-tools install prompt.
+//
+// `configPaths` lists those merged configs anyway, for the opposite question:
+// whether the tool is actually wired up to run the hook script. A present
+// script file says nothing on its own — the registration lives here, and it
+// is what rots when a user prunes it or a Windows Python upgrade invalidates
+// the absolute interpreter path baked into the command.
 const KIRO_HOOK_FILES = [
   'vibemon-prompt-submit.kiro.hook',
   'vibemon-agent-stop.kiro.hook',
@@ -128,6 +233,7 @@ const TOOLS = [
     command: 'claude',
     homeDir: homePath('.claude'),
     hookFile: homePath('.claude', 'hooks', 'vibemon.py'),
+    configPaths: [homePath('.claude', 'settings.json')],
     files: [
       { local: homePath('.claude', 'hooks', 'vibemon.py'), remote: 'claude/hooks/vibemon.py' },
       { local: homePath('.claude', 'statusline.py'), remote: 'claude/statusline.py' }
@@ -139,6 +245,7 @@ const TOOLS = [
     command: 'codex',
     homeDir: homePath('.codex'),
     hookFile: homePath('.codex', 'hooks', 'vibemon.py'),
+    configPaths: [homePath('.codex', 'hooks.json')],
     files: [
       { local: homePath('.codex', 'hooks', 'vibemon.py'), remote: 'codex/hooks/vibemon.py' }
     ]
@@ -149,6 +256,10 @@ const TOOLS = [
     command: 'kiro',
     homeDir: homePath('.kiro'),
     hookFile: homePath('.kiro', 'hooks', 'vibemon.py'),
+    configPaths: [
+      homePath('.kiro', 'agents', 'default.json'),
+      ...KIRO_HOOK_FILES.map(name => homePath('.kiro', 'hooks', name))
+    ],
     files: [
       { local: homePath('.kiro', 'hooks', 'vibemon.py'), remote: 'kiro/hooks/vibemon.py' },
       // The .kiro.hook definitions hold a shell command string, which install.py
@@ -169,6 +280,12 @@ const TOOLS = [
     command: 'openclaw',
     homeDir: homePath('.openclaw'),
     hookFile: homePath('.openclaw', 'extensions', 'vibemon-bridge', 'index.mjs'),
+    configPaths: [homePath('.openclaw', 'openclaw.json')],
+    // No command to inspect: the bridge is a Node plugin OpenClaw loads
+    // itself, so registration means the entry exists and is enabled.
+    isRegistered: docs => docs.some(
+      doc => doc?.plugins?.entries?.['vibemon-bridge']?.enabled === true
+    ),
     files: [
       { local: homePath('.openclaw', 'extensions', 'vibemon-bridge', 'index.mjs'), remote: 'openclaw/extensions/index.mjs' },
       { local: homePath('.openclaw', 'extensions', 'vibemon-bridge', 'openclaw.plugin.json'), remote: 'openclaw/extensions/openclaw.plugin.json' }
@@ -255,7 +372,13 @@ class HookInstaller {
     return commandExists(tool.command) || fs.existsSync(tool.homeDir);
   }
 
-  hasHook(tool) {
+  /**
+   * Whether the tool's VibeMon script files are on disk. Says nothing about
+   * whether the tool is configured to run them — see inspectRegistration().
+   * @param {object} tool
+   * @returns {boolean}
+   */
+  hasHookFiles(tool) {
     if (tool.sharedAssets) return tool.files.every(f => fs.existsSync(f.local));
     return fs.existsSync(tool.hookFile);
   }
@@ -289,19 +412,56 @@ class HookInstaller {
   }
 
   /**
+   * Whether "Don't Ask Again" is silencing any tool's automatic prompt.
+   * @returns {boolean}
+   */
+  hasDismissed() {
+    return this.store.get('dismissed').length > 0 || this.sessionSuppressed.size > 0;
+  }
+
+  /**
+   * Undo every "Don't Ask Again", so the periodic check offers those tools
+   * again. Without this the choice is permanent — it is stored on disk and
+   * nothing ever removed a flag from it — and a user who picks it by mistake
+   * has no way back to the automatic prompt.
+   *
+   * Also clears the in-memory suppression a failed install sets, so retrying
+   * after installing Python doesn't require restarting the app.
+   */
+  clearDismissed() {
+    this.store.set('dismissed', []);
+    this.sessionSuppressed.clear();
+    this.refreshStatuses();
+  }
+
+  /**
    * Recompute and cache each tool's status. Blocking (spawns `which`/`where`
-   * per tool) — safe to call occasionally (startup, periodic check, after an
-   * install), not on every render.
-   * @returns {Array} status of every known tool: {..., present, hasHook, changed}
+   * per tool and reads its config files) — safe to call occasionally (startup,
+   * periodic check, after an install), not on every render.
+   *
+   * `hasHook` means installed *and wired up*: a script file whose registration
+   * has been removed from the tool's config would otherwise read as installed
+   * forever, and never be offered for reinstall.
+   * @returns {Array} status of every known tool:
+   *   {..., present, hasHook, broken, brokenPath, dismissed, changed}
    */
   refreshStatuses() {
     this.cachedStatuses = TOOLS.map(tool => {
       const present = this.isPresent(tool);
-      const hasHook = this.hasHook(tool);
+      const filesPresent = this.hasHookFiles(tool);
+      const { registered, brokenPath } = present && filesPresent && !tool.sharedAssets
+        ? inspectRegistration(tool)
+        : { registered: false, brokenPath: null };
+      // The shared ~/.vibemon scripts are imported by the per-tool hooks
+      // rather than registered anywhere, so their files are the whole story.
+      const hasHook = filesPresent && (tool.sharedAssets || registered);
       return {
         ...tool,
         present,
         hasHook,
+        broken: Boolean(brokenPath),
+        brokenPath,
+        dismissed: this.isDismissed(tool),
         changed: present && hasHook && this.isChanged(tool)
       };
     });
@@ -309,12 +469,13 @@ class HookInstaller {
   }
 
   /**
-   * Whether any installed tool's files drifted from the manifest, per the
-   * last refreshStatuses(). Non-blocking — for badge rendering.
+   * Whether any installed tool needs attention — drifted from the manifest or
+   * points at a path that no longer exists — per the last refreshStatuses().
+   * Non-blocking, for badge rendering.
    * @returns {boolean}
    */
   hasChanges() {
-    return this.cachedStatuses.some(tool => tool.changed);
+    return this.cachedStatuses.some(tool => tool.changed || tool.broken);
   }
 
   /**

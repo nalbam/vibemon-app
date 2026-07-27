@@ -107,6 +107,46 @@ describe('TrayManager settings menu item', () => {
   });
 });
 
+describe('TrayManager hook installer submenu', () => {
+  function submenuFor(status) {
+    const tray = new TrayManager(
+      makeWindowManager({ state: 'idle', character: 'clawd', project: 'proj-a' }),
+      makeApp(),
+      { setupStateTimeout: jest.fn() }
+    );
+    tray.setHookInstaller({ hasChanges: () => false, getCachedStatuses: () => [status] });
+    return tray.buildHookInstallerSubmenu()[0];
+  }
+
+  const installed = { name: 'Claude Code', flag: '--claude', present: true, hasHook: true };
+
+  test('a healthy install is a disabled label', () => {
+    const item = submenuFor({ ...installed });
+    expect(item.label).toBe('Claude Code: Installed ✓');
+    expect(item.enabled).toBe(false);
+  });
+
+  test('drift offers a reinstall', () => {
+    const item = submenuFor({ ...installed, changed: true });
+    expect(item.label).toBe('Claude Code: Changed — Reinstall...');
+    expect(typeof item.click).toBe('function');
+  });
+
+  // Broken outranks changed: the hook doesn't run at all, so "Changed" would
+  // understate it.
+  test('a broken registration asks for repair, even when it also drifted', () => {
+    const item = submenuFor({ ...installed, broken: true, changed: true });
+    expect(item.label).toBe('Claude Code: Needs repair — Reinstall...');
+    expect(typeof item.click).toBe('function');
+  });
+
+  test('an absent tool is not actionable', () => {
+    const item = submenuFor({ name: 'Kiro IDE', flag: '--kiro', present: false });
+    expect(item.label).toBe('Kiro IDE: Not detected');
+    expect(item.enabled).toBe(false);
+  });
+});
+
 describe('TrayManager status label', () => {
   test('shows the followed project and its state', () => {
     const windowManager = makeWindowManager({ state: 'working', character: 'clawd', project: 'proj-a' });

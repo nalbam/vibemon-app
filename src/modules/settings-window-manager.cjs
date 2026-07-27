@@ -57,7 +57,16 @@ class SettingsWindowManager {
    * @returns {Array<{name: string, flag: string, present: boolean, hasHook: boolean, changed: boolean}>}
    */
   toHookView(statuses) {
-    return statuses.map(({ name, flag, present, hasHook, changed }) => ({ name, flag, present, hasHook, changed: Boolean(changed) }));
+    return statuses.map(({ name, flag, present, hasHook, changed, broken, brokenPath, dismissed }) => ({
+      name,
+      flag,
+      present,
+      hasHook,
+      changed: Boolean(changed),
+      broken: Boolean(broken),
+      brokenPath: brokenPath || null,
+      dismissed: Boolean(dismissed)
+    }));
   }
 
   /**
@@ -140,6 +149,12 @@ class SettingsWindowManager {
       this.vibemonConfigManager.write({ vibemon_token: trimmed });
       this.notifyChanged();
       return true;
+    });
+
+    ipcMain.handle('settings:reset-hook-prompts', () => {
+      this.hookInstaller.clearDismissed();
+      this.notifyChanged();
+      return this.toHookView(this.hookInstaller.getCachedStatuses());
     });
 
     ipcMain.handle('settings:refresh-hook-statuses', async () => {

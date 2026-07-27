@@ -471,6 +471,11 @@ class TrayManager {
         });
       };
       if (tool.hasHook) {
+        // Broken outranks changed: a hook pointing at a path that no longer
+        // exists doesn't run at all, while drift only means it's outdated.
+        if (tool.broken) {
+          return { label: `${tool.name}: Needs repair — Reinstall...`, click: install };
+        }
         if (tool.changed) {
           return { label: `${tool.name}: Changed — Reinstall...`, click: install };
         }
