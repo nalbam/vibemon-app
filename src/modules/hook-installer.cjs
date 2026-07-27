@@ -18,6 +18,7 @@ const { spawn, spawnSync } = require('child_process');
 const { dialog, shell } = require('electron');
 const Store = require('electron-store');
 const { DOCS_BASE_URL, INSTALLER_SHA256 } = require('../shared/config.cjs');
+const { findPython, SPAWN_DEFAULTS, IS_WINDOWS } = require('./python-runtime.cjs');
 
 // Tolerate an accidental trailing slash on the (env-overridable) base URL.
 const DOCS_BASE = DOCS_BASE_URL.replace(/\/+$/, '');
@@ -150,10 +151,16 @@ const TOOLS = [
     hookFile: homePath('.kiro', 'hooks', 'vibemon.py'),
     files: [
       { local: homePath('.kiro', 'hooks', 'vibemon.py'), remote: 'kiro/hooks/vibemon.py' },
-      ...KIRO_HOOK_FILES.map(name => ({
+      // The .kiro.hook definitions hold a shell command string, which install.py
+      // has to rewrite with an absolute interpreter path on Windows (`python3
+      // ~/...` resolves to nothing there). Their installed form can never match
+      // the published hash, so they are excluded from drift detection the same
+      // way the merged configs are. Still tracked on macOS and Linux, where
+      // they are copied verbatim.
+      ...(IS_WINDOWS ? [] : KIRO_HOOK_FILES.map(name => ({
         local: homePath('.kiro', 'hooks', name),
         remote: `kiro/hooks/${name}`
-      }))
+      })))
     ]
   },
   {
@@ -181,18 +188,20 @@ const TOOLS = [
   }
 ];
 
-const WHICH_COMMAND = process.platform === 'win32' ? 'where' : 'which';
-const PYTHON_COMMAND = process.platform === 'win32' ? 'python' : 'python3';
+const WHICH_COMMAND = IS_WINDOWS ? 'where' : 'which';
 
 function commandExists(command) {
-  const result = spawnSync(WHICH_COMMAND, [command], { stdio: 'ignore' });
+  const result = spawnSync(WHICH_COMMAND, [command], { stdio: 'ignore', ...SPAWN_DEFAULTS });
   return result.status === 0;
 }
 
 function describeFailure(result) {
   switch (result.reason) {
     case 'python-not-found':
-      return 'Python3 is not installed';
+      return IS_WINDOWS
+        ? 'No working Python 3 found. Install it from python.org (tick "Add python.exe to PATH").\n'
+          + 'If `python` opens the Microsoft Store, turn off the python.exe app execution alias.'
+        : 'Python3 is not installed';
     case 'download-failed':
       return `Failed to download install script (HTTP ${result.statusCode})`;
     case 'download-too-large':
@@ -458,12 +467,16 @@ class HookInstaller {
    * are left alone. Older published installers treated any platform flag as
    * auto-approve, so omitting the flag is safe against those too.
    * @param {string} script
+   * @param {{command: string, prefixArgs: string[]}} python - from findPython()
    * @param {string[]} flags - e.g. ['--claude']
    * @returns {Promise<{ok: boolean, reason?: string, [key: string]: any}>}
    */
-  runScript(script, flags) {
+  runScript(script, python, flags) {
     return new Promise((resolve) => {
-      const child = spawn(PYTHON_COMMAND, ['-', ...flags], { stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn(python.command, [...python.prefixArgs, '-', ...flags], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        ...SPAWN_DEFAULTS
+      });
       let stdout = '';
       let stderr = '';
       // Both streams are drained, not merely sampled for diagnostics: a piped
@@ -508,7 +521,8 @@ class HookInstaller {
 
     const results = [];
     try {
-      if (!commandExists(PYTHON_COMMAND)) {
+      const python = findPython();
+      if (!python) {
         for (const tool of tools) {
           results.push({ tool, result: { ok: false, reason: 'python-not-found' } });
           this.sessionSuppressed.add(tool.flag);
@@ -532,7 +546,7 @@ class HookInstaller {
             ? ['--token', token]
             : [];
           for (const tool of tools) {
-            const result = await this.runScript(script, [tool.flag, ...tokenFlags]);
+            const result = await this.runScript(script, python, [tool.flag, ...tokenFlags]);
             results.push({ tool, result });
           }
         }

@@ -42,10 +42,31 @@ test('installer integrity verification accepts a matching digest', () => {
   expect(verifyInstallerScript('print(1)', 'd287bb7f9d15abdc5b6e98536263815744b6ef21c8f3c839fc434ca70d8efe99')).toBe(true);
 });
 
+// spawnSync serves two callers: commandExists() runs which/where, and
+// findPython() probes an interpreter by executing `-c <code>`. Route by argv
+// shape so a test can control tool presence and Python availability apart.
+const PROBE_OK = { status: 0, stdout: '3\n' };
+// What a Microsoft Store alias stub does: a real python.exe on PATH that runs
+// nothing.
+const PROBE_FAIL = { status: 9009, stdout: '' };
+
+// What findPython() returns on POSIX; runScript() takes it as a parameter.
+const PYTHON = { command: 'python3', prefixArgs: [] };
+
+let pythonAvailable;
+let presentCommands;
+
+function mockSpawnSyncRouter() {
+  spawnSync.mockImplementation((command, args) => {
+    if (args.includes('-c')) return pythonAvailable ? PROBE_OK : PROBE_FAIL;
+    return { status: presentCommands.has(args[0]) ? 0 : 1 };
+  });
+}
+
 // Makes a tool "present" via its CLI command, with no hook file, so it
 // shows up as missing. Other tools stay absent (default mocks).
 function mockToolMissing(tool) {
-  spawnSync.mockImplementation((which, args) => ({ status: args[0] === tool.command ? 0 : 1 }));
+  presentCommands = new Set([tool.command]);
 }
 
 // Configures https.get + spawn to simulate a successful install.py run:
@@ -88,7 +109,10 @@ describe('HookInstaller', () => {
 
   beforeEach(() => {
     fs.existsSync.mockReset().mockReturnValue(false);
-    spawnSync.mockReset().mockReturnValue({ status: 1 });
+    pythonAvailable = true;
+    presentCommands = new Set();
+    spawnSync.mockReset();
+    mockSpawnSyncRouter();
     spawn.mockReset();
     https.get.mockReset();
     dialog.showMessageBox.mockReset().mockResolvedValue({ response: 0 });
@@ -252,7 +276,7 @@ describe('HookInstaller', () => {
       fakeChild.stderr = new EventEmitter();
       spawn.mockReturnValue(fakeChild);
 
-      const resultPromise = hookInstaller.runScript('print(1)', ['--claude'], 'my_token123');
+      const resultPromise = hookInstaller.runScript('print(1)', PYTHON, ['--claude'], 'my_token123');
       fakeChild.emit('close', 0);
       const result = await resultPromise;
 
@@ -277,7 +301,7 @@ describe('HookInstaller', () => {
       fakeChild.stderr = new EventEmitter();
       spawn.mockReturnValue(fakeChild);
 
-      const resultPromise = hookInstaller.runScript('print(1)', ['--claude']);
+      const resultPromise = hookInstaller.runScript('print(1)', PYTHON, ['--claude']);
       fakeChild.emit('close', 0);
       await resultPromise;
 
@@ -292,7 +316,7 @@ describe('HookInstaller', () => {
       fakeChild.stderr = new EventEmitter();
       spawn.mockReturnValue(fakeChild);
 
-      const resultPromise = hookInstaller.runScript('script', ['--codex'], null);
+      const resultPromise = hookInstaller.runScript('script', PYTHON, ['--codex'], null);
       fakeChild.stderr.emit('data', 'traceback');
       fakeChild.emit('close', 1);
 
@@ -311,7 +335,7 @@ describe('HookInstaller', () => {
       fakeChild.stderr = new EventEmitter();
       spawn.mockReturnValue(fakeChild);
 
-      const resultPromise = hookInstaller.runScript('script', ['--claude']);
+      const resultPromise = hookInstaller.runScript('script', PYTHON, ['--claude']);
       expect(fakeChild.stdout.listenerCount('data')).toBe(1);
       fakeChild.stdout.emit('data', 'installing...\n');
       fakeChild.stdout.emit('data', 'done\n');
@@ -327,7 +351,7 @@ describe('HookInstaller', () => {
       fakeChild.stderr = new EventEmitter();
       spawn.mockReturnValue(fakeChild);
 
-      const resultPromise = hookInstaller.runScript('script', ['--claude']);
+      const resultPromise = hookInstaller.runScript('script', PYTHON, ['--claude']);
       for (let i = 0; i < 40; i++) {
         fakeChild.stdout.emit('data', 'x'.repeat(4 * 1024));
       }
@@ -382,7 +406,7 @@ describe('HookInstaller', () => {
     });
 
     test('fails the whole batch with python-not-found when python3 is missing (no download attempted)', async () => {
-      spawnSync.mockReturnValue({ status: 1 });
+      pythonAvailable = false;
 
       const results = await hookInstaller.installTools([TOOLS[0], TOOLS[1]], null);
 
@@ -393,7 +417,6 @@ describe('HookInstaller', () => {
     });
 
     test('downloads install.py exactly once for a multi-tool batch and spawns once per tool', async () => {
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       const children = mockSuccessfulInstall();
 
       const results = await hookInstaller.installTools([TOOLS[0], TOOLS[1]], 'my_token_123');
@@ -408,7 +431,6 @@ describe('HookInstaller', () => {
     });
 
     test('omits --token when the token is missing or malformed (install.py exits 2 on a bad --token)', async () => {
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       mockSuccessfulInstall();
 
       await hookInstaller.installTools([TOOLS[0]], null);
@@ -419,7 +441,6 @@ describe('HookInstaller', () => {
     });
 
     test('suppresses the whole batch and skips spawning when the download fails', async () => {
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       const fakeReq = new EventEmitter();
       https.get.mockImplementation(() => fakeReq);
 
@@ -434,7 +455,6 @@ describe('HookInstaller', () => {
     });
 
     test('fails the batch with integrity-check-failed when install.py does not match the manifest installer hash', async () => {
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       https.get.mockImplementation((url, opts, cb) => {
         const fakeRes = new EventEmitter();
         fakeRes.statusCode = 200;
@@ -457,7 +477,6 @@ describe('HookInstaller', () => {
     });
 
     test('fails the batch with integrity-reference-missing when the manifest has no installer hash', async () => {
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       https.get.mockImplementation((url, opts, cb) => {
         const fakeRes = new EventEmitter();
         fakeRes.statusCode = 200;
@@ -478,7 +497,6 @@ describe('HookInstaller', () => {
 
     test('a previously fetched manifest verifies the install when the fresh fetch fails', async () => {
       hookInstaller.manifest = { installer: sha256('script-source'), files: {} };
-      spawnSync.mockReturnValue({ status: 0 }); // python present
       https.get.mockImplementation((url, opts, cb) => {
         if (url.endsWith('/manifest.json')) {
           const fakeReq = new EventEmitter();
@@ -510,7 +528,6 @@ describe('HookInstaller', () => {
     });
 
     test('refreshes the status cache after finishing', async () => {
-      spawnSync.mockReturnValue({ status: 0 });
       mockSuccessfulInstall();
       fs.existsSync.mockReturnValue(true); // hook "now installed"
 
@@ -521,7 +538,6 @@ describe('HookInstaller', () => {
     });
 
     test('shows a summary dialog when finished', async () => {
-      spawnSync.mockReturnValue({ status: 0 });
       mockSuccessfulInstall();
 
       await hookInstaller.installTools([TOOLS[0]], null);
@@ -540,7 +556,6 @@ describe('HookInstaller', () => {
     });
 
     test('installs the matching tool', async () => {
-      spawnSync.mockReturnValue({ status: 0 });
       mockSuccessfulInstall();
 
       const results = await hookInstaller.installByFlag(TOOLS[2].flag, null);
@@ -551,7 +566,6 @@ describe('HookInstaller', () => {
     });
 
     test('shows the result dialog by default', async () => {
-      spawnSync.mockReturnValue({ status: 0 });
       mockSuccessfulInstall();
 
       await hookInstaller.installByFlag(TOOLS[2].flag, null);
@@ -560,7 +574,6 @@ describe('HookInstaller', () => {
     });
 
     test('skips the result dialog when showSummary is false', async () => {
-      spawnSync.mockReturnValue({ status: 0 });
       mockSuccessfulInstall();
 
       await hookInstaller.installByFlag(TOOLS[2].flag, null, { showSummary: false });
@@ -719,9 +732,6 @@ describe('HookInstaller', () => {
       dialog.showMessageBox.mockResolvedValueOnce({ response: 0 });
       // Second call (result summary) uses the default mocked response.
       mockSuccessfulInstall();
-      spawnSync.mockImplementation((which, args) => ({
-        status: (args[0] === TOOLS[0].command || args[0] === 'python3') ? 0 : 1
-      }));
 
       await hookInstaller.checkAndPrompt('tok');
 
@@ -729,8 +739,8 @@ describe('HookInstaller', () => {
         detail: expect.stringContaining(TOOLS[0].name)
       }));
       expect(spawn).toHaveBeenCalledWith(
-        'python3',
-        ['-', TOOLS[0].flag],
+        process.platform === 'win32' ? 'py' : 'python3',
+        expect.arrayContaining(['-', TOOLS[0].flag]),
         expect.anything()
       );
     });

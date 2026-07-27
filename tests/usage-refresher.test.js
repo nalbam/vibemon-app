@@ -13,8 +13,14 @@ jest.mock('../src/shared/config.cjs', () => ({
 }));
 
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const { UsageRefresher, USAGE_SCRIPT_PATH } = require('../src/modules/usage-refresher.cjs');
+
+// findPython() probes candidates by running `-c 'print(sys.version_info[0])'`,
+// so a usable interpreter has to answer with its major version.
+function mockPythonPresent() {
+  spawnSync.mockReturnValue({ status: 0, stdout: '3\n' });
+}
 
 // Returns a fake child whose exit is controlled by the test via close(code).
 function mockSpawnedChild() {
@@ -30,6 +36,8 @@ describe('UsageRefresher', () => {
   beforeEach(() => {
     fs.existsSync.mockReset().mockReturnValue(true);
     spawn.mockReset();
+    spawnSync.mockReset();
+    mockPythonPresent();
     refresher = new UsageRefresher();
   });
 
@@ -55,8 +63,27 @@ describe('UsageRefresher', () => {
 
     expect(result).toMatchObject({ ok: true, code: 0 });
     const [command, args] = spawn.mock.calls[0];
-    expect(command).toBe(process.platform === 'win32' ? 'python' : 'python3');
-    expect(args).toEqual([USAGE_SCRIPT_PATH, '--max-age', '540']);
+    expect(command).toBe(process.platform === 'win32' ? 'py' : 'python3');
+    expect(args.slice(-3)).toEqual([USAGE_SCRIPT_PATH, '--max-age', '540']);
+  });
+
+  test('skips without spawning when no working Python 3 is found', async () => {
+    spawnSync.mockReturnValue({ status: 9009, stdout: '' });
+
+    const result = await refresher.refresh();
+
+    expect(result).toEqual({ ok: false, reason: 'python-not-found' });
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  test('hides the console window Windows would otherwise pop for every refresh', async () => {
+    const child = mockSpawnedChild();
+
+    const promise = refresher.refresh();
+    child.emit('close', 0);
+    await promise;
+
+    expect(spawn.mock.calls[0][2].windowsHide).toBe(true);
   });
 
   test('extends PATH with the common claude CLI install locations', async () => {
