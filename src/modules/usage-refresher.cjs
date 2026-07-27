@@ -19,8 +19,8 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { USAGE_REFRESH_MAX_AGE_SECONDS } = require('../shared/config.cjs');
+const { findPython, SPAWN_DEFAULTS } = require('./python-runtime.cjs');
 
-const PYTHON_COMMAND = process.platform === 'win32' ? 'python' : 'python3';
 const USAGE_SCRIPT_PATH = path.join(os.homedir(), '.vibemon', 'usage.py');
 
 // Electron launched from Finder/Dock gets a minimal PATH, and usage.py
@@ -65,10 +65,20 @@ class UsageRefresher {
     if (!fs.existsSync(USAGE_SCRIPT_PATH)) {
       return Promise.resolve({ ok: false, reason: 'not-installed' });
     }
+    const python = findPython();
+    if (!python) {
+      return Promise.resolve({ ok: false, reason: 'python-not-found' });
+    }
     this.inFlight = true;
     return new Promise((resolve) => {
-      const args = [USAGE_SCRIPT_PATH, '--max-age', String(USAGE_REFRESH_MAX_AGE_SECONDS)];
-      const child = spawn(PYTHON_COMMAND, args, {
+      const args = [
+        ...python.prefixArgs,
+        USAGE_SCRIPT_PATH,
+        '--max-age',
+        String(USAGE_REFRESH_MAX_AGE_SECONDS)
+      ];
+      const child = spawn(python.command, args, {
+        ...SPAWN_DEFAULTS,
         // Launched from Finder/Dock the app's cwd is `/`, which the spawned
         // `claude` CLI would treat as its workspace — its file enumeration
         // can then descend into TCC-protected folders (Documents, Desktop,
