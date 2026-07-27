@@ -618,13 +618,10 @@ class HookInstaller {
     const succeeded = results.filter(r => r.result.ok).map(r => r.tool.name);
     const failed = results.filter(r => !r.result.ok);
 
+    // Nothing to say when it worked: the install is already visible in the
+    // tray submenu and the Settings AI Tools rows, so a dialog here is a modal
+    // interruption confirming what the user just asked for.
     if (failed.length === 0) {
-      dialog.showMessageBox({
-        type: 'info',
-        title: 'VibeMon',
-        message: 'VibeMon hooks installed',
-        detail: succeeded.join(', ')
-      }).catch(() => {});
       return;
     }
 

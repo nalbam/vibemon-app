@@ -537,14 +537,47 @@ describe('HookInstaller', () => {
       expect(status.hasHook).toBe(true);
     });
 
-    test('shows a summary dialog when finished', async () => {
+    // A dialog confirming what the user just asked for is a modal
+    // interruption; the tray submenu and Settings rows already show it.
+    test('stays silent when every tool installed', async () => {
       mockSuccessfulInstall();
 
       await hookInstaller.installTools([TOOLS[0]], null);
 
+      expect(dialog.showMessageBox).not.toHaveBeenCalled();
+    });
+
+    test('still reports failures, with the setup guide offered', async () => {
+      pythonAvailable = false;
+
+      await hookInstaller.installTools([TOOLS[0]], null);
+
       expect(dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'VibeMon hooks installed'
+        type: 'warning',
+        message: 'VibeMon hook installation failed',
+        buttons: ['OK', 'Open Setup Guide']
       }));
+    });
+
+    test('names the tools that did succeed alongside the ones that failed', async () => {
+      mockSuccessfulInstall();
+      let call = 0;
+      spawn.mockImplementation(() => {
+        const child = new EventEmitter();
+        child.stdin = { write: jest.fn(), end: jest.fn() };
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        const code = call++ === 0 ? 0 : 1;
+        setTimeout(() => child.emit('close', code), 0);
+        return child;
+      });
+
+      await hookInstaller.installTools([TOOLS[0], TOOLS[1]], null);
+
+      const { detail, message } = dialog.showMessageBox.mock.calls[0][0];
+      expect(message).toBe('Some hooks failed to install');
+      expect(detail).toContain(`Succeeded: ${TOOLS[0].name}`);
+      expect(detail).toContain(TOOLS[1].name);
     });
   });
 
@@ -565,8 +598,8 @@ describe('HookInstaller', () => {
       expect(spawn.mock.calls[0][1]).toContain(TOOLS[2].flag);
     });
 
-    test('shows the result dialog by default', async () => {
-      mockSuccessfulInstall();
+    test('reports a failure through the result dialog by default', async () => {
+      pythonAvailable = false;
 
       await hookInstaller.installByFlag(TOOLS[2].flag, null);
 
@@ -574,7 +607,7 @@ describe('HookInstaller', () => {
     });
 
     test('skips the result dialog when showSummary is false', async () => {
-      mockSuccessfulInstall();
+      pythonAvailable = false;
 
       await hookInstaller.installByFlag(TOOLS[2].flag, null, { showSummary: false });
 
@@ -730,7 +763,6 @@ describe('HookInstaller', () => {
     test('installs missing tools when the user confirms (response 0)', async () => {
       mockToolMissing(TOOLS[0]);
       dialog.showMessageBox.mockResolvedValueOnce({ response: 0 });
-      // Second call (result summary) uses the default mocked response.
       mockSuccessfulInstall();
 
       await hookInstaller.checkAndPrompt('tok');
