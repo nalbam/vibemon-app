@@ -27,6 +27,39 @@ const SETUP_GUIDE_URL = `${DOCS_BASE}/setup.md`;
 // response is ever unexpectedly large.
 const MAX_SCRIPT_SIZE = 1024 * 1024;
 
+// install.py's own output is bounded (it caps each file diff at 50 lines),
+// but its streams still have to be drained: an unread pipe stalls the child
+// once the OS buffer fills. Only the tail is kept — failures are reported at
+// the end of a run.
+const MAX_OUTPUT_SIZE = 64 * 1024;
+
+// install.py always emits ANSI color codes (it doesn't check isatty), and
+// prints its own failures to stdout rather than stderr.
+const ANSI_ESCAPE = /\u001b\[[0-9;]*m/g;
+const MAX_DETAIL_LINES = 3;
+
+function appendCapped(buffer, chunk) {
+  const next = buffer + chunk;
+  return next.length > MAX_OUTPUT_SIZE ? next.slice(-MAX_OUTPUT_SIZE) : next;
+}
+
+/**
+ * The most informative lines of a failed install.py run, for the error dialog.
+ * Prefers the script's own '✗' failure lines (e.g. an integrity-check abort,
+ * which it reports on stdout) and falls back to the tail of its output.
+ * @param {{stdout?: string, stderr?: string}} result
+ * @returns {string} empty when the script produced no usable output
+ */
+function scriptErrorDetail({ stdout = '', stderr = '' }) {
+  const lines = `${stdout}\n${stderr}`
+    .replace(ANSI_ESCAPE, '')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+  const failures = lines.filter(line => line.startsWith('✗'));
+  return (failures.length > 0 ? failures : lines).slice(-MAX_DETAIL_LINES).join('\n');
+}
+
 function verifyInstallerScript(script, expectedHash) {
   if (!expectedHash) return true;
   const actualHash = crypto.createHash('sha256').update(script, 'utf8').digest('hex');
@@ -174,8 +207,13 @@ function describeFailure(result) {
       return `Network error: ${result.error}`;
     case 'spawn-error':
       return `Execution error: ${result.error}`;
-    case 'exit-code':
-      return `Install script exited with code ${result.code}`;
+    case 'exit-code': {
+      // install.py reports *why* it stopped (a failed integrity check, a file
+      // it couldn't write) on stdout, so the bare exit code alone is useless.
+      const detail = scriptErrorDetail(result);
+      const summary = `Install script exited with code ${result.code}`;
+      return detail ? `${summary}\n${detail}` : summary;
+    }
     default:
       return 'Unknown error';
   }
@@ -411,22 +449,33 @@ class HookInstaller {
   /**
    * Run already-downloaded install.py source via `python3 -` with the given
    * flags, piping the script over stdin (no shell, no temp file).
+   *
+   * `--yes` is deliberately not passed. A platform flag alone already makes
+   * install.py run unattended, and since the installer separated the two,
+   * `--yes` additionally means "replace settings the user owns" — most visibly
+   * an existing Claude Code `statusLine`. Without it, VibeMon's own scripts are
+   * still upgraded in place, so drift is repaired and only user-owned settings
+   * are left alone. Older published installers treated any platform flag as
+   * auto-approve, so omitting the flag is safe against those too.
    * @param {string} script
    * @param {string[]} flags - e.g. ['--claude']
    * @returns {Promise<{ok: boolean, reason?: string, [key: string]: any}>}
    */
   runScript(script, flags) {
     return new Promise((resolve) => {
-      const args = ['-', ...flags, '--yes'];
-
-      const child = spawn(PYTHON_COMMAND, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = spawn(PYTHON_COMMAND, ['-', ...flags], { stdio: ['pipe', 'pipe', 'pipe'] });
+      let stdout = '';
       let stderr = '';
-      child.stderr.on('data', (chunk) => { stderr += chunk; });
+      // Both streams are drained, not merely sampled for diagnostics: a piped
+      // stream nobody reads blocks the child as soon as the OS buffer fills.
+      child.stdout.on('data', (chunk) => { stdout = appendCapped(stdout, chunk); });
+      child.stderr.on('data', (chunk) => { stderr = appendCapped(stderr, chunk); });
       child.on('error', (err) => resolve({ ok: false, reason: 'spawn-error', error: err.message }));
       child.on('close', (code) => resolve({
         ok: code === 0,
         reason: code === 0 ? null : 'exit-code',
         code,
+        stdout,
         stderr
       }));
 
@@ -584,4 +633,4 @@ class HookInstaller {
   }
 }
 
-module.exports = { HookInstaller, TOOLS, verifyInstallerScript };
+module.exports = { HookInstaller, TOOLS, verifyInstallerScript, describeFailure };

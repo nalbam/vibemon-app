@@ -27,7 +27,9 @@ const fs = require('fs');
 const { spawnSync, spawn } = require('child_process');
 const https = require('https');
 const { dialog, shell } = require('electron');
-const { HookInstaller, TOOLS, verifyInstallerScript } = require('../src/modules/hook-installer.cjs');
+const {
+  HookInstaller, TOOLS, verifyInstallerScript, describeFailure
+} = require('../src/modules/hook-installer.cjs');
 
 const realCrypto = jest.requireActual('crypto');
 const sha256 = (data) => realCrypto.createHash('sha256').update(data).digest('hex');
@@ -257,12 +259,30 @@ describe('HookInstaller', () => {
       expect(result.ok).toBe(true);
       expect(spawn).toHaveBeenCalledWith(
         'python3',
-        ['-', '--claude', '--yes'],
+        ['-', '--claude'],
         expect.objectContaining({ stdio: ['pipe', 'pipe', 'pipe'] })
       );
       expect(spawn.mock.calls[0][2].shell).toBeUndefined();
       expect(fakeChild.stdin.write).toHaveBeenCalledWith('print(1)');
       expect(fakeChild.stdin.end).toHaveBeenCalled();
+    });
+
+    // install.py separates "run unattended" (a platform flag) from "replace
+    // settings I own" (--yes). Passing --yes would silently overwrite a
+    // statusLine the user configured themselves.
+    test('does not pass --yes, so user-owned settings survive an install', async () => {
+      const fakeChild = new EventEmitter();
+      fakeChild.stdin = { write: jest.fn(), end: jest.fn() };
+      fakeChild.stdout = new EventEmitter();
+      fakeChild.stderr = new EventEmitter();
+      spawn.mockReturnValue(fakeChild);
+
+      const resultPromise = hookInstaller.runScript('print(1)', ['--claude']);
+      fakeChild.emit('close', 0);
+      await resultPromise;
+
+      expect(spawn.mock.calls[0][1]).not.toContain('--yes');
+      expect(spawn.mock.calls[0][1]).not.toContain('-y');
     });
 
     test('resolves ok:false with exit code when the script fails', async () => {
@@ -276,8 +296,77 @@ describe('HookInstaller', () => {
       fakeChild.stderr.emit('data', 'traceback');
       fakeChild.emit('close', 1);
 
-      expect(await resultPromise).toEqual({ ok: false, reason: 'exit-code', code: 1, stderr: 'traceback' });
+      expect(await resultPromise).toEqual({
+        ok: false, reason: 'exit-code', code: 1, stdout: '', stderr: 'traceback'
+      });
       expect(spawn.mock.calls[0][1]).not.toContain('--token');
+    });
+
+    // A piped stream nobody reads blocks the child once the OS pipe buffer
+    // fills, and install.py prints its failures to stdout, not stderr.
+    test('drains stdout and keeps it on the result', async () => {
+      const fakeChild = new EventEmitter();
+      fakeChild.stdin = { write: jest.fn(), end: jest.fn() };
+      fakeChild.stdout = new EventEmitter();
+      fakeChild.stderr = new EventEmitter();
+      spawn.mockReturnValue(fakeChild);
+
+      const resultPromise = hookInstaller.runScript('script', ['--claude']);
+      expect(fakeChild.stdout.listenerCount('data')).toBe(1);
+      fakeChild.stdout.emit('data', 'installing...\n');
+      fakeChild.stdout.emit('data', 'done\n');
+      fakeChild.emit('close', 0);
+
+      expect((await resultPromise).stdout).toBe('installing...\ndone\n');
+    });
+
+    test('caps captured output so a runaway script cannot grow it without bound', async () => {
+      const fakeChild = new EventEmitter();
+      fakeChild.stdin = { write: jest.fn(), end: jest.fn() };
+      fakeChild.stdout = new EventEmitter();
+      fakeChild.stderr = new EventEmitter();
+      spawn.mockReturnValue(fakeChild);
+
+      const resultPromise = hookInstaller.runScript('script', ['--claude']);
+      for (let i = 0; i < 40; i++) {
+        fakeChild.stdout.emit('data', 'x'.repeat(4 * 1024));
+      }
+      fakeChild.stdout.emit('data', 'TAIL');
+      fakeChild.emit('close', 1);
+
+      const { stdout } = await resultPromise;
+      expect(stdout.length).toBe(64 * 1024);
+      expect(stdout.endsWith('TAIL')).toBe(true); // the tail is what diagnoses a failure
+    });
+  });
+
+  describe('failure reporting', () => {
+    test('surfaces the script\'s own failure line alongside the exit code', () => {
+      const message = describeFailure({
+        reason: 'exit-code',
+        code: 1,
+        stdout: '\u001b[36m  Mode: online\u001b[0m\n'
+          + '\u001b[31m✗\u001b[0m Claude Code aborted: claude/statusline.py failed its integrity check\n',
+        stderr: ''
+      });
+
+      expect(message).toContain('exited with code 1');
+      expect(message).toContain('failed its integrity check');
+      expect(message).not.toContain('\u001b['); // ANSI stripped for the dialog
+      expect(message).not.toContain('Mode: online');
+    });
+
+    test('falls back to the tail of the output when nothing is marked as a failure', () => {
+      const message = describeFailure({
+        reason: 'exit-code', code: 2, stdout: 'usage: install.py\ninstall.py: error: bad --token\n', stderr: ''
+      });
+
+      expect(message).toContain('error: bad --token');
+    });
+
+    test('reports the bare exit code when the script produced no output', () => {
+      expect(describeFailure({ reason: 'exit-code', code: 1, stdout: '', stderr: '' }))
+        .toBe('Install script exited with code 1');
     });
   });
 
@@ -314,8 +403,8 @@ describe('HookInstaller', () => {
       expect(spawn).toHaveBeenCalledTimes(2);
       expect(children).toHaveLength(2);
       expect(results.every(r => r.result.ok)).toBe(true);
-      expect(spawn.mock.calls[0][1]).toEqual(['-', TOOLS[0].flag, '--token', 'my_token_123', '--yes']);
-      expect(spawn.mock.calls[1][1]).toEqual(['-', TOOLS[1].flag, '--token', 'my_token_123', '--yes']);
+      expect(spawn.mock.calls[0][1]).toEqual(['-', TOOLS[0].flag, '--token', 'my_token_123']);
+      expect(spawn.mock.calls[1][1]).toEqual(['-', TOOLS[1].flag, '--token', 'my_token_123']);
     });
 
     test('omits --token when the token is missing or malformed (install.py exits 2 on a bad --token)', async () => {
@@ -323,10 +412,10 @@ describe('HookInstaller', () => {
       mockSuccessfulInstall();
 
       await hookInstaller.installTools([TOOLS[0]], null);
-      expect(spawn.mock.calls[0][1]).toEqual(['-', TOOLS[0].flag, '--yes']);
+      expect(spawn.mock.calls[0][1]).toEqual(['-', TOOLS[0].flag]);
 
       await hookInstaller.installTools([TOOLS[0]], 'BAD TOKEN!');
-      expect(spawn.mock.calls[1][1]).toEqual(['-', TOOLS[0].flag, '--yes']);
+      expect(spawn.mock.calls[1][1]).toEqual(['-', TOOLS[0].flag]);
     });
 
     test('suppresses the whole batch and skips spawning when the download fails', async () => {
@@ -641,7 +730,7 @@ describe('HookInstaller', () => {
       }));
       expect(spawn).toHaveBeenCalledWith(
         'python3',
-        ['-', TOOLS[0].flag, '--yes'],
+        ['-', TOOLS[0].flag],
         expect.anything()
       );
     });
