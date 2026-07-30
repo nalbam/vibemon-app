@@ -2,8 +2,9 @@
 // render mode — see init())
 let vibeMonEngine = null;
 
-// IPC cleanup function
+// IPC cleanup functions
 let cleanupStateListener = null;
+let cleanupDisplayOptionsListener = null;
 
 // Interaction override: while the character is held (pointer down) or
 // dragged, it shows the 'start' greeting expression, restoring the last
@@ -22,18 +23,32 @@ function setInteractionActive(active) {
   vibeMonEngine.render();
 }
 
+// Apply the persisted display settings to the character area: the Character
+// Size scale (styles.css scales .vibemon-display by --vibemon-scale; the
+// window itself is resized to match by the main process) and the dev-mode
+// tint that makes that area's bounds visible.
+function applyDisplayOptions(container, options) {
+  if (!options) return;
+  container.style.setProperty('--vibemon-scale', String((options.characterScale || 100) / 100));
+  container.classList.toggle('dev-mode', !!options.devMode);
+}
+
 // Initialize
 async function init() {
   const container = document.getElementById('vibemon-display');
 
   // Character/state registries (canonical: vibemon-static, resolved by
-  // registry-cache.cjs in the main process), fetched via preload.js, and
-  // the persisted render mode selecting which engine to boot.
-  const [{ characters, default: defaultCharacter, staticBaseUrl }, { states }, renderMode] = await Promise.all([
+  // registry-cache.cjs in the main process), fetched via preload.js, the
+  // persisted render mode selecting which engine to boot, and the display
+  // options the character area is drawn with.
+  const [{ characters, default: defaultCharacter, staticBaseUrl }, { states }, renderMode, displayOptions] = await Promise.all([
     window.electronAPI.getCharacterRegistry(),
     window.electronAPI.getStateRegistry(),
-    window.electronAPI.getRenderMode()
+    window.electronAPI.getRenderMode(),
+    window.electronAPI.getDisplayOptions()
   ]);
+
+  applyDisplayOptions(container, displayOptions);
 
   if (renderMode === '3d') {
     // 3D pet engine: renders procedurally — characters map to the registry's
@@ -86,6 +101,11 @@ async function init() {
       // mid-click/drag; the real state is restored when it ends.
       if (interactionActive) vibeMonEngine.setState({ state: 'start' });
       vibeMonEngine.render();
+    });
+
+    // Size/dev-mode changes made in Settings apply live — no window reload.
+    cleanupDisplayOptionsListener = window.electronAPI.onDisplayOptions((options) => {
+      applyDisplayOptions(container, options);
     });
   }
 
@@ -162,6 +182,10 @@ function cleanup() {
   if (cleanupStateListener) {
     cleanupStateListener();
     cleanupStateListener = null;
+  }
+  if (cleanupDisplayOptionsListener) {
+    cleanupDisplayOptionsListener();
+    cleanupDisplayOptionsListener = null;
   }
 }
 

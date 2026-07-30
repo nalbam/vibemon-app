@@ -214,6 +214,13 @@
             </div>
             <select id="character-lock"></select>
           </div>
+          <div class="row">
+            <div class="row-text">
+              <label for="character-scale">Character Size</label>
+              <p class="hint">Scale the character and its window down from full size</p>
+            </div>
+            <select id="character-scale"></select>
+          </div>
         </div>
 
         <h2>Window</h2>
@@ -224,6 +231,13 @@
               <p class="hint">While Active keeps the character on top only in busy states (thinking, working, ...)</p>
             </div>
             <select id="always-on-top"></select>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <label for="edge-margin">Edge Margin</label>
+              <p class="hint">Gap the character keeps from the screen's edges when it snaps to one</p>
+            </div>
+            <select id="edge-margin"></select>
           </div>
           <div class="row">
             <div class="row-text">
@@ -243,6 +257,16 @@
             </div>
             <label class="switch">
               <input type="checkbox" id="open-at-login">
+              <span class="track"></span>
+            </label>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <label for="dev-mode">Dev Mode</label>
+              <p class="hint">Tint the character's area so its bounds are visible</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="dev-mode">
               <span class="track"></span>
             </label>
           </div>
@@ -416,7 +440,17 @@
         [['auto', 'Auto'], ...s.options.characters.map((c) => [c.name, c.displayName])],
         s.characterLock
       );
+      fillSelect(
+        $('character-scale'),
+        s.options.characterScales.map((scale) => [scale, scale + '%']),
+        s.characterScale
+      );
       fillSelect($('always-on-top'), Object.entries(s.options.alwaysOnTopModes), s.alwaysOnTopMode);
+      fillSelect(
+        $('edge-margin'),
+        s.options.edgeMargins.map((margin) => [margin, margin + ' px']),
+        s.edgeMargin
+      );
 
       const fieldsBox = $('speech-bubble-fields');
       fieldsBox.innerHTML = '';
@@ -435,6 +469,7 @@
       }
 
       $('open-at-login').checked = !!s.openAtLogin;
+      $('dev-mode').checked = !!s.devMode;
 
       const wsBadge = $('ws-status');
       const labels = {
@@ -696,8 +731,19 @@
     $('render-mode').addEventListener('change', async (e) => {
       await window.settingsAPI.setRenderMode(e.target.value);
     });
+    // Select values arrive as strings; the main process validates them
+    // against the numeric CHARACTER_SCALES/EDGE_MARGINS lists.
+    $('character-scale').addEventListener('change', async (e) => {
+      await window.settingsAPI.setCharacterScale(Number(e.target.value));
+    });
     $('always-on-top').addEventListener('change', async (e) => {
       await window.settingsAPI.setAlwaysOnTopMode(e.target.value);
+    });
+    $('edge-margin').addEventListener('change', async (e) => {
+      await window.settingsAPI.setEdgeMargin(Number(e.target.value));
+    });
+    $('dev-mode').addEventListener('change', async (e) => {
+      await window.settingsAPI.setDevMode(e.target.checked);
     });
     $('open-at-login').addEventListener('change', async (e) => {
       await window.settingsAPI.setOpenAtLogin(e.target.checked);

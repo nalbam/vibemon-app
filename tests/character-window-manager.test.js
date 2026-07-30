@@ -72,6 +72,37 @@ describe('default settings', () => {
     expect(manager.getRenderMode()).toBe('2d');
   });
 
+  test('character size, edge margin and dev mode default to the previous behaviour', () => {
+    const manager = new CharacterWindowManager();
+
+    expect(manager.getCharacterScale()).toBe(100);
+    expect(manager.getEdgeMargin()).toBe(0);
+    expect(manager.getDevMode()).toBe(false);
+    expect(manager.getDisplayOptions()).toEqual({ characterScale: 100, devMode: false });
+  });
+
+  test('stored character size and edge margin outside the offered lists fall back', () => {
+    Store.__presetNextStore({ characterScale: 25, edgeMargin: 999 });
+    const manager = new CharacterWindowManager();
+
+    expect(manager.getCharacterScale()).toBe(100);
+    expect(manager.getEdgeMargin()).toBe(0);
+  });
+
+  test('character size and edge margin setters reject values outside the offered lists', () => {
+    const manager = new CharacterWindowManager();
+
+    manager.setCharacterScale(50);
+    manager.setEdgeMargin(16);
+    expect(manager.getCharacterScale()).toBe(50);
+    expect(manager.getEdgeMargin()).toBe(16);
+
+    manager.setCharacterScale(25);
+    manager.setEdgeMargin(999);
+    expect(manager.getCharacterScale()).toBe(50);
+    expect(manager.getEdgeMargin()).toBe(16);
+  });
+
   test('migrates the legacy per-key window position map', () => {
     Store.__presetNextStore({ windowPositions: { __character__: { x: 11, y: 22 } } });
     const manager = new CharacterWindowManager();
@@ -388,6 +419,188 @@ describe('shouldBeAlwaysOnTop', () => {
     const manager = new CharacterWindowManager();
     manager.alwaysOnTopMode = 'disabled';
     expect(manager.shouldBeAlwaysOnTop('working')).toBe(false);
+  });
+});
+
+describe('window geometry (character size + edge margin)', () => {
+  const { WINDOW_WIDTH, SNAP_DEBOUNCE_MS } = require('../src/shared/config.cjs');
+  const { screen } = require('electron');
+  const WORK_AREA_WIDTH = 1920;
+  const WORK_AREA_HEIGHT = 1080;
+  // Matches CHAR_Y_BASE + CHAR_SIZE + 12 in character-window-manager.cjs
+  const WINDOW_HEIGHT = 160;
+
+  beforeEach(() => {
+    screen.getDisplayMatching.mockImplementation(() => ({
+      workArea: { x: 0, y: 0, width: WORK_AREA_WIDTH, height: WORK_AREA_HEIGHT }
+    }));
+  });
+
+  test('the window size scales with the character size setting', () => {
+    const manager = new CharacterWindowManager();
+    expect(manager.windowSize()).toEqual({ width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+
+    manager.setCharacterScale(50);
+    expect(manager.windowSize()).toEqual({ width: WINDOW_WIDTH / 2, height: WINDOW_HEIGHT / 2 });
+  });
+
+  test('the default position keeps the edge margin from the top-right corner', () => {
+    const manager = new CharacterWindowManager();
+    expect(manager.defaultPosition()).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0 });
+
+    manager.setEdgeMargin(16);
+    expect(manager.defaultPosition()).toEqual({ x: WORK_AREA_WIDTH - 16 - WINDOW_WIDTH, y: 16 });
+  });
+
+  test('a smaller character spawns closer to the corner it is anchored at', () => {
+    const manager = new CharacterWindowManager();
+    manager.setCharacterScale(50);
+
+    expect(manager.defaultPosition()).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH / 2, y: 0 });
+  });
+
+  test('clamping keeps the window inside the work area inset by the edge margin', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(16);
+
+    expect(manager.clampPositionToScreen({ x: -50, y: -50 })).toEqual({ x: 16, y: 16 });
+    expect(manager.clampPositionToScreen({ x: 5000, y: 5000 })).toEqual({
+      x: WORK_AREA_WIDTH - 16 - WINDOW_WIDTH,
+      y: WORK_AREA_HEIGHT - 16 - WINDOW_HEIGHT
+    });
+  });
+
+  test('an edge margin with no room for the window falls back to the bare work area', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(32);
+    screen.getDisplayMatching.mockImplementation(() => ({
+      workArea: { x: 0, y: 0, width: 200, height: 200 }
+    }));
+
+    expect(manager.clampPositionToScreen({ x: -50, y: -50 })).toEqual({ x: 0, y: 0 });
+  });
+
+  test('a settled drag snaps flush to the margin, not to the screen edge', () => {
+    jest.useFakeTimers();
+    try {
+      const manager = new CharacterWindowManager();
+      manager.setEdgeMargin(16);
+
+      const window = {
+        getBounds: jest.fn(() => ({ x: 2, y: 3, width: WINDOW_WIDTH, height: WINDOW_HEIGHT })),
+        getPosition: jest.fn(() => [2, 3]),
+        setPosition: jest.fn(),
+        isDestroyed: () => false
+      };
+      manager.entry = { window, state: null, projectId: 'a' };
+
+      manager.handleWindowMove();
+      jest.advanceTimersByTime(SNAP_DEBOUNCE_MS);
+
+      expect(window.setPosition).toHaveBeenCalledWith(16, 16);
+      expect(manager.windowPosition).toEqual({ x: 16, y: 16 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  function makeGeometryWindow(bounds) {
+    return {
+      getPosition: jest.fn(() => [bounds.x, bounds.y]),
+      getBounds: jest.fn(() => ({ ...bounds })),
+      setPosition: jest.fn(),
+      setResizable: jest.fn(),
+      setBounds: jest.fn(),
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send: jest.fn() }
+    };
+  }
+
+  test('resizing keeps a corner-parked character in its corner', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+    manager.onWindowMoved = jest.fn();
+
+    manager.setCharacterScale(50);
+
+    expect(window.setBounds).toHaveBeenCalledWith({
+      x: WORK_AREA_WIDTH - WINDOW_WIDTH / 2,
+      y: 0,
+      width: WINDOW_WIDTH / 2,
+      height: WINDOW_HEIGHT / 2
+    });
+    // Programmatic resizes need the window temporarily resizable
+    expect(window.setResizable).toHaveBeenNthCalledWith(1, true);
+    expect(window.setResizable).toHaveBeenNthCalledWith(2, false);
+    // A resize fires no 'move' event, so the bubble is told to follow
+    expect(manager.onWindowMoved).toHaveBeenCalledWith('a');
+    expect(window.webContents.send).toHaveBeenCalledWith('display-options', { characterScale: 50, devMode: false });
+  });
+
+  test('resizing leaves a character parked away from every edge where it is', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: 600, y: 400, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setCharacterScale(50);
+
+    expect(window.setBounds).toHaveBeenCalledWith(expect.objectContaining({ x: 600, y: 400 }));
+  });
+
+  test('lowering the edge margin brings a pinned window back out to the edge', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(32);
+    // Where a 32px margin pins the window in the top-right corner
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - 32 - WINDOW_WIDTH, y: 32, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setEdgeMargin(0);
+
+    expect(window.setBounds).toHaveBeenCalledWith({
+      x: WORK_AREA_WIDTH - WINDOW_WIDTH,
+      y: 0,
+      width: WINDOW_WIDTH,
+      height: WINDOW_HEIGHT
+    });
+    expect(manager.windowPosition).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0 });
+  });
+
+  test('raising the edge margin pushes a flush window inward', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setEdgeMargin(16);
+
+    expect(window.setBounds).toHaveBeenCalledWith(expect.objectContaining({
+      x: WORK_AREA_WIDTH - 16 - WINDOW_WIDTH,
+      y: 16
+    }));
+  });
+
+  test('the saved spawn position follows the margin even with no window open', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(32);
+    manager.saveWindowPosition({ x: WORK_AREA_WIDTH - 32 - WINDOW_WIDTH, y: 32 });
+
+    manager.setEdgeMargin(0);
+
+    expect(manager.windowPosition).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0 });
+  });
+
+  test('dev mode pushes the new display options to the open window', () => {
+    const manager = new CharacterWindowManager();
+    const window = {
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send: jest.fn() }
+    };
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setDevMode(true);
+
+    expect(manager.getDevMode()).toBe(true);
+    expect(window.webContents.send).toHaveBeenCalledWith('display-options', { characterScale: 100, devMode: true });
   });
 });
 

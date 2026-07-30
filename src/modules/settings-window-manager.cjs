@@ -11,7 +11,8 @@ const { BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const { centerOnCursorDisplay } = require('./window-position.cjs');
 const {
-  ALWAYS_ON_TOP_MODES, CHARACTER_NAMES, CHARACTER_CONFIG, SPEECH_BUBBLE_FIELDS
+  ALWAYS_ON_TOP_MODES, CHARACTER_NAMES, CHARACTER_CONFIG, SPEECH_BUBBLE_FIELDS,
+  CHARACTER_SCALES, EDGE_MARGINS
 } = require('../shared/config.cjs');
 const { describeFailure } = require('./hook-installer.cjs');
 
@@ -89,6 +90,9 @@ class SettingsWindowManager {
       renderMode: this.windowManager.getRenderMode(),
       alwaysOnTopMode: this.windowManager.getAlwaysOnTopMode(),
       speechBubbleFields: this.windowManager.getSpeechBubbleFields(),
+      characterScale: this.windowManager.getCharacterScale(),
+      edgeMargin: this.windowManager.getEdgeMargin(),
+      devMode: this.windowManager.getDevMode(),
       openAtLogin: this.app.getLoginItemSettings().openAtLogin,
       ws: {
         status: this.wsClient ? this.wsClient.getStatus() : 'not-configured',
@@ -100,7 +104,9 @@ class SettingsWindowManager {
       options: {
         alwaysOnTopModes: ALWAYS_ON_TOP_MODES,
         characters: CHARACTER_NAMES.map(name => ({ name, displayName: CHARACTER_CONFIG[name].displayName })),
-        speechBubbleFields: SPEECH_BUBBLE_FIELDS
+        speechBubbleFields: SPEECH_BUBBLE_FIELDS,
+        characterScales: CHARACTER_SCALES,
+        edgeMargins: EDGE_MARGINS
       }
     };
   }
@@ -132,6 +138,26 @@ class SettingsWindowManager {
     ipcMain.handle('settings:set-speech-bubble-field', (_event, field, enabled) => {
       if (!SPEECH_BUBBLE_FIELDS.includes(field)) return false;
       this.windowManager.setSpeechBubbleField(field, Boolean(enabled));
+      this.notifyChanged();
+      return true;
+    });
+
+    ipcMain.handle('settings:set-character-scale', (_event, scale) => {
+      if (!CHARACTER_SCALES.includes(scale)) return false;
+      this.windowManager.setCharacterScale(scale);
+      this.notifyChanged();
+      return true;
+    });
+
+    ipcMain.handle('settings:set-edge-margin', (_event, margin) => {
+      if (!EDGE_MARGINS.includes(margin)) return false;
+      this.windowManager.setEdgeMargin(margin);
+      this.notifyChanged();
+      return true;
+    });
+
+    ipcMain.handle('settings:set-dev-mode', (_event, enabled) => {
+      this.windowManager.setDevMode(Boolean(enabled));
       this.notifyChanged();
       return true;
     });

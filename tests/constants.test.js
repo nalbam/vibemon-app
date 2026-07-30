@@ -52,5 +52,16 @@ describe('Constants', () => {
     test('CHAR_SIZE is positive', () => {
       expect(constants.CHAR_SIZE).toBeGreaterThan(0);
     });
+
+    test('CHARACTER_SCALES offers 100% down to 50%, largest first', () => {
+      expect(constants.CHARACTER_SCALES[0]).toBe(100);
+      expect(constants.CHARACTER_SCALES[constants.CHARACTER_SCALES.length - 1]).toBe(50);
+      expect([...constants.CHARACTER_SCALES].sort((a, b) => b - a)).toEqual(constants.CHARACTER_SCALES);
+    });
+
+    test('EDGE_MARGINS starts at 0 (flush to the edge) and only grows', () => {
+      expect(constants.EDGE_MARGINS[0]).toBe(0);
+      expect([...constants.EDGE_MARGINS].sort((a, b) => a - b)).toEqual(constants.EDGE_MARGINS);
+    });
   });
 });
