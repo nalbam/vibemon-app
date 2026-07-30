@@ -32,6 +32,36 @@ const {
 // something needs the user's attention right away.
 const PRIORITY_FOCUS_STATES = ['alert', 'notification'];
 
+// How close a window edge must be to its margin area's edge to count as
+// sitting flush against it (positions are set programmatically, so this only
+// tolerates a hand-dragged near miss).
+const EDGE_PIN_EPSILON = 2;
+
+/**
+ * Place one axis of the window after a size or margin change. An edge the
+ * window sat flush against stays flush against the same edge of the new
+ * margin area: a window pushed inward by a margin was put there by the
+ * setting rather than chosen by the user, so it has to follow the setting
+ * back out when the margin shrinks. Anything else is clamped back inside.
+ * @param {number} pos - the window's current position on this axis
+ * @param {number} oldSize - its current extent on this axis
+ * @param {number} newSize - the extent it is being resized to
+ * @param {number} oldStart - the margin area's start before the change
+ * @param {number} oldLength - the margin area's extent before the change
+ * @param {number} newStart - the margin area's start after the change
+ * @param {number} newLength - the margin area's extent after the change
+ * @returns {number}
+ */
+function repinAxis(pos, oldSize, newSize, oldStart, oldLength, newStart, newLength) {
+  if (Math.abs(pos - oldStart) <= EDGE_PIN_EPSILON) {
+    return newStart;
+  }
+  if (Math.abs((pos + oldSize) - (oldStart + oldLength)) <= EDGE_PIN_EPSILON) {
+    return newStart + newLength - newSize;
+  }
+  return Math.min(Math.max(pos, newStart), newStart + newLength - newSize);
+}
+
 // A session working inside ~/.vibemon is VibeMon's own plumbing (the
 // `claude -p "/usage"` session the usage refresher spawns), never a user
 // project. Current hooks skip reporting it themselves, but hooks installed
@@ -234,14 +264,16 @@ class CharacterWindowManager {
    * screen's edges. Falls back to the uninset work area when the inset would
    * leave no room for the window.
    * @param {{x: number, y: number, width: number, height: number}} workArea
+   * @param {number} [margin] - defaults to the current setting; applyWindowGeometry
+   *   passes the previous one to work out where the window used to be pinned
+   * @param {{width: number, height: number}} [size] - the window size the inset
+   *   has to leave room for, defaulting to the current one
    * @returns {{x: number, y: number, width: number, height: number}}
    */
-  marginArea(workArea) {
-    const margin = this.edgeMargin;
+  marginArea(workArea, margin = this.edgeMargin, size = this.windowSize()) {
     if (margin <= 0) return workArea;
 
-    const { width, height } = this.windowSize();
-    if (workArea.width - margin * 2 < width || workArea.height - margin * 2 < height) {
+    if (workArea.width - margin * 2 < size.width || workArea.height - margin * 2 < size.height) {
       return workArea;
     }
 
@@ -273,30 +305,59 @@ class CharacterWindowManager {
   }
 
   /**
-   * Resize the open window to the current Character Size and move it back
-   * inside the current Edge Margin. Run after either setting changes.
+   * Resize the open window to the current Character Size and re-place it for
+   * the current Edge Margin. Run after either setting changes.
+   *
+   * Placement goes through repinAxis rather than a plain clamp, so an edge
+   * the window was resting against stays an edge it rests against — lowering
+   * the margin brings it back out to the screen's edge instead of stranding
+   * it at the old gap, and resizing keeps a corner-parked character in its
+   * corner. The saved spawn position is updated even with no window open, so
+   * the next one doesn't spawn against the superseded setting.
+   * @param {{edgeMargin: number, size: {width: number, height: number}}} previous
+   *   - the geometry in effect before the change
    */
-  applyWindowGeometry() {
-    if (!this.isWindowValid(this.entry)) return;
+  applyWindowGeometry(previous) {
+    const size = this.windowSize();
+    const isOpen = this.isWindowValid(this.entry);
+    const origin = isOpen
+      ? this.entry.window.getBounds()
+      : (this.windowPosition ? { ...this.windowPosition, ...previous.size } : null);
+    if (!origin) return;
 
-    const { window } = this.entry;
-    const { width, height } = this.windowSize();
-    const [x, y] = window.getPosition();
-    const position = this.clampPositionToScreen({ x, y });
+    const { workArea } = screen.getDisplayMatching(origin);
+    const before = this.marginArea(workArea, previous.edgeMargin, previous.size);
+    const after = this.marginArea(workArea, this.edgeMargin, size);
+
+    const position = {
+      x: repinAxis(origin.x, previous.size.width, size.width, before.x, before.width, after.x, after.width),
+      y: repinAxis(origin.y, previous.size.height, size.height, before.y, before.height, after.y, after.height)
+    };
+
+    this.saveWindowPosition(position);
+    if (!isOpen) return;
 
     // A non-resizable window pins its minimum and maximum size to its
     // current size on some platforms, which would clamp setBounds to a no-op.
+    const { window } = this.entry;
     window.setResizable(true);
-    window.setBounds({ x: position.x, y: position.y, width, height });
+    window.setBounds({ x: position.x, y: position.y, width: size.width, height: size.height });
     window.setResizable(false);
-
-    this.saveWindowPosition(position);
 
     // A resize on its own fires no 'move' event, so without this the speech
     // bubble keeps pointing at the old bounds.
     if (this.onWindowMoved) {
       this.onWindowMoved(this.entry.projectId);
     }
+  }
+
+  /**
+   * The geometry inputs that decide where the window sits, captured before a
+   * setting changes so applyWindowGeometry can tell which edge it was on.
+   * @returns {{edgeMargin: number, size: {width: number, height: number}}}
+   */
+  currentGeometry() {
+    return { edgeMargin: this.edgeMargin, size: this.windowSize() };
   }
 
   /**
@@ -314,9 +375,10 @@ class CharacterWindowManager {
   setCharacterScale(scale) {
     if (!CHARACTER_SCALES.includes(scale) || scale === this.characterScale) return;
 
+    const previous = this.currentGeometry();
     this.characterScale = scale;
     this.store.set('characterScale', scale);
-    this.applyWindowGeometry();
+    this.applyWindowGeometry(previous);
     this.sendDisplayOptions();
   }
 
@@ -328,14 +390,17 @@ class CharacterWindowManager {
   }
 
   /**
+   * Set the gap the character window — and the speech bubble following it —
+   * keeps from the screen's edges.
    * @param {number} margin - an EDGE_MARGINS entry, in px
    */
   setEdgeMargin(margin) {
     if (!EDGE_MARGINS.includes(margin) || margin === this.edgeMargin) return;
 
+    const previous = this.currentGeometry();
     this.edgeMargin = margin;
     this.store.set('edgeMargin', margin);
-    this.applyWindowGeometry();
+    this.applyWindowGeometry(previous);
   }
 
   /**

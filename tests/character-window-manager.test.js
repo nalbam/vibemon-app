@@ -504,24 +504,28 @@ describe('window geometry (character size + edge margin)', () => {
     }
   });
 
-  test('changing the character size resizes and repositions the open window', () => {
-    const manager = new CharacterWindowManager();
-    const window = {
-      getPosition: jest.fn(() => [WORK_AREA_WIDTH - WINDOW_WIDTH, 0]),
-      getBounds: jest.fn(() => ({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT })),
+  function makeGeometryWindow(bounds) {
+    return {
+      getPosition: jest.fn(() => [bounds.x, bounds.y]),
+      getBounds: jest.fn(() => ({ ...bounds })),
       setPosition: jest.fn(),
       setResizable: jest.fn(),
       setBounds: jest.fn(),
       isDestroyed: () => false,
       webContents: { isDestroyed: () => false, send: jest.fn() }
     };
+  }
+
+  test('resizing keeps a corner-parked character in its corner', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
     manager.entry = { window, state: null, projectId: 'a' };
     manager.onWindowMoved = jest.fn();
 
     manager.setCharacterScale(50);
 
     expect(window.setBounds).toHaveBeenCalledWith({
-      x: WORK_AREA_WIDTH - WINDOW_WIDTH,
+      x: WORK_AREA_WIDTH - WINDOW_WIDTH / 2,
       y: 0,
       width: WINDOW_WIDTH / 2,
       height: WINDOW_HEIGHT / 2
@@ -532,6 +536,57 @@ describe('window geometry (character size + edge margin)', () => {
     // A resize fires no 'move' event, so the bubble is told to follow
     expect(manager.onWindowMoved).toHaveBeenCalledWith('a');
     expect(window.webContents.send).toHaveBeenCalledWith('display-options', { characterScale: 50, devMode: false });
+  });
+
+  test('resizing leaves a character parked away from every edge where it is', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: 600, y: 400, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setCharacterScale(50);
+
+    expect(window.setBounds).toHaveBeenCalledWith(expect.objectContaining({ x: 600, y: 400 }));
+  });
+
+  test('lowering the edge margin brings a pinned window back out to the edge', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(32);
+    // Where a 32px margin pins the window in the top-right corner
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - 32 - WINDOW_WIDTH, y: 32, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setEdgeMargin(0);
+
+    expect(window.setBounds).toHaveBeenCalledWith({
+      x: WORK_AREA_WIDTH - WINDOW_WIDTH,
+      y: 0,
+      width: WINDOW_WIDTH,
+      height: WINDOW_HEIGHT
+    });
+    expect(manager.windowPosition).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0 });
+  });
+
+  test('raising the edge margin pushes a flush window inward', () => {
+    const manager = new CharacterWindowManager();
+    const window = makeGeometryWindow({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+    manager.entry = { window, state: null, projectId: 'a' };
+
+    manager.setEdgeMargin(16);
+
+    expect(window.setBounds).toHaveBeenCalledWith(expect.objectContaining({
+      x: WORK_AREA_WIDTH - 16 - WINDOW_WIDTH,
+      y: 16
+    }));
+  });
+
+  test('the saved spawn position follows the margin even with no window open', () => {
+    const manager = new CharacterWindowManager();
+    manager.setEdgeMargin(32);
+    manager.saveWindowPosition({ x: WORK_AREA_WIDTH - 32 - WINDOW_WIDTH, y: 32 });
+
+    manager.setEdgeMargin(0);
+
+    expect(manager.windowPosition).toEqual({ x: WORK_AREA_WIDTH - WINDOW_WIDTH, y: 0 });
   });
 
   test('dev mode pushes the new display options to the open window', () => {
