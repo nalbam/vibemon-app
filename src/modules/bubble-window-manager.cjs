@@ -25,7 +25,6 @@ const CHARACTER_RADIUS = 70;
 const BUBBLE_COLLIDE_PADDING = 4;
 const LINK_DISTANCE = 100;
 const BIAS_DISTANCE = 100;
-const SCREEN_MARGIN = 8;
 
 // How close the character window's edge must be to the work area's edge to
 // count as "pinned" there (the character window is continuously clamped on
@@ -142,8 +141,9 @@ function resolveBgColor(state) {
 class BubbleWindowManager {
   /**
    * @param {(projectId: string) => Electron.BrowserWindow|null} getCharacterWindow
-   * @param {() => number} [getEdgeMargin] - the character window's configured
-   *   gap from the screen's edges, used by the pinned-edge check
+   * @param {() => number} [getEdgeMargin] - the configured gap from the
+   *   screen's edges, shared with the character window: it widens the
+   *   pinned-edge check and is the bubble's own minimum distance from an edge
    */
   constructor(getCharacterWindow, getEdgeMargin = () => 0) {
     this.getCharacterWindow = getCharacterWindow;
@@ -437,6 +437,14 @@ class BubbleWindowManager {
     const { workArea } = display;
     const onRightHalf = charCenterX > workArea.x + workArea.width / 2;
 
+    // How close to the screen's edges the bubble may be pushed. This used to
+    // be a fixed 8px, which contradicted the Edge Margin setting at both
+    // ends: it held the bubble back at margin 0, and let it sit closer than
+    // the character it belongs to at larger margins. It only binds when the
+    // bubble is squeezed against an edge — placement is otherwise driven by
+    // the character's position below.
+    const screenMargin = this.getEdgeMargin();
+
     const bubbleRadius = Math.max(size.width, size.height) / 2;
 
     // The bias point only helps if it's far enough from the character that
@@ -445,7 +453,7 @@ class BubbleWindowManager {
     // bias upward" has no room there and the clamp would just pull the
     // simulation's result back down into the character. Flip toward
     // whichever side of each axis actually has room instead.
-    const requiredClearance = characterRadius + bubbleRadius + BUBBLE_COLLIDE_PADDING + SCREEN_MARGIN;
+    const requiredClearance = characterRadius + bubbleRadius + BUBBLE_COLLIDE_PADDING + screenMargin;
 
     let biasXOffset = onRightHalf ? -BIAS_DISTANCE : BIAS_DISTANCE;
     const spaceX = biasXOffset < 0 ? charCenterX - workArea.x : workArea.x + workArea.width - charCenterX;
@@ -513,10 +521,10 @@ class BubbleWindowManager {
       }
     }
 
-    const minX = workArea.x + SCREEN_MARGIN + size.width / 2;
-    const maxX = workArea.x + workArea.width - SCREEN_MARGIN - size.width / 2;
-    const minY = workArea.y + SCREEN_MARGIN + size.height / 2;
-    const maxY = workArea.y + workArea.height - SCREEN_MARGIN - size.height / 2;
+    const minX = workArea.x + screenMargin + size.width / 2;
+    const maxX = workArea.x + workArea.width - screenMargin - size.width / 2;
+    const minY = workArea.y + screenMargin + size.height / 2;
+    const maxY = workArea.y + workArea.height - screenMargin - size.height / 2;
     const clampedX = Math.min(maxX, Math.max(minX, bubbleNode.x));
     const clampedY = Math.min(maxY, Math.max(minY, bubbleNode.y));
 
