@@ -56,7 +56,7 @@ jest.mock('electron', () => {
 
 const { BrowserWindow, screen, shell } = require('electron');
 const { SettingsWindowManager } = require('../src/modules/settings-window-manager.cjs');
-const { CHARACTER_NAMES } = require('../src/shared/config.cjs');
+const { CHARACTER_NAMES, CHARACTER_SCALES, EDGE_MARGINS } = require('../src/shared/config.cjs');
 
 function makeDeps() {
   return {
@@ -68,7 +68,13 @@ function makeDeps() {
       getAlwaysOnTopMode: jest.fn(() => 'active-only'),
       setAlwaysOnTopMode: jest.fn(),
       getSpeechBubbleFields: jest.fn(() => ({ status: true })),
-      setSpeechBubbleField: jest.fn()
+      setSpeechBubbleField: jest.fn(),
+      getCharacterScale: jest.fn(() => 100),
+      setCharacterScale: jest.fn(),
+      getEdgeMargin: jest.fn(() => 0),
+      setEdgeMargin: jest.fn(),
+      getDevMode: jest.fn(() => false),
+      setDevMode: jest.fn()
     },
     app: {
       getVersion: jest.fn(() => '9.9.9'),
@@ -148,6 +154,18 @@ describe('settings:get-all', () => {
     expect(after.ws).toEqual({ status: 'connected', tokenConfigured: true });
   });
 
+  test('carries the character size, edge margin and dev mode plus their option lists', async () => {
+    freshManager();
+
+    const snap = await invoke('settings:get-all');
+
+    expect(snap.characterScale).toBe(100);
+    expect(snap.edgeMargin).toBe(0);
+    expect(snap.devMode).toBe(false);
+    expect(snap.options.characterScales).toEqual(CHARACTER_SCALES);
+    expect(snap.options.edgeMargins).toEqual(EDGE_MARGINS);
+  });
+
   test('strips filesystem paths from hook statuses', async () => {
     freshManager();
     const snap = await invoke('settings:get-all');
@@ -204,6 +222,32 @@ describe('setting mutations', () => {
     expect(wsClient.setToken).toHaveBeenCalledWith('tok');
     expect(deps.vibemonConfigManager.write).toHaveBeenCalledWith({ vibemon_token: 'tok' });
     expect(await invoke('settings:set-token', 123)).toBe(false);
+  });
+
+  test('set-character-scale accepts only listed percentages', async () => {
+    const { deps } = freshManager();
+    expect(await invoke('settings:set-character-scale', 50)).toBe(true);
+    expect(deps.windowManager.setCharacterScale).toHaveBeenCalledWith(50);
+    // A string from the select, or a percentage outside the list, is rejected
+    expect(await invoke('settings:set-character-scale', '50')).toBe(false);
+    expect(await invoke('settings:set-character-scale', 25)).toBe(false);
+    expect(deps.windowManager.setCharacterScale).toHaveBeenCalledTimes(1);
+  });
+
+  test('set-edge-margin accepts only listed margins', async () => {
+    const { deps } = freshManager();
+    expect(await invoke('settings:set-edge-margin', 16)).toBe(true);
+    expect(deps.windowManager.setEdgeMargin).toHaveBeenCalledWith(16);
+    expect(await invoke('settings:set-edge-margin', 999)).toBe(false);
+    expect(deps.windowManager.setEdgeMargin).toHaveBeenCalledTimes(1);
+  });
+
+  test('set-dev-mode coerces enabled to a boolean', async () => {
+    const { deps } = freshManager();
+    expect(await invoke('settings:set-dev-mode', 1)).toBe(true);
+    expect(deps.windowManager.setDevMode).toHaveBeenCalledWith(true);
+    expect(await invoke('settings:set-dev-mode', undefined)).toBe(true);
+    expect(deps.windowManager.setDevMode).toHaveBeenLastCalledWith(false);
   });
 
   test('set-open-at-login forwards a boolean to the app', async () => {

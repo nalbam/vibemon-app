@@ -49,7 +49,10 @@ if (!gotTheLock) {
 // Initialize managers
 const stateManager = new StateManager();
 const windowManager = new CharacterWindowManager();
-const bubbleWindowManager = new BubbleWindowManager((projectId) => windowManager.getWindow(projectId));
+const bubbleWindowManager = new BubbleWindowManager(
+  (projectId) => windowManager.getWindow(projectId),
+  () => windowManager.getEdgeMargin()
+);
 const hookInstaller = new HookInstaller();
 const vibemonConfigManager = new VibemonConfigManager();
 const updateChecker = new UpdateChecker();
@@ -251,6 +254,13 @@ ipcMain.handle('get-state-registry', () => {
 // Which engine the renderer should boot: '2d' pixel-art or '3d' pet
 ipcMain.handle('get-render-mode', () => {
   return windowManager.getRenderMode();
+});
+
+// How the character window draws itself: the Character Size scale it applies
+// with CSS, and whether dev mode tints its display area. Later changes are
+// pushed over the 'display-options' channel.
+ipcMain.handle('get-display-options', () => {
+  return windowManager.getDisplayOptions();
 });
 
 ipcMain.on('show-context-menu', (event) => {

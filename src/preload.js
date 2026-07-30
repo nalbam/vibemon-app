@@ -7,6 +7,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCharacterRegistry: () => ipcRenderer.invoke('get-character-registry'),
   getStateRegistry: () => ipcRenderer.invoke('get-state-registry'),
   getRenderMode: () => ipcRenderer.invoke('get-render-mode'),
+  getDisplayOptions: () => ipcRenderer.invoke('get-display-options'),
+  onDisplayOptions: (callback) => {
+    const handler = (_event, options) => {
+      try {
+        callback(options);
+      } catch (error) {
+        console.error('Display options callback error:', error);
+      }
+    };
+    ipcRenderer.on('display-options', handler);
+    return () => ipcRenderer.removeListener('display-options', handler);
+  },
   showContextMenu: () => ipcRenderer.send('show-context-menu'),
   focusTerminal: () => ipcRenderer.invoke('focus-terminal'),
   onStateUpdate: (callback) => {

@@ -15,12 +15,25 @@ html, body {
    interaction expression must react the moment the mouse goes down.
    Sized to the sprite canvas (128x128 at 22,20) plus clearance for its
    floating animation — must stay in sync with the window size set by
+   character-window-manager.cjs.
+   The Character Size setting scales the whole area down through
+   --vibemon-scale (set by renderer.js). Scaling with a transform keeps the
+   layout box — and so both engines' canvas resolution — at full size, so
+   only the presentation shrinks; the window itself is resized to match in
    character-window-manager.cjs. */
 .vibemon-display {
   position: relative;
   width: 172px;
   height: 160px;
   image-rendering: pixelated;
+  transform: scale(var(--vibemon-scale, 1));
+  transform-origin: top left;
+}
+
+/* Dev mode: tint the otherwise transparent display area so its bounds — and
+   the effect of the size and margin settings — are visible. */
+.vibemon-display.dev-mode {
+  background: rgba(0, 200, 255, 0.18);
 }
 
 /* 3D engine canvas: transparent WebGL filling the whole display area; the

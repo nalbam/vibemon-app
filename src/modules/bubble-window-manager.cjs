@@ -10,14 +10,16 @@
 
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
-const { STATE_COLORS, STATE_TEXTS, TOOL_TEXTS, LOADING_STATES } = require('../shared/config.cjs');
+const { STATE_COLORS, STATE_TEXTS, TOOL_TEXTS, LOADING_STATES, WINDOW_WIDTH } = require('../shared/config.cjs');
 
-// The character sprite's center offset and collision radius within the
-// character window, matching the rendering engine's layout constants
-// (CHAR_X_BASE=22, CHAR_Y_BASE=20, CHAR_SIZE=128 in
+// The character sprite's center offset and collision radius within a
+// full-size character window, matching the rendering engine's layout
+// constants (CHAR_X_BASE=22, CHAR_Y_BASE=20, CHAR_SIZE=128 in
 // src/engine/vibemon-engine.js). The radius is generous
 // (measured opaque sprite bounds span nearly the full 128x128 canvas for some
 // characters) since the bubble now has the whole screen to move in.
+// The Character Size setting shrinks the window, so both are scaled by the
+// window's actual width in computePlacement().
 const CHARACTER_OFFSET = { x: 86, y: 84 };
 const CHARACTER_RADIUS = 70;
 const BUBBLE_COLLIDE_PADDING = 4;
@@ -27,7 +29,9 @@ const SCREEN_MARGIN = 8;
 
 // How close the character window's edge must be to the work area's edge to
 // count as "pinned" there (the character window is continuously clamped on
-// screen, so a pinned edge sits flush — this just tolerates rounding).
+// screen, so a pinned edge sits flush — this just tolerates rounding). The
+// configured edge margin is added on top, since the character window is
+// clamped to the work area inset by it.
 const EDGE_PIN_EPSILON = 2;
 
 // Must match character-window-manager.cjs's ALWAYS_ON_TOP_LEVEL so the
@@ -138,9 +142,12 @@ function resolveBgColor(state) {
 class BubbleWindowManager {
   /**
    * @param {(projectId: string) => Electron.BrowserWindow|null} getCharacterWindow
+   * @param {() => number} [getEdgeMargin] - the character window's configured
+   *   gap from the screen's edges, used by the pinned-edge check
    */
-  constructor(getCharacterWindow) {
+  constructor(getCharacterWindow, getEdgeMargin = () => 0) {
     this.getCharacterWindow = getCharacterWindow;
+    this.getEdgeMargin = getEdgeMargin;
     this.bubbleWindows = new Map(); // Map<projectId, BrowserWindow>
     this.lastSizes = new Map(); // Map<projectId, {width, height}>
     this.lastFields = new Map(); // Map<projectId, Object> — needed so reposition() can re-render the tail
@@ -418,8 +425,13 @@ class BubbleWindowManager {
     if (!this.isWindowValid(charWindow)) return null;
 
     const charBounds = charWindow.getBounds();
-    const charCenterX = charBounds.x + CHARACTER_OFFSET.x;
-    const charCenterY = charBounds.y + CHARACTER_OFFSET.y;
+    // The window is sized WINDOW_WIDTH x WINDOW_HEIGHT times the Character
+    // Size setting, so its width recovers that scale — the sprite's anchor
+    // and collision radius shrink with it.
+    const charScale = charBounds.width / WINDOW_WIDTH;
+    const charCenterX = charBounds.x + CHARACTER_OFFSET.x * charScale;
+    const charCenterY = charBounds.y + CHARACTER_OFFSET.y * charScale;
+    const characterRadius = CHARACTER_RADIUS * charScale;
 
     const display = screen.getDisplayNearestPoint({ x: charCenterX, y: charCenterY });
     const { workArea } = display;
@@ -433,7 +445,7 @@ class BubbleWindowManager {
     // bias upward" has no room there and the clamp would just pull the
     // simulation's result back down into the character. Flip toward
     // whichever side of each axis actually has room instead.
-    const requiredClearance = CHARACTER_RADIUS + bubbleRadius + BUBBLE_COLLIDE_PADDING + SCREEN_MARGIN;
+    const requiredClearance = characterRadius + bubbleRadius + BUBBLE_COLLIDE_PADDING + SCREEN_MARGIN;
 
     let biasXOffset = onRightHalf ? -BIAS_DISTANCE : BIAS_DISTANCE;
     const spaceX = biasXOffset < 0 ? charCenterX - workArea.x : workArea.x + workArea.width - charCenterX;
@@ -449,10 +461,11 @@ class BubbleWindowManager {
     // room instead of the usual diagonal bias: pinned top/bottom -> bubble
     // beside the character; pinned left/right -> bubble above/below it.
     // A corner pin satisfies both checks — top/bottom wins there.
-    const pinnedTop = charBounds.y <= workArea.y + EDGE_PIN_EPSILON;
-    const pinnedBottom = (charBounds.y + charBounds.height) >= (workArea.y + workArea.height - EDGE_PIN_EPSILON);
-    const pinnedLeft = charBounds.x <= workArea.x + EDGE_PIN_EPSILON;
-    const pinnedRight = (charBounds.x + charBounds.width) >= (workArea.x + workArea.width - EDGE_PIN_EPSILON);
+    const pinDistance = EDGE_PIN_EPSILON + this.getEdgeMargin();
+    const pinnedTop = charBounds.y <= workArea.y + pinDistance;
+    const pinnedBottom = (charBounds.y + charBounds.height) >= (workArea.y + workArea.height - pinDistance);
+    const pinnedLeft = charBounds.x <= workArea.x + pinDistance;
+    const pinnedRight = (charBounds.x + charBounds.width) >= (workArea.x + workArea.width - pinDistance);
 
     if (pinnedTop || pinnedBottom) {
       biasYOffset = 0;
@@ -464,7 +477,7 @@ class BubbleWindowManager {
     const biasY = charCenterY + biasYOffset;
 
     const nodes = [
-      { id: 'character', x: charCenterX, y: charCenterY, fx: charCenterX, fy: charCenterY, radius: CHARACTER_RADIUS },
+      { id: 'character', x: charCenterX, y: charCenterY, fx: charCenterX, fy: charCenterY, radius: characterRadius },
       { id: 'bubble', x: biasX, y: biasY, radius: bubbleRadius }
     ];
 
@@ -493,7 +506,7 @@ class BubbleWindowManager {
       const uy = dy / dist;
       // Half-extent of the bubble rectangle along the placement direction
       const halfExtent = Math.abs(ux) * size.width / 2 + Math.abs(uy) * size.height / 2;
-      const desired = CHARACTER_RADIUS + BUBBLE_COLLIDE_PADDING + halfExtent;
+      const desired = characterRadius + BUBBLE_COLLIDE_PADDING + halfExtent;
       if (dist > desired) {
         bubbleNode.x = charCenterX + ux * desired;
         bubbleNode.y = charCenterY + uy * desired;

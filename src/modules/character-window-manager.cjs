@@ -23,6 +23,8 @@ const {
   CHARACTER_NAMES,
   CHAR_Y_BASE,
   CHAR_SIZE,
+  CHARACTER_SCALES,
+  EDGE_MARGINS,
   FOCUS_HYSTERESIS_MS
 } = require('../shared/config.cjs');
 
@@ -45,6 +47,8 @@ const ALWAYS_ON_TOP_LEVEL = process.platform === 'darwin' ? 'floating' : 'screen
 // Window height: just tall enough for the character sprite
 // (CHAR_Y_BASE + CHAR_SIZE) plus a little clearance for its floating
 // animation. Must stay in sync with .vibemon-display in styles.css.
+// WINDOW_WIDTH/WINDOW_HEIGHT are the full-size (100%) dimensions; the
+// Character Size setting scales both — see windowSize().
 const WINDOW_HEIGHT = CHAR_Y_BASE + CHAR_SIZE + 12;
 
 class CharacterWindowManager {
@@ -78,6 +82,9 @@ class CharacterWindowManager {
         speechBubbleFields: { status: true, project: true, model: true, memory: true, usage5h: true, usageWeek: true, usageWeekModel: true },
         characterLock: 'auto',  // 'auto' or a CHARACTER_NAMES entry
         renderMode: '2d',  // '2d' (pixel-art sprite) or '3d' (three.js pet)
+        characterScale: 100,  // percent, a CHARACTER_SCALES entry
+        edgeMargin: 0,  // px kept between the window and the work area's edges, an EDGE_MARGINS entry
+        devMode: false,  // tint the character area so its bounds are visible
         windowPosition: null  // {x, y} - last dragged position, restored on next creation
       }
     });
@@ -106,6 +113,17 @@ class CharacterWindowManager {
 
     const storedRenderMode = this.store.get('renderMode');
     this.renderMode = storedRenderMode === '3d' ? '3d' : '2d';
+
+    // Both are picked from a fixed list in Settings, so a value outside it
+    // means a stale or corrupted store — fall back to the full-size,
+    // flush-to-the-edge defaults rather than sizing the window from it.
+    const storedScale = this.store.get('characterScale');
+    this.characterScale = CHARACTER_SCALES.includes(storedScale) ? storedScale : 100;
+
+    const storedEdgeMargin = this.store.get('edgeMargin');
+    this.edgeMargin = EDGE_MARGINS.includes(storedEdgeMargin) ? storedEdgeMargin : 0;
+
+    this.devMode = this.store.get('devMode') === true;
 
     // Migrate the window position saved by earlier versions, which kept it
     // in a per-key map under the '__character__' key.
@@ -194,6 +212,154 @@ class CharacterWindowManager {
   }
 
   // ============================================================================
+  // Display Geometry (character size, edge margin, dev mode)
+  // ============================================================================
+
+  /**
+   * The character window's current size: the full-size dimensions scaled by
+   * the Character Size setting.
+   * @returns {{width: number, height: number}}
+   */
+  windowSize() {
+    const scale = this.characterScale / 100;
+    return {
+      width: Math.round(WINDOW_WIDTH * scale),
+      height: Math.round(WINDOW_HEIGHT * scale)
+    };
+  }
+
+  /**
+   * A display's work area inset by the Edge Margin setting — the region the
+   * window spawns, clamps, and snaps within, so it keeps that gap from the
+   * screen's edges. Falls back to the uninset work area when the inset would
+   * leave no room for the window.
+   * @param {{x: number, y: number, width: number, height: number}} workArea
+   * @returns {{x: number, y: number, width: number, height: number}}
+   */
+  marginArea(workArea) {
+    const margin = this.edgeMargin;
+    if (margin <= 0) return workArea;
+
+    const { width, height } = this.windowSize();
+    if (workArea.width - margin * 2 < width || workArea.height - margin * 2 < height) {
+      return workArea;
+    }
+
+    return {
+      x: workArea.x + margin,
+      y: workArea.y + margin,
+      width: workArea.width - margin * 2,
+      height: workArea.height - margin * 2
+    };
+  }
+
+  /**
+   * Renderer-side display options — the character window scales itself with
+   * CSS and tints its display area in dev mode.
+   * @returns {{characterScale: number, devMode: boolean}}
+   */
+  getDisplayOptions() {
+    return { characterScale: this.characterScale, devMode: this.devMode };
+  }
+
+  /**
+   * Push the display options to the open window, so a change applies without
+   * reloading it.
+   */
+  sendDisplayOptions() {
+    if (this.entry) {
+      this.sendToWindow(this.entry.projectId, 'display-options', this.getDisplayOptions());
+    }
+  }
+
+  /**
+   * Resize the open window to the current Character Size and move it back
+   * inside the current Edge Margin. Run after either setting changes.
+   */
+  applyWindowGeometry() {
+    if (!this.isWindowValid(this.entry)) return;
+
+    const { window } = this.entry;
+    const { width, height } = this.windowSize();
+    const [x, y] = window.getPosition();
+    const position = this.clampPositionToScreen({ x, y });
+
+    // A non-resizable window pins its minimum and maximum size to its
+    // current size on some platforms, which would clamp setBounds to a no-op.
+    window.setResizable(true);
+    window.setBounds({ x: position.x, y: position.y, width, height });
+    window.setResizable(false);
+
+    this.saveWindowPosition(position);
+
+    // A resize on its own fires no 'move' event, so without this the speech
+    // bubble keeps pointing at the old bounds.
+    if (this.onWindowMoved) {
+      this.onWindowMoved(this.entry.projectId);
+    }
+  }
+
+  /**
+   * @returns {number} character size in percent
+   */
+  getCharacterScale() {
+    return this.characterScale;
+  }
+
+  /**
+   * Scale the character window (and the character drawn in it) down from its
+   * full size.
+   * @param {number} scale - a CHARACTER_SCALES entry, in percent
+   */
+  setCharacterScale(scale) {
+    if (!CHARACTER_SCALES.includes(scale) || scale === this.characterScale) return;
+
+    this.characterScale = scale;
+    this.store.set('characterScale', scale);
+    this.applyWindowGeometry();
+    this.sendDisplayOptions();
+  }
+
+  /**
+   * @returns {number} gap kept between the window and the screen's edges, in px
+   */
+  getEdgeMargin() {
+    return this.edgeMargin;
+  }
+
+  /**
+   * @param {number} margin - an EDGE_MARGINS entry, in px
+   */
+  setEdgeMargin(margin) {
+    if (!EDGE_MARGINS.includes(margin) || margin === this.edgeMargin) return;
+
+    this.edgeMargin = margin;
+    this.store.set('edgeMargin', margin);
+    this.applyWindowGeometry();
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  getDevMode() {
+    return this.devMode;
+  }
+
+  /**
+   * Tint the character's display area so its bounds are visible — makes the
+   * effect of the size and margin settings easy to see.
+   * @param {boolean} enabled
+   */
+  setDevMode(enabled) {
+    const next = Boolean(enabled);
+    if (next === this.devMode) return;
+
+    this.devMode = next;
+    this.store.set('devMode', next);
+    this.sendDisplayOptions();
+  }
+
+  // ============================================================================
   // Character Lock
   // ============================================================================
 
@@ -252,26 +418,31 @@ class CharacterWindowManager {
    * @returns {{x: number, y: number}}
    */
   clampPositionToScreen(position) {
-    const display = screen.getDisplayMatching({ x: position.x, y: position.y, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
-    const { workArea } = display;
-    const x = Math.min(Math.max(position.x, workArea.x), workArea.x + workArea.width - WINDOW_WIDTH);
-    const y = Math.min(Math.max(position.y, workArea.y), workArea.y + workArea.height - WINDOW_HEIGHT);
+    const { width, height } = this.windowSize();
+    const display = screen.getDisplayMatching({ x: position.x, y: position.y, width, height });
+    const area = this.marginArea(display.workArea);
+    const x = Math.min(Math.max(position.x, area.x), area.x + area.width - width);
+    const y = Math.min(Math.max(position.y, area.y), area.y + area.height - height);
     return { x, y };
   }
 
   /**
-   * Default spawn position: top-right corner of the primary display.
+   * Default spawn position: top-right corner of the primary display, inside
+   * the configured edge margin.
    * @returns {{x: number, y: number}}
    */
   defaultPosition() {
-    const { workArea } = screen.getPrimaryDisplay();
-    return { x: workArea.x + workArea.width - WINDOW_WIDTH, y: workArea.y };
+    const area = this.marginArea(screen.getPrimaryDisplay().workArea);
+    const { width } = this.windowSize();
+    return { x: area.x + area.width - width, y: area.y };
   }
 
   /**
    * Debounced snap after a drag settles: clamp the window fully back
    * on-screen (it can be dragged past the edge mid-drag), snap flush to an
    * edge when within SNAP_THRESHOLD of it, and remember where it settled.
+   * "On-screen" and "edge" both mean the work area inset by the configured
+   * edge margin, so the window keeps that gap however it is dragged.
    */
   handleWindowMove() {
     if (!this.entry || this.positionTrackingSuspended) return;
@@ -287,24 +458,24 @@ class CharacterWindowManager {
 
       const bounds = entry.window.getBounds();
       const display = screen.getDisplayMatching(bounds);
-      const { workArea } = display;
+      const area = this.marginArea(display.workArea);
 
       // Hard clamp first: never leave the window partially or fully off-screen,
       // regardless of how far past the edge it was dragged.
-      let newX = Math.min(Math.max(bounds.x, workArea.x), workArea.x + workArea.width - bounds.width);
-      let newY = Math.min(Math.max(bounds.y, workArea.y), workArea.y + workArea.height - bounds.height);
+      let newX = Math.min(Math.max(bounds.x, area.x), area.x + area.width - bounds.width);
+      let newY = Math.min(Math.max(bounds.y, area.y), area.y + area.height - bounds.height);
 
       // Snap flush to the nearest edge when already close to it.
-      if (Math.abs(newX - workArea.x) < SNAP_THRESHOLD) {
-        newX = workArea.x;
-      } else if (Math.abs((newX + bounds.width) - (workArea.x + workArea.width)) < SNAP_THRESHOLD) {
-        newX = workArea.x + workArea.width - bounds.width;
+      if (Math.abs(newX - area.x) < SNAP_THRESHOLD) {
+        newX = area.x;
+      } else if (Math.abs((newX + bounds.width) - (area.x + area.width)) < SNAP_THRESHOLD) {
+        newX = area.x + area.width - bounds.width;
       }
 
-      if (Math.abs(newY - workArea.y) < SNAP_THRESHOLD) {
-        newY = workArea.y;
-      } else if (Math.abs((newY + bounds.height) - (workArea.y + workArea.height)) < SNAP_THRESHOLD) {
-        newY = workArea.y + workArea.height - bounds.height;
+      if (Math.abs(newY - area.y) < SNAP_THRESHOLD) {
+        newY = area.y;
+      } else if (Math.abs((newY + bounds.height) - (area.y + area.height)) < SNAP_THRESHOLD) {
+        newY = area.y + area.height - bounds.height;
       }
 
       if (newX !== bounds.x || newY !== bounds.y) {
@@ -419,9 +590,10 @@ class CharacterWindowManager {
       ? this.clampPositionToScreen(this.windowPosition)
       : this.defaultPosition();
 
+    const { width, height } = this.windowSize();
     const windowOptions = {
-      width: WINDOW_WIDTH,
-      height: WINDOW_HEIGHT,
+      width,
+      height,
       x: position.x,
       y: position.y,
       frame: false,

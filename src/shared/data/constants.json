@@ -29,6 +29,9 @@
   "CHAR_SIZE": 128,
   "CHAR_Y_BASE": 20,
 
+  "CHARACTER_SCALES": [100, 90, 80, 70, 60, 50],
+  "EDGE_MARGINS": [0, 4, 8, 16, 24, 32],
+
   "ALWAYS_ON_TOP_MODES": {
     "all": "Always",
     "active-only": "While Active",
