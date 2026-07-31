@@ -58,3 +58,6 @@ dist/
 out/
 *.dmg
 *.app
+
+# Playwright
+.playwright-mcp
