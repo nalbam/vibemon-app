@@ -5,47 +5,32 @@ description: Run and drive the VibeMon Electron app — launch it, put a charact
 
 VibeMon is a tray-only Electron app: `pnpm start` shows no window, because the
 character window is created on demand by a `POST /status` to its local HTTP
-server. For agent use, drive it through the Playwright REPL at
-`.claude/skills/run-desktop/driver.mjs`.
+server. For agent use, drive it through
+`.claude/skills/run-desktop/driver.mjs` — a zero-dependency driver that speaks
+the Chrome DevTools Protocol over Node's built-in WebSocket (Node >= 22, no
+npm install, no tmux).
 
 The driver always launches with an isolated `--user-data-dir`, so a run never
 touches the developer's real settings in `~/Library/Application Support/vibemon`.
 
-## Prerequisites
-
-`playwright-core` is not a project dependency — install it into this skill
-directory (kept out of the app's `package.json` and lockfile):
-
-```bash
-npm install --prefix .claude/skills/run-desktop --no-save playwright-core
-```
-
-Also make sure the real app is not already running — it owns port 19280 and
-the launch will collide with it:
-
-```bash
-pgrep -fl "VibeMon.app" || echo "clear"
-```
-
 ## Run (agent path)
 
+One shot: pass the commands as arguments. They run in order, the app is closed
+at the end, and the exit code is non-zero if any command failed.
+
 ```bash
-tmux new-session -d -s vibemon -x 200 -y 50
-tmux send-keys -t vibemon 'node .claude/skills/run-desktop/driver.mjs' Enter
-sleep 2
-tmux send-keys -t vibemon 'launch 3d' Enter        # or: launch 2d
-sleep 8
-tmux send-keys -t vibemon 'lock codex' Enter       # pin the character — see Gotchas
-sleep 2
-tmux send-keys -t vibemon 'status working' Enter   # creates the character window
-sleep 5
-tmux send-keys -t vibemon 'ss codex-3d' Enter
-sleep 4
-tmux capture-pane -t vibemon -p -S -40 | grep -v '^$' | tail -10
+node .claude/skills/run-desktop/driver.mjs \
+  "launch 3d" "lock codex" "status working" "engine" "ss codex-3d" "logs"
 ```
 
 Then **open the PNG and look at it.** Screenshots land in `/tmp/vibemon-shots/`
 (override with `SCREENSHOT_DIR`).
+
+Run it with no arguments for an interactive `driver>` REPL instead (same
+commands, `quit` to exit).
+
+The real app must not be running — it owns port 19280, and `launch` fails fast
+with a clear error if the port is taken.
 
 ### Commands
 
@@ -61,8 +46,9 @@ Then **open the PNG and look at it.** Screenshots land in `/tmp/vibemon-shots/`
 | `page <character\|bubble>` | retarget commands at the character window or the speech bubble |
 | `windows` | list open windows |
 | `eval <js>` / `text [sel]` | evaluate in the page / dump innerText |
-| `logs` | renderer console + uncaught errors since launch (empty is the good result) |
-| `quit` | close the app and exit |
+| `wait <ms>` | pause the sequence (e.g. to let an animation settle) |
+| `logs` | renderer console, uncaught errors, CSP violations, and main-process output since launch |
+| `quit` | close the app (implicit at the end of a one-shot run) |
 
 States: `start`, `idle`, `thinking`, `planning`, `working`, `packing`,
 `notification`, `done`, `sleep`, `alert`. Characters: `vibemon`, `clawd`,
@@ -90,6 +76,14 @@ curl -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' \
   next to every screenshot so an image that surprises you is explainable
   rather than mysterious.
 
+- **The window's first update races renderer init.** The main process sends
+  the initial state at `ready-to-show`, before the renderer's async init
+  (registry IPC + character image preload) registers its listener — on a cold
+  cache the update is lost and the default character stays on screen. `status`
+  self-heals: when it creates the window it waits for the engine to boot and
+  re-drives the state (via a different-state nudge, because an identical
+  re-POST is deduped). Expect the extra `/status` pair in the app's logs.
+
 - **Render mode is persisted state, not a flag.** It lives in electron-store
   (`<userData>/config.json`), read when the character window is created.
   `launch` seeds it before boot; switching modes means `quit` then
@@ -100,19 +94,16 @@ curl -X POST http://127.0.0.1:19280/status -H 'Content-Type: application/json' \
   and reverts it. Use `ss-raw` when the transparency itself is what you're
   checking.
 
-- **macOS has no `timeout(1)`.** The tmux waits above use `sleep`; if you want
-  a real poll, write a `for i in $(seq 1 40); do ... done` loop.
-
-- **`tmux capture-pane -p` looks empty.** The pane is mostly blank lines —
-  pipe it through `-S -30 | grep -v '^$' | tail -N`.
+- **Screenshots are in device pixels.** On a retina display the PNG is 2x the
+  window's logical size (e.g. 268x276 for a 134x138 window).
 
 ## Troubleshooting
 
-- **`launch` times out waiting for the HTTP server** — the real app (or a
-  previous driver run) still holds 19280. `pgrep -fl Electron` and kill it.
+- **`launch` fails with "port 19280 is already in use"** — the real app (or a
+  previous driver run) still holds it: `lsof -nP -iTCP:19280 -sTCP:LISTEN`
+  and kill that PID.
 - **`status` times out waiting for the character window** — check `logs`; a
   renderer crash (bad vendored engine, CSP violation) shows up there.
 - **3D shows the default purple monster for every character** — the registry
   entry lost its `theme`; check `src/shared/data/characters.json` and re-sync
   with `pnpm check:registry -- --fix`.
-- **Stale tmux session** — `tmux kill-session -t vibemon`.
