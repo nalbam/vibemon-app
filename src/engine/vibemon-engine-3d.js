@@ -44,8 +44,8 @@ import {
 let THREE = null;
 
 const CONSTANTS = {
-  VIEW_WIDTH: 172,
-  VIEW_HEIGHT: 160,
+  VIEW_WIDTH: 134,
+  VIEW_HEIGHT: 138,
   FRAME_INTERVAL_MS: 33,     // ~30fps cap; tray-resident app, keep CPU low
   POSE_DAMP_RATE: 9,         // responsiveness of pose blending (1/s)
   EYE_DAMP_RATE: 18,

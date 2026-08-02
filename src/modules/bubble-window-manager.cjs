@@ -14,13 +14,13 @@ const { STATE_COLORS, STATE_TEXTS, TOOL_TEXTS, LOADING_STATES, WINDOW_WIDTH } = 
 
 // The character sprite's center offset and collision radius within a
 // full-size character window, matching the rendering engine's layout
-// constants (CHAR_X_BASE=22, CHAR_Y_BASE=20, CHAR_SIZE=128 in
+// constants (CHAR_X_BASE=3, CHAR_Y_BASE=5, CHAR_SIZE=128 in
 // src/engine/vibemon-engine.js). The radius is generous
 // (measured opaque sprite bounds span nearly the full 128x128 canvas for some
 // characters) since the bubble now has the whole screen to move in.
 // The Character Size setting shrinks the window, so both are scaled by the
 // window's actual width in computePlacement().
-const CHARACTER_OFFSET = { x: 86, y: 84 };
+const CHARACTER_OFFSET = { x: 67, y: 69 };
 const CHARACTER_RADIUS = 70;
 const BUBBLE_COLLIDE_PADDING = 4;
 const LINK_DISTANCE = 100;

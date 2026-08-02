@@ -75,11 +75,12 @@ const INTERNAL_PROJECT_ID = '.vibemon';
 const ALWAYS_ON_TOP_LEVEL = process.platform === 'darwin' ? 'floating' : 'screen-saver';
 
 // Window height: just tall enough for the character sprite
-// (CHAR_Y_BASE + CHAR_SIZE) plus a little clearance for its floating
-// animation. Must stay in sync with .vibemon-display in styles.css.
+// (CHAR_Y_BASE + CHAR_SIZE) plus exactly the clearance its floating
+// animation needs (FLOAT_AMPLITUDE_Y in vibemon-engine.js). Must stay in
+// sync with .vibemon-display in styles.css.
 // WINDOW_WIDTH/WINDOW_HEIGHT are the full-size (100%) dimensions; the
 // Character Size setting scales both — see windowSize().
-const WINDOW_HEIGHT = CHAR_Y_BASE + CHAR_SIZE + 12;
+const WINDOW_HEIGHT = CHAR_Y_BASE + CHAR_SIZE + 5;
 
 class CharacterWindowManager {
   constructor() {
