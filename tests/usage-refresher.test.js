@@ -9,7 +9,7 @@ const path = require('path');
 jest.mock('fs');
 jest.mock('child_process');
 jest.mock('../src/shared/config.cjs', () => ({
-  USAGE_REFRESH_MAX_AGE_SECONDS: 540
+  USAGE_REFRESH_MAX_AGE_SECONDS: 90
 }));
 
 const fs = require('fs');
@@ -35,6 +35,8 @@ describe('UsageRefresher', () => {
 
   beforeEach(() => {
     fs.existsSync.mockReset().mockReturnValue(true);
+    fs.readFileSync.mockReset();
+    fs.statSync.mockReset();
     spawn.mockReset();
     spawnSync.mockReset();
     mockPythonPresent();
@@ -64,7 +66,20 @@ describe('UsageRefresher', () => {
     expect(result).toMatchObject({ ok: true, code: 0 });
     const [command, args] = spawn.mock.calls[0];
     expect(command).toBe(process.platform === 'win32' ? 'py' : 'python3');
-    expect(args.slice(-3)).toEqual([USAGE_SCRIPT_PATH, '--max-age', '540']);
+    expect(args.slice(-3)).toEqual([USAGE_SCRIPT_PATH, '--max-age', '90']);
+  });
+
+  test('forces a refresh when Codex auth changed after the cached usage', async () => {
+    fs.statSync.mockReturnValue({ mtimeMs: 200000 });
+    fs.readFileSync.mockReturnValue(JSON.stringify({ codex: { updated_at: 100 } }));
+    const child = mockSpawnedChild();
+
+    const promise = refresher.refresh();
+    child.emit('close', 0);
+    await promise;
+
+    const args = spawn.mock.calls[0][1];
+    expect(args.slice(-3)).toEqual([USAGE_SCRIPT_PATH, '--max-age', '0']);
   });
 
   test('skips without spawning when no working Python 3 is found', async () => {

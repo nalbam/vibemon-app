@@ -40,6 +40,15 @@ describe('Constants', () => {
     });
   });
 
+  describe('Usage Refresh', () => {
+    test('refreshes usage every two minutes with a shorter cache age', () => {
+      expect(constants.USAGE_REFRESH_INTERVAL_MS).toBe(120000);
+      expect(constants.USAGE_REFRESH_MAX_AGE_SECONDS).toBe(90);
+      expect(constants.USAGE_REFRESH_MAX_AGE_SECONDS * 1000)
+        .toBeLessThan(constants.USAGE_REFRESH_INTERVAL_MS);
+    });
+  });
+
   describe('Modes', () => {
     test('ALWAYS_ON_TOP_MODES has required modes', () => {
       expect(constants.ALWAYS_ON_TOP_MODES).toHaveProperty('active-only');

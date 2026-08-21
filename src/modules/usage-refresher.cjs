@@ -20,8 +20,10 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { USAGE_REFRESH_MAX_AGE_SECONDS } = require('../shared/config.cjs');
 const { findPython, SPAWN_DEFAULTS } = require('./python-runtime.cjs');
+const { getUsageCachePath } = require('./usage-cache-reader.cjs');
 
 const USAGE_SCRIPT_PATH = path.join(os.homedir(), '.vibemon', 'usage.py');
+const CODEX_AUTH_PATH = path.join(os.homedir(), '.codex', 'auth.json');
 
 // Electron launched from Finder/Dock gets a minimal PATH, and usage.py
 // resolves the `claude` CLI via PATH — append the common install locations.
@@ -47,6 +49,17 @@ function buildEnv() {
   };
 }
 
+function shouldForceCodexRefresh() {
+  try {
+    const authMtimeMs = fs.statSync(CODEX_AUTH_PATH).mtimeMs;
+    const cache = JSON.parse(fs.readFileSync(getUsageCachePath(), 'utf8'));
+    const codexUpdatedAtMs = Number(cache.codex?.updated_at ?? cache.ts ?? 0) * 1000;
+    return codexUpdatedAtMs > 0 && authMtimeMs > codexUpdatedAtMs;
+  } catch {
+    return false;
+  }
+}
+
 class UsageRefresher {
   constructor() {
     this.inFlight = false;
@@ -69,13 +82,14 @@ class UsageRefresher {
     if (!python) {
       return Promise.resolve({ ok: false, reason: 'python-not-found' });
     }
+    const maxAgeSeconds = shouldForceCodexRefresh() ? 0 : USAGE_REFRESH_MAX_AGE_SECONDS;
     this.inFlight = true;
     return new Promise((resolve) => {
       const args = [
         ...python.prefixArgs,
         USAGE_SCRIPT_PATH,
         '--max-age',
-        String(USAGE_REFRESH_MAX_AGE_SECONDS)
+        String(maxAgeSeconds)
       ];
       const child = spawn(python.command, args, {
         ...SPAWN_DEFAULTS,

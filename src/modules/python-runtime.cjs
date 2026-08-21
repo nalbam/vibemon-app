@@ -16,7 +16,7 @@ const IS_WINDOWS = process.platform === 'win32';
  * windowsHide matters because Electron is a GUI process with no console of its
  * own: Windows allocates a visible console window for each console child
  * unless this is set. These spawns run on timers (tool detection every 30
- * minutes, usage refresh every 10), so without it a black window flashes at
+ * minutes, usage refresh every 2), so without it a black window flashes at
  * the user indefinitely. Node's default is false.
  */
 const SPAWN_DEFAULTS = { windowsHide: true };
