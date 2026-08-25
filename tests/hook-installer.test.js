@@ -74,6 +74,21 @@ function registeredConfigFor(tool) {
   if (tool.flag === '--openclaw') {
     return JSON.stringify({ plugins: { entries: { 'vibemon-bridge': { enabled: true } } } });
   }
+  if (tool.flag === '--kiro') {
+    return JSON.stringify({
+      version: 'v1',
+      hooks: [
+        {
+          name: 'VibeMon Stop',
+          trigger: 'Stop',
+          action: {
+            type: 'command',
+            command: `python3 ${tool.hookFile} Stop`
+          }
+        }
+      ]
+    });
+  }
   return JSON.stringify({
     hooks: { Stop: [{ hooks: [{ type: 'command', command: `python3 ${tool.hookFile}` }] }] }
   });
@@ -168,6 +183,34 @@ describe('HookInstaller', () => {
 
       const missing = hookInstaller.getMissingTools();
       expect(missing.find(t => t.flag === target.flag)).toBeUndefined();
+    });
+
+    test('recognizes the Kiro v1 global hook config as registered', () => {
+      const target = TOOLS.find(t => t.flag === '--kiro');
+      mockToolInstalled(target);
+
+      const status = hookInstaller.refreshStatuses().find(t => t.flag === target.flag);
+      expect(status.hasHook).toBe(true);
+      expect(hookInstaller.getMissingTools().map(t => t.flag)).not.toContain(target.flag);
+    });
+
+    test('reads only the current Kiro global hook config', () => {
+      const target = TOOLS.find(t => t.flag === '--kiro');
+      const normalizedPaths = target.configPaths.map(p => p.replaceAll('\\', '/'));
+
+      expect(normalizedPaths).toHaveLength(1);
+      expect(normalizedPaths[0]).toMatch(/\/\.kiro\/hooks\/vibemon\.json$/);
+      expect(normalizedPaths.some(p => p.includes('/.kiro/agents/default.json'))).toBe(false);
+      expect(normalizedPaths.some(p => p.endsWith('.kiro.hook'))).toBe(false);
+    });
+
+    test('does not accept a Kiro config without a VibeMon command', () => {
+      const target = TOOLS.find(t => t.flag === '--kiro');
+      mockToolInstalled(target, {
+        config: JSON.stringify({ version: 'v1', hooks: [] })
+      });
+
+      expect(hookInstaller.getMissingTools().map(t => t.flag)).toContain(target.flag);
     });
 
     // The script file surviving says nothing: the tool only runs it because
@@ -834,6 +877,25 @@ describe('HookInstaller', () => {
       const status = hookInstaller.getCachedStatuses().find(t => t.flag === claude.flag);
       expect(status.changed).toBe(true);
       expect(hookInstaller.hasChanges()).toBe(true);
+    });
+
+    test('checkForChanges includes the Kiro global hook config on POSIX', async () => {
+      if (process.platform === 'win32') return;
+
+      const kiro = TOOLS.find(t => t.flag === '--kiro');
+      const configFile = kiro.files.find(f => f.remote === 'kiro/hooks/vibemon.json');
+      expect(configFile.local).toBe(kiro.configPaths[0]);
+      mockToolInstalled(kiro);
+      mockManifestResponse(manifestFor({
+        'kiro/hooks/vibemon.py': sha256('local-bytes'),
+        'kiro/hooks/vibemon.json': sha256('published-config')
+      }));
+
+      await expect(hookInstaller.checkForChanges()).resolves.toBe(true);
+
+      const status = hookInstaller.getCachedStatuses().find(t => t.flag === kiro.flag);
+      expect(status.hasHook).toBe(true);
+      expect(status.changed).toBe(true);
     });
 
     test('checkForChanges reports no drift when hashes match', async () => {

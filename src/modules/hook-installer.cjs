@@ -98,8 +98,8 @@ function readJson(filePath) {
  *
  * Walked generically rather than per-tool because the four configs put their
  * commands in four different places (Claude's hooks map and statusLine,
- * Codex's hooks map plus its commandWindows override, Kiro's agent hooks and
- * the standalone .kiro.hook `then` blocks) and only agree on the key names.
+ * Codex's hooks map plus its commandWindows override, and Kiro's v1 hook
+ * action blocks) and only agree on the key names.
  * @param {any} node
  * @param {Array<{command: string, args: string[]}>} [out]
  * @returns {Array<{command: string, args: string[]}>}
@@ -208,8 +208,9 @@ function homePath(...segments) {
 // Per tool, `files` lists every file install.py copies verbatim (local
 // install path ↔ path under docs.vibemon.io), used to detect drift against
 // the published manifest.json. Merged config files (settings.json,
-// hooks.json, ...) are excluded — their installed form never matches the
-// source hash. The `sharedAssets` entry covers the shared ~/.vibemon
+// hooks.json, ...) and platform-adapted configs are excluded — their installed
+// form never matches the source hash. The `sharedAssets` entry covers the
+// shared ~/.vibemon
 // scripts: always considered "present" (they belong to every installation)
 // and excluded from the missing-tools install prompt.
 //
@@ -218,13 +219,7 @@ function homePath(...segments) {
 // script file says nothing on its own — the registration lives here, and it
 // is what rots when a user prunes it or a Windows Python upgrade invalidates
 // the absolute interpreter path baked into the command.
-const KIRO_HOOK_FILES = [
-  'vibemon-prompt-submit.kiro.hook',
-  'vibemon-agent-stop.kiro.hook',
-  'vibemon-file-created.kiro.hook',
-  'vibemon-file-edited.kiro.hook',
-  'vibemon-file-deleted.kiro.hook'
-];
+const KIRO_HOOK_CONFIG = 'vibemon.json';
 
 const TOOLS = [
   {
@@ -256,22 +251,18 @@ const TOOLS = [
     command: 'kiro',
     homeDir: homePath('.kiro'),
     hookFile: homePath('.kiro', 'hooks', 'vibemon.py'),
-    configPaths: [
-      homePath('.kiro', 'agents', 'default.json'),
-      ...KIRO_HOOK_FILES.map(name => homePath('.kiro', 'hooks', name))
-    ],
+    configPaths: [homePath('.kiro', 'hooks', KIRO_HOOK_CONFIG)],
     files: [
       { local: homePath('.kiro', 'hooks', 'vibemon.py'), remote: 'kiro/hooks/vibemon.py' },
-      // The .kiro.hook definitions hold a shell command string, which install.py
-      // has to rewrite with an absolute interpreter path on Windows (`python3
-      // ~/...` resolves to nothing there). Their installed form can never match
-      // the published hash, so they are excluded from drift detection the same
-      // way the merged configs are. Still tracked on macOS and Linux, where
-      // they are copied verbatim.
-      ...(IS_WINDOWS ? [] : KIRO_HOOK_FILES.map(name => ({
-        local: homePath('.kiro', 'hooks', name),
-        remote: `kiro/hooks/${name}`
-      })))
+      // The Kiro v1 global hook config holds a shell command string, which
+      // install.py rewrites with an absolute interpreter path on Windows
+      // (`python3 ~/...` resolves to nothing there). Its installed form can
+      // never match the published hash there, so it is excluded from Windows
+      // drift detection. On macOS and Linux it is copied verbatim.
+      ...(IS_WINDOWS ? [] : [{
+        local: homePath('.kiro', 'hooks', KIRO_HOOK_CONFIG),
+        remote: `kiro/hooks/${KIRO_HOOK_CONFIG}`
+      }])
     ]
   },
   {
