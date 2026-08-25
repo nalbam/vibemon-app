@@ -7,7 +7,7 @@ VibeMon normalizes multiple agent ecosystems into one display model. The renderi
 | Agent | Integration path | Best signal source | Observability quality | Important limitation |
 |------|-------------------|--------------------|-----------------------|----------------------|
 | Claude Code | Native hooks | Session, turn, and tool hooks | High | None significant for basic monitoring |
-| Codex | Native hooks and non-interactive JSON output | Interactive hooks for sessions, `codex exec --json` for automation | Medium in interactive mode, high in automation | Interactive tool hooks are currently Bash-focused |
+| Codex | Native hooks and non-interactive JSON output | Interactive lifecycle and local tool hooks, `codex exec --json` for automation | High | Hosted tools such as WebSearch do not pass through local tool hooks |
 | Kiro | Native hooks | Prompt, tool, and stop hooks | High | Fewer lifecycle events than Claude Code |
 | OpenClaw | Plugin bridge | Plugin SDK hooks | Medium to high | Internal hooks are not enough by themselves for full tool-loop visibility |
 
@@ -19,8 +19,8 @@ VibeMon normalizes multiple agent ecosystems into one display model. The renderi
 ### Agent-Specific Notes
 
 - **Claude Code**: Best overall source for real-time monitoring. It exposes a broad lifecycle including prompt, tool, permission, compact, and stop events.
-- **Codex**: Good fit for VibeMon, but not symmetric with Claude Code yet. Interactive hooks are experimental and the current runtime emits Bash for `PreToolUse`, `PermissionRequest`, and `PostToolUse`. For CI or batch jobs, `codex exec --json` exposes a much richer event stream.
-- **Kiro**: Strong tool-level support with explicit `preToolUse` and `postToolUse`, plus namespaced MCP tool names.
+- **Codex**: Strong interactive lifecycle and local tool coverage. VibeMon's `PreToolUse` and `PostToolUse` hooks observe shell commands, `apply_patch`, MCP tools, and other local function tools; `codex exec --json` remains useful for CI or batch jobs.
+- **Kiro**: Strong tool-level support with explicit `PreToolUse` and `PostToolUse`, plus namespaced MCP tool names.
 - **OpenClaw**: Strongest when treated as a plugin platform. The VibeMon bridge should continue to use plugin hooks instead of depending on the lighter internal hook system.
 
 ## Characters
@@ -170,7 +170,7 @@ When running Claude Code in multiple terminal tabs, clicking the character windo
 
 ### Speech Bubble
 
-A small, transparent, click-through window that displays selected info fields (status, project name, model, memory, 5h usage, weekly usage, model-scoped weekly usage — e.g. "Fable 12%", percentage only since its window resets with the weekly one) next to the character. Positioned automatically so it never overlaps the character window and stays on-screen, with an animated slide when it needs to move.
+A small, transparent, click-through window that displays selected info fields (status, project name, model, memory, 5h usage, weekly usage, model-scoped weekly usage — e.g. "Fable 12% · 4d11h") next to the character. Each plan-usage row shows its own reset countdown when available. Positioned automatically so it never overlaps the character window and stays on-screen, with an animated slide when it needs to move.
 
 - Toggled per field via the system tray menu (**Speech Bubble** submenu: Status / Project / Model / Memory / Usage 5h / Usage Week / Usage Model Week)
 - The status field shows state-based text (e.g. "Ready", "Thinking") and tool-based text while working (e.g. "Reading"), with animated loading dots during thinking/planning/working/packing — slower for thinking-style states
@@ -195,7 +195,7 @@ Grouped to mirror the Settings window's tab order (VibeMon / Collector / AI Tool
 - Settings... (opens the Settings window)
 - **VibeMon** — Character Lock (Auto/VibeMon/Clawd/Codex/Kiro/Claw/Daangni), Always on Top, Speech Bubble field toggles, Open at Login toggle
 - **Collector** — WebSocket status (Connected/Disconnected), HTTP Server port display
-- **AI Tools** — AI Tool Hooks (per-tool install status for Claude Code/Codex CLI/Kiro IDE/OpenClaw, with one-click install), followed by Claude/Codex plan usage grouped per provider (5h and weekly %, each with a heat-colored bar icon and time-to-reset, plus a model-scoped weekly row shown as percentage only, e.g. "🎯 Fable 12%") — read from the shared usage cache independent of which project is focused; rows with no fresh data are omitted
+- **AI Tools** — AI Tool Hooks (per-tool install status for Claude Code/Codex CLI/Kiro IDE/OpenClaw, with one-click install), followed by Claude/Codex plan usage grouped per provider (5h, weekly, and model-scoped weekly %, each with a heat-colored bar icon and its own time-to-reset) — read from the shared usage cache independent of which project is focused; rows with no fresh data are omitted
 - **About** — opens the Settings window's About tab, followed by a version display or a one-click "Update to vX" / "Restart to install vX" item
 - Quit
 
@@ -208,6 +208,8 @@ The character is rendered by a bundled engine (`src/engine/vibemon-engine.js`): 
 Hook installation verifies the downloaded installer against the `installer` SHA-256 published in the same origin's `manifest.json` (fetched fresh at install time), so install.py updates ship with a vibemon-docs deploy alone — no app release needed. install.py then re-checks every file it downloads against that same manifest before writing it, so install.py and manifest.json have to go out in the same deploy. Custom installer deployments can pin a specific hash via `VIBEMON_INSTALLER_SHA256` together with `VIBEMON_DOCS_URL`; the pin takes precedence over the manifest. `VIBEMON_DOCS_URL` only redirects where install.py itself is fetched from — the installer always pulls the files it installs, and the manifest it checks them against, from `docs.vibemon.io`.
 
 Installs run unattended but not force-approved: the app passes a platform flag and never `--yes`. VibeMon's own hook scripts are upgraded in place (so Reinstall still repairs drift), while settings you own — most visibly an existing Claude Code `statusLine` — are left as they are. Run install.py yourself with `--yes` to have those replaced too. When a run fails, the installer's own reason (a failed integrity check, a file it couldn't write) is shown with the exit code instead of the bare code.
+
+Detection and hook paths honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `KIRO_HOME`. Kiro is detected through either `kiro` or `kiro-cli`.
 
 ```bash
 npm run build:mac     # macOS (DMG, ZIP)

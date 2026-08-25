@@ -26,14 +26,14 @@ VibeMon does not talk to agent runtimes directly. Each supported agent is bridge
 | Agent | Bridge type | Tool visibility | Notes |
 |------|-------------|-----------------|-------|
 | Claude Code | Native hooks | Broad | Best documented lifecycle and tool coverage |
-| Codex | Native hooks + `codex exec --json` | Partial in interactive mode, broad in automation | Interactive hooks are experimental and currently Bash-focused |
+| Codex | Native hooks + `codex exec --json` | Broad | Interactive hooks cover shell, file edits, MCP, and other local function tools |
 | Kiro | Native hooks | Broad | Good tool-level hooks with MCP-aware tool names |
 | OpenClaw | Plugin bridge | Plugin-dependent | Uses plugin SDK hooks rather than the simpler internal hook system |
 
 ### Support Quality
 
 - **Claude Code**: Richest hook surface. Best fit for real-time state, permissions, compacting, and subagent-aware monitoring.
-- **Codex**: Strong support, but split by mode. Interactive sessions expose limited tool hooks today, while `codex exec --json` is better for CI and automation.
+- **Codex**: Strong native lifecycle and tool coverage in interactive sessions. `codex exec --json` remains useful for CI and batch automation.
 - **Kiro**: Clean hook model for prompt, tool, and stop events. Practical fit for real-time monitoring.
 - **OpenClaw**: Best supported through plugins. Internal hooks are session/message oriented, so plugin SDK integration is the right path for VibeMon.
 
@@ -67,6 +67,8 @@ That's it! The app launches in the system tray and listens on `http://127.0.0.1:
 `vibemon --version` prints the installed version, `vibemon --help` prints usage — both exit without launching the app.
 
 Open **Settings > AI Tools** from the tray menu and click **Install** for Claude Code, Codex CLI, Kiro IDE, or OpenClaw — this sets up the hooks and collector config for you, no separate installer needed. See [Settings Window](docs/features.md#settings-window) for details.
+
+Tool detection and hook paths honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `KIRO_HOME`. Kiro is detected through either `kiro` or `kiro-cli`.
 
 ## Preview
 

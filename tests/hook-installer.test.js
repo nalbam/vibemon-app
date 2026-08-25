@@ -28,7 +28,7 @@ const { spawnSync, spawn } = require('child_process');
 const https = require('https');
 const { dialog, shell } = require('electron');
 const {
-  HookInstaller, TOOLS, verifyInstallerScript, describeFailure
+  HookInstaller, TOOLS, verifyInstallerScript, describeFailure, resolveToolHome
 } = require('../src/modules/hook-installer.cjs');
 
 const realCrypto = jest.requireActual('crypto');
@@ -40,6 +40,19 @@ test('installer integrity verification rejects a mismatched digest', () => {
 
 test('installer integrity verification accepts a matching digest', () => {
   expect(verifyInstallerScript('print(1)', 'd287bb7f9d15abdc5b6e98536263815744b6ef21c8f3c839fc434ca70d8efe99')).toBe(true);
+});
+
+test('tool home resolver honors config-root environment overrides', () => {
+  const previous = process.env.CODEX_HOME;
+  process.env.CODEX_HOME = './custom-codex-home';
+  try {
+    expect(resolveToolHome('CODEX_HOME', '.codex')).toBe(
+      require('path').resolve('./custom-codex-home')
+    );
+  } finally {
+    if (previous === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previous;
+  }
 });
 
 // spawnSync serves two callers: commandExists() runs which/where, and
@@ -175,6 +188,13 @@ describe('HookInstaller', () => {
 
       const missing = hookInstaller.getMissingTools();
       expect(missing.map(t => t.flag)).toEqual([target.flag]);
+    });
+
+    test('detects Kiro CLI through the kiro-cli command alias', () => {
+      const target = TOOLS.find(t => t.flag === '--kiro');
+      presentCommands = new Set(['kiro-cli']);
+
+      expect(hookInstaller.getMissingTools().map(t => t.flag)).toContain(target.flag);
     });
 
     test('excludes a tool that already has its hook installed', () => {

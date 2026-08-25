@@ -205,6 +205,24 @@ function homePath(...segments) {
   return path.join(os.homedir(), ...segments);
 }
 
+/**
+ * Resolve an AI tool's user config root, honoring the same environment
+ * override as the tool and install.py. Relative paths resolve from this
+ * process's working directory, matching normal CLI environment semantics.
+ * @param {string} envName
+ * @param {string} defaultDir
+ * @returns {string}
+ */
+function resolveToolHome(envName, defaultDir) {
+  const configured = String(process.env[envName] || '').trim();
+  if (!configured) return homePath(defaultDir);
+  if (configured === '~') return os.homedir();
+  if (configured.startsWith('~/') || configured.startsWith('~\\')) {
+    return path.join(os.homedir(), configured.slice(2));
+  }
+  return path.resolve(configured);
+}
+
 // Per tool, `files` lists every file install.py copies verbatim (local
 // install path ↔ path under docs.vibemon.io), used to detect drift against
 // the published manifest.json. Merged config files (settings.json,
@@ -220,47 +238,51 @@ function homePath(...segments) {
 // is what rots when a user prunes it or a Windows Python upgrade invalidates
 // the absolute interpreter path baked into the command.
 const KIRO_HOOK_CONFIG = 'vibemon.json';
+const CLAUDE_HOME = resolveToolHome('CLAUDE_CONFIG_DIR', '.claude');
+const CODEX_HOME = resolveToolHome('CODEX_HOME', '.codex');
+const KIRO_HOME = resolveToolHome('KIRO_HOME', '.kiro');
+const KIRO_CONFIG_IS_ADAPTED = IS_WINDOWS || KIRO_HOME !== homePath('.kiro');
 
 const TOOLS = [
   {
     name: 'Claude Code',
     flag: '--claude',
     command: 'claude',
-    homeDir: homePath('.claude'),
-    hookFile: homePath('.claude', 'hooks', 'vibemon.py'),
-    configPaths: [homePath('.claude', 'settings.json')],
+    homeDir: CLAUDE_HOME,
+    hookFile: path.join(CLAUDE_HOME, 'hooks', 'vibemon.py'),
+    configPaths: [path.join(CLAUDE_HOME, 'settings.json')],
     files: [
-      { local: homePath('.claude', 'hooks', 'vibemon.py'), remote: 'claude/hooks/vibemon.py' },
-      { local: homePath('.claude', 'statusline.py'), remote: 'claude/statusline.py' }
+      { local: path.join(CLAUDE_HOME, 'hooks', 'vibemon.py'), remote: 'claude/hooks/vibemon.py' },
+      { local: path.join(CLAUDE_HOME, 'statusline.py'), remote: 'claude/statusline.py' }
     ]
   },
   {
     name: 'Codex CLI',
     flag: '--codex',
     command: 'codex',
-    homeDir: homePath('.codex'),
-    hookFile: homePath('.codex', 'hooks', 'vibemon.py'),
-    configPaths: [homePath('.codex', 'hooks.json')],
+    homeDir: CODEX_HOME,
+    hookFile: path.join(CODEX_HOME, 'hooks', 'vibemon.py'),
+    configPaths: [path.join(CODEX_HOME, 'hooks.json')],
     files: [
-      { local: homePath('.codex', 'hooks', 'vibemon.py'), remote: 'codex/hooks/vibemon.py' }
+      { local: path.join(CODEX_HOME, 'hooks', 'vibemon.py'), remote: 'codex/hooks/vibemon.py' }
     ]
   },
   {
     name: 'Kiro IDE',
     flag: '--kiro',
     command: 'kiro',
-    homeDir: homePath('.kiro'),
-    hookFile: homePath('.kiro', 'hooks', 'vibemon.py'),
-    configPaths: [homePath('.kiro', 'hooks', KIRO_HOOK_CONFIG)],
+    commandAliases: ['kiro-cli'],
+    homeDir: KIRO_HOME,
+    hookFile: path.join(KIRO_HOME, 'hooks', 'vibemon.py'),
+    configPaths: [path.join(KIRO_HOME, 'hooks', KIRO_HOOK_CONFIG)],
     files: [
-      { local: homePath('.kiro', 'hooks', 'vibemon.py'), remote: 'kiro/hooks/vibemon.py' },
+      { local: path.join(KIRO_HOME, 'hooks', 'vibemon.py'), remote: 'kiro/hooks/vibemon.py' },
       // The Kiro v1 global hook config holds a shell command string, which
-      // install.py rewrites with an absolute interpreter path on Windows
-      // (`python3 ~/...` resolves to nothing there). Its installed form can
-      // never match the published hash there, so it is excluded from Windows
-      // drift detection. On macOS and Linux it is copied verbatim.
-      ...(IS_WINDOWS ? [] : [{
-        local: homePath('.kiro', 'hooks', KIRO_HOOK_CONFIG),
+      // install.py rewrites with an absolute script path on Windows and when
+      // KIRO_HOME overrides ~/.kiro. Adapted files cannot match the published
+      // default-home hash, so only a default POSIX install tracks this file.
+      ...(KIRO_CONFIG_IS_ADAPTED ? [] : [{
+        local: path.join(KIRO_HOME, 'hooks', KIRO_HOOK_CONFIG),
         remote: `kiro/hooks/${KIRO_HOOK_CONFIG}`
       }])
     ]
@@ -360,7 +382,8 @@ class HookInstaller {
 
   isPresent(tool) {
     if (tool.sharedAssets) return true;
-    return commandExists(tool.command) || fs.existsSync(tool.homeDir);
+    const commands = [tool.command, ...(tool.commandAliases || [])].filter(Boolean);
+    return commands.some(commandExists) || fs.existsSync(tool.homeDir);
   }
 
   /**
@@ -796,4 +819,6 @@ class HookInstaller {
   }
 }
 
-module.exports = { HookInstaller, TOOLS, verifyInstallerScript, describeFailure };
+module.exports = {
+  HookInstaller, TOOLS, verifyInstallerScript, describeFailure, resolveToolHome
+};

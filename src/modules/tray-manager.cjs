@@ -34,9 +34,8 @@ const USAGE_PROVIDERS = [
 const USAGE_BUCKETS = [
   { bucket: 'session', suffix: '5h', emoji: '⏱️' },
   { bucket: 'week', suffix: 'Week', emoji: '📅' },
-  // Model-scoped weekly limit (e.g. Fable); suffix comes from the bucket's
-  // label, and the reset time is omitted — it matches the Week row's.
-  { bucket: 'modelWeek', suffix: null, emoji: '🎯', showReset: false }
+  // Model-scoped weekly limit (e.g. Fable); suffix comes from the bucket label.
+  { bucket: 'modelWeek', suffix: null, emoji: '🎯' }
 ];
 
 // Usage bar graph rendered as a PNG menu-item icon (capsule track + heat
@@ -372,8 +371,9 @@ class TrayManager {
   }
 
   /**
-   * Claude/Codex plan-usage rows (5h + weekly, each with a heat-colored bar
-   * icon and time-to-reset), read directly from the shared usage cache —
+   * Claude/Codex plan-usage rows (5h, weekly, and model-scoped weekly, each
+   * with a heat-colored bar icon and time-to-reset), read directly from the
+   * shared usage cache —
    * account-level, so it shows both tools regardless of which project is
    * currently focused. Rows are grouped under a disabled header per provider;
    * buckets with no fresh data are omitted entirely (no "N/A" placeholders),
@@ -387,12 +387,12 @@ class TrayManager {
 
     for (const { provider, label } of USAGE_PROVIDERS) {
       const rows = [];
-      for (const { bucket, suffix, emoji, showReset } of USAGE_BUCKETS) {
+      for (const { bucket, suffix, emoji } of USAGE_BUCKETS) {
         const data = snapshot[provider][bucket];
         if (!data) continue;
         const suffixText = suffix ?? data.label;
         if (!suffixText) continue;
-        const resetPart = showReset !== false && data.resetsAt !== null
+        const resetPart = data.resetsAt !== null
           ? ` · ${formatResetIn(data.resetsAt)}`
           : '';
         rows.push({

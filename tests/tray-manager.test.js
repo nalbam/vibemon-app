@@ -248,7 +248,7 @@ describe('TrayManager usage menu', () => {
     ]);
   });
 
-  test('shows the model-scoped weekly row labeled, without a reset suffix', () => {
+  test('shows the model-scoped weekly row with its label and reset suffix', () => {
     getUsageSnapshot.mockReturnValue({
       claude: {
         session: { pct: 7, resetsAt: null },
@@ -261,13 +261,11 @@ describe('TrayManager usage menu', () => {
 
     const items = makeTray().buildUsageMenuItems();
 
-    // The model row omits the reset time even though resetsAt is present —
-    // its window resets together with the Week row.
     expect(items.map(i => i.label)).toEqual([
       'Claude',
       '⏱️ 5h  7%',
       '📅 Week  7% · 4d11h',
-      '🎯 Fable  12%'
+      '🎯 Fable  12% · 4d11h'
     ]);
     expect(items[3].icon).toEqual({ isNativeImage: true });
   });

@@ -58,20 +58,19 @@ const TEXT_ICONS = {
   model: '🤖'
 };
 
-// usage5h/usageWeek quotas reset on a rolling window; the collector can
+// Plan-usage quotas reset on rolling windows; the collector can
 // optionally send how many minutes remain until that reset in these fields,
 // shown next to the usual usage percentage (e.g. "18% · 24m"). Absent for
 // collectors that don't send it yet, or for memory (not a resetting quota).
-// usageWeekModel intentionally has no entry: the model-scoped weekly limit
-// resets together with the Week row, so its row shows the percentage only.
 const RESET_MINUTES_FIELDS = {
   usage5h: 'usage5hResetsIn',
-  usageWeek: 'usageWeekResetsIn'
+  usageWeek: 'usageWeekResetsIn',
+  usageWeekModel: 'usageWeekModelResetsIn'
 };
 
 /**
  * Build the bubble.html content payload: status/project/model render as plain
- * text, memory/usage5h/usageWeek render as an icon + inline bar + percentage
+ * text, and usage metrics render as an icon + inline bar + percentage
  * (bubble.html's __setBubbleContent draws the bar itself from `value`).
  * @param {Object|null} state
  * @param {Object|null} speechBubbleFields
