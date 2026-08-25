@@ -123,5 +123,10 @@
         "repo": "vibemon-app"
       }
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "4.3.1"
+    }
   }
 }
