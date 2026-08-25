@@ -32,7 +32,7 @@ VibeMon does not talk to agent runtimes directly. Each supported agent is bridge
 
 ### Support Quality
 
-- **Claude Code**: Richest hook surface. Best fit for real-time state, permissions, compacting, and subagent-aware monitoring.
+- **Claude Code**: Richest hook surface. Best fit for real-time state, permissions, compacting, and tool-loop monitoring.
 - **Codex**: Strong native lifecycle and tool coverage in interactive sessions. `codex exec --json` remains useful for CI and batch automation.
 - **Kiro**: Clean hook model for prompt, tool, and stop events. Practical fit for real-time monitoring.
 - **OpenClaw**: Best supported through plugins. Internal hooks are session/message oriented, so plugin SDK integration is the right path for VibeMon.
